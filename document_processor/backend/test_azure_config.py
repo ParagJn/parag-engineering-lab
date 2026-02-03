@@ -1,11 +1,32 @@
-"""Test Azure OpenAI configuration."""
+"""Azure OpenAI Configuration Test Script.
+
+This script validates the Azure OpenAI configuration by attempting a simple chat
+completion API call. It checks for:
+    - Valid endpoint URL
+    - Valid API key
+    - Valid deployment name
+    - Successful API connectivity
+
+Environment Variables Required:
+    AZURE_OPENAI_ENDPOINT: The Azure OpenAI service endpoint URL
+    AZURE_OPENAI_API_KEY: The API key for authentication
+    AZURE_OPENAI_DEPLOYMENT: The deployment name (e.g., gpt-4, gpt-4o)
+    AZURE_OPENAI_API_VERSION: The API version (default: 2024-02-15-preview)
+
+Usage:
+    python test_azure_config.py
+
+Output:
+    Prints configuration details and test results to stdout.
+    Returns success (✓) or failure (✗) status.
+"""
 import os
 import httpx
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Load configuration
+# Load configuration from environment variables
 endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "").rstrip("/")
 api_key = os.getenv("AZURE_OPENAI_API_KEY", "")
 deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT", "")

@@ -180,7 +180,14 @@ _table_processor = None
 
 
 def get_image_processor() -> ImageProcessor:
-    """Get or create the global image processor instance."""
+    """Get or create the global image processor instance.
+    
+    Implements the singleton pattern to ensure only one processor instance
+    exists throughout the application lifecycle.
+    
+    Returns:
+        ImageProcessor: The global image processor instance
+    """
     global _image_processor
     if _image_processor is None:
         _image_processor = ImageProcessor()
@@ -188,7 +195,14 @@ def get_image_processor() -> ImageProcessor:
 
 
 def get_table_processor() -> TableProcessor:
-    """Get or create the global table processor instance."""
+    """Get or create the global table processor instance.
+    
+    Implements the singleton pattern to ensure only one processor instance
+    exists throughout the application lifecycle.
+    
+    Returns:
+        TableProcessor: The global table processor instance
+    """
     global _table_processor
     if _table_processor is None:
         _table_processor = TableProcessor()

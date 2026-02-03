@@ -97,7 +97,14 @@ _azure_client = None
 
 
 def get_azure_client() -> AzureOpenAIClient:
-    """Get or create the global Azure OpenAI client instance."""
+    """Get or create the global Azure OpenAI client instance.
+    
+    Implements the singleton pattern to ensure only one client instance
+    exists throughout the application lifecycle.
+    
+    Returns:
+        AzureOpenAIClient: The global client instance
+    """
     global _azure_client
     if _azure_client is None:
         _azure_client = AzureOpenAIClient()

@@ -25,12 +25,26 @@ class DocxProcessor:
 
     @staticmethod
     def _md5(data: bytes) -> str:
-        """Calculate MD5 hash of binary data."""
+        """Calculate MD5 hash of binary data.
+        
+        Args:
+            data: Binary data to hash
+            
+        Returns:
+            str: Hexadecimal MD5 hash string
+        """
         return hashlib.md5(data).hexdigest()
 
     @staticmethod
     def _image_size(data: bytes) -> Dict[str, int]:
-        """Extract image dimensions from binary data."""
+        """Extract image dimensions from binary data.
+        
+        Args:
+            data: Binary image data
+            
+        Returns:
+            Dict with 'width' and 'height' keys (0 if extraction fails)
+        """
         try:
             with Image.open(io.BytesIO(data)) as img:
                 return {"width": img.width, "height": img.height}
@@ -140,7 +154,14 @@ class DocxProcessor:
 
     @staticmethod
     def _table_to_rows(table) -> List[List[str]]:
-        """Convert python-docx table to list of lists."""
+        """Convert python-docx table to list of lists.
+        
+        Args:
+            table: python-docx Table object
+            
+        Returns:
+            List of rows, where each row is a list of cell text strings
+        """
         rows = []
         for row in table.rows:
             row_cells = [cell.text.strip() for cell in row.cells]
@@ -149,7 +170,19 @@ class DocxProcessor:
 
     @staticmethod
     def _rows_to_markdown(rows: List[List[str]]) -> str:
-        """Convert table rows to markdown format."""
+        """Convert table rows to markdown format.
+        
+        Creates a markdown table with:
+        - First row as header
+        - Separator line with dashes
+        - Remaining rows as table body
+        
+        Args:
+            rows: List of rows, each being a list of cell values
+            
+        Returns:
+            str: Markdown-formatted table
+        """
         if not rows:
             return ""
         
@@ -393,7 +426,14 @@ _processor = None
 
 
 def get_docx_processor() -> DocxProcessor:
-    """Get or create the global DOCX processor instance."""
+    """Get or create the global DOCX processor instance.
+    
+    Implements the singleton pattern to ensure only one processor instance
+    exists throughout the application lifecycle.
+    
+    Returns:
+        DocxProcessor: The global DOCX processor instance
+    """
     global _processor
     if _processor is None:
         _processor = DocxProcessor()
