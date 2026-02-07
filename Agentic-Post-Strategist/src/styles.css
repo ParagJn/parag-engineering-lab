@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+.field {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(179 204 226 / 0.8);
+  background: white;
+  padding: 0.6rem 0.75rem;
+  font: inherit;
+  font-size: 16px;
+  color: rgb(37 50 67);
+}
+
+.field:focus {
+  outline: none;
+  border-color: rgb(73 111 149);
+  box-shadow: 0 0 0 3px rgb(73 111 149 / 0.12);
+}
+
+textarea.field {
+  resize: vertical;
+}
+
+@media (min-width: 768px) {
+  .field {
+    font-size: 0.95rem;
+  }
+}
