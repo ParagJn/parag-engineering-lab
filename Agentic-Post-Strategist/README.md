@@ -1,4 +1,4 @@
-# Agentic Social Studio
+# Agentic Social Strategist
 
 Use the power of agentic AI with multiple LLMs to generate comprehensive social media strategies, content calendars, and engagement plans tailored to your niche and audience.
 

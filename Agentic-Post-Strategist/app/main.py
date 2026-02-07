@@ -5,7 +5,7 @@ from app.agent_service import run_multi_agent
 from app.operations import OPERATIONS
 from app.schemas import GenerateRequest
 
-app = FastAPI(title="Agentic Social Studio API", version="1.0.0")
+app = FastAPI(title="Agentic Social Media Strategist API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -16,7 +16,10 @@ app.add_middleware(
 )
 
 
-@app.get("/api/health")
+@app.get("/api/health",
+         tags=["Health"],
+         summary="Check API health",
+         description="Endpoint to check if the API is running and healthy.")
 async def health() -> dict[str, str]:
     return {"status": "ok"}
 
@@ -31,7 +34,10 @@ async def favicon() -> Response:
     return Response(status_code=204)
 
 
-@app.get("/api/operations")
+@app.get("/api/operations"
+         , tags=["Operations"]
+         , summary="List available operations"
+         , description="Endpoint to list all available operations that agents can perform.")
 async def operations() -> dict:
     return {
         "operations": [
@@ -45,7 +51,10 @@ async def operations() -> dict:
     }
 
 
-@app.post("/api/generate")
+@app.post("/api/generate",
+          tags=["Generation"],
+          summary="Generate content using agents",
+          description="Endpoint to generate content based on the provided instructions and operations.")
 async def generate(payload: GenerateRequest):
     try:
         return await run_multi_agent(payload)

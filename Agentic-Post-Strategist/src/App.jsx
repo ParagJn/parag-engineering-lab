@@ -98,9 +98,12 @@ export default function App() {
     <main className="min-h-[100dvh] bg-gradient-to-br from-studio-50 via-slate-100 to-studio-100 px-3 py-4 text-studio-900 sm:px-5 sm:py-6">
       <div className="mx-auto grid w-full max-w-7xl gap-4 lg:grid-cols-[320px_1fr] xl:grid-cols-[360px_1fr]">
         <aside className="rounded-2xl border border-studio-100 bg-white/90 p-4 shadow-panel backdrop-blur sm:p-5 lg:sticky lg:top-6 lg:h-fit">
-          <h1 className="text-lg font-black tracking-tight text-studio-800 sm:text-xl">Agentic Social Studio</h1>
+          <div className="flex items-center gap-3">
+            <img src="/app_icon.png" alt="Agentic Social Media Strategist" className="h-10 w-10 sm:h-12 sm:w-12" />
+            <h1 className="text-lg font-black tracking-tight text-studio-800 sm:text-xl">Social Media Strategist</h1>
+          </div>
           <p className="mt-2 text-xs leading-5 text-studio-600 sm:text-sm sm:leading-6">
-            Multi-agent content system powered by Gemini + Claude.
+            Strategic social media planning powered by Gemini & Claude AI.
           </p>
 
           <label className="mt-4 block space-y-1 text-sm md:hidden">
