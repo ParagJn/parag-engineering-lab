@@ -1,8 +1,10 @@
+import asyncio
 import json
 import os
+import re
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import Any, AsyncGenerator, Dict, List, Optional, Literal
 
 import httpx
 from dotenv import load_dotenv
@@ -13,6 +15,8 @@ from pydantic import BaseModel, HttpUrl
 
 BASE_DIR = Path(__file__).resolve().parent
 BACKEND_DIR = BASE_DIR.parent
+PROJECT_DIR = BACKEND_DIR.parent
+GENERATED_DIR = PROJECT_DIR / "generated_articles"
 
 # Always load backend/app/.env first.
 load_dotenv(BASE_DIR / ".env")
@@ -47,6 +51,8 @@ app.add_middleware(
 
 class GenerateRequest(BaseModel):
     urls: List[HttpUrl]
+    article_id: Optional[str] = None
+    platform: Literal["blog", "linkedin", "instagram", "x"] = "blog"
 
 
 class ApplySuggestionsRequest(BaseModel):
@@ -54,6 +60,16 @@ class ApplySuggestionsRequest(BaseModel):
     article: str
     improvements: List[str]
     review_summary: Optional[str] = None
+    article_id: Optional[str] = None
+    platform: Literal["blog", "linkedin", "instagram", "x"] = "blog"
+
+
+class ManualRegenerateRequest(BaseModel):
+    urls: List[HttpUrl]
+    article: str
+    change_request: str
+    article_id: Optional[str] = None
+    platform: Literal["blog", "linkedin", "instagram", "x"] = "blog"
 
 
 class ReviewResult(BaseModel):
@@ -88,7 +104,9 @@ def get_runtime_settings() -> Dict[str, Any]:
         ),
         "gemini_temperature": float(get_config("llm.gemini.temperature", 0.7)),
         "gemini_max_output_tokens": int(get_config("llm.gemini.max_output_tokens", 3000)),
-        "claude_api_url": get_config("llm.claude.api_url", "https://api.anthropic.com/v1/messages"),
+        "claude_api_url": get_config(
+            "llm.claude.api_url", "https://api.anthropic.com/v1/messages"
+        ),
         "claude_model": get_config(
             "llm.claude.model", os.getenv("CLAUDE_MODEL", "claude-3-5-sonnet-latest")
         ),
@@ -98,6 +116,143 @@ def get_runtime_settings() -> Dict[str, Any]:
         "request_timeout_seconds": float(get_config("llm.request_timeout_seconds", 90)),
         "min_score": int(get_config("quality.min_score", 7)),
         "max_retries": int(get_config("quality.max_retries", 2)),
+        "max_parallel_articles": max(1, int(get_config("processing.max_parallel_articles", 3))),
+    }
+
+
+MAX_PARALLEL_ARTICLES = max(1, int(get_config("processing.max_parallel_articles", 3)))
+GENERATION_SEMAPHORE = asyncio.Semaphore(MAX_PARALLEL_ARTICLES)
+GENERATION_STATE_LOCK = asyncio.Lock()
+ACTIVE_GENERATIONS = 0
+WAITING_GENERATIONS = 0
+
+
+async def acquire_generation_slot() -> Dict[str, int | bool]:
+    global ACTIVE_GENERATIONS, WAITING_GENERATIONS
+
+    async with GENERATION_STATE_LOCK:
+        was_queued = ACTIVE_GENERATIONS >= MAX_PARALLEL_ARTICLES
+        queue_position = 0
+        if was_queued:
+            WAITING_GENERATIONS += 1
+            queue_position = WAITING_GENERATIONS
+
+    await GENERATION_SEMAPHORE.acquire()
+
+    async with GENERATION_STATE_LOCK:
+        if was_queued and WAITING_GENERATIONS > 0:
+            WAITING_GENERATIONS -= 1
+        ACTIVE_GENERATIONS += 1
+        active_now = ACTIVE_GENERATIONS
+        waiting_now = WAITING_GENERATIONS
+
+    return {
+        "was_queued": was_queued,
+        "queue_position": queue_position,
+        "active_now": active_now,
+        "waiting_now": waiting_now,
+    }
+
+
+async def release_generation_slot() -> Dict[str, int]:
+    global ACTIVE_GENERATIONS
+
+    GENERATION_SEMAPHORE.release()
+
+    async with GENERATION_STATE_LOCK:
+        ACTIVE_GENERATIONS = max(0, ACTIVE_GENERATIONS - 1)
+        return {
+            "active_now": ACTIVE_GENERATIONS,
+            "waiting_now": WAITING_GENERATIONS,
+        }
+
+
+def ensure_generated_dir() -> None:
+    GENERATED_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def sanitize_article_id(article_id: str) -> str:
+    safe_name = Path(article_id).name
+    if not safe_name.endswith(".md"):
+        safe_name = f"{safe_name}.md"
+    return safe_name
+
+
+def slugify(text: str) -> str:
+    cleaned = re.sub(r"[^a-zA-Z0-9\s-]", "", text).strip().lower()
+    slug = re.sub(r"[\s_-]+", "-", cleaned)
+    return slug[:60] or "article"
+
+
+def extract_title(article: str) -> str:
+    for line in article.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("#"):
+            return stripped.lstrip("#").strip()[:120] or "Generated Article"
+
+    for line in article.splitlines():
+        stripped = line.strip()
+        if stripped:
+            return stripped[:120]
+
+    return "Generated Article"
+
+
+def save_article_markdown(article: str, article_id: Optional[str] = None) -> Dict[str, str]:
+    ensure_generated_dir()
+    title = extract_title(article)
+
+    if article_id:
+        safe_id = sanitize_article_id(article_id)
+    else:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_id = f"{timestamp}_{slugify(title)}.md"
+
+    path = GENERATED_DIR / safe_id
+    path.write_text(article, encoding="utf-8")
+
+    return {"article_id": safe_id, "article_title": title}
+
+
+def list_saved_articles() -> List[Dict[str, str]]:
+    ensure_generated_dir()
+    articles: List[Dict[str, str]] = []
+
+    for path in GENERATED_DIR.glob("*.md"):
+        try:
+            content = path.read_text(encoding="utf-8")
+            title = extract_title(content)
+            modified = datetime.fromtimestamp(path.stat().st_mtime).isoformat()
+            articles.append(
+                {
+                    "article_id": path.name,
+                    "title": title,
+                    "updated_at": modified,
+                }
+            )
+        except OSError:
+            continue
+
+    articles.sort(key=lambda item: item["updated_at"], reverse=True)
+    return articles
+
+
+def read_saved_article(article_id: str) -> Dict[str, str]:
+    ensure_generated_dir()
+    safe_id = sanitize_article_id(article_id)
+    path = GENERATED_DIR / safe_id
+
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Article not found.")
+
+    content = path.read_text(encoding="utf-8")
+    modified = datetime.fromtimestamp(path.stat().st_mtime).isoformat()
+
+    return {
+        "article_id": safe_id,
+        "title": extract_title(content),
+        "content": content,
+        "updated_at": modified,
     }
 
 
@@ -260,11 +415,46 @@ async def review_with_claude(
     )
 
 
-def build_initial_prompt(urls: List[str], current_date: str) -> str:
+def normalize_platform(platform: str) -> str:
+    value = (platform or "blog").strip().lower()
+    if value in {"linkedin", "instagram", "x", "blog"}:
+        return value
+    return "blog"
+
+
+def platform_instruction(platform: str) -> str:
+    platform = normalize_platform(platform)
+    if platform == "linkedin":
+        return (
+            "Write for LinkedIn: professional, insight-driven, and credible. "
+            "Use clear business/academic framing, structured points, and avoid slang. "
+            "End with 3-5 relevant LinkedIn-friendly hashtags."
+        )
+    if platform == "instagram":
+        return (
+            "Write for Instagram: concise, engaging, audience-friendly, and visually descriptive. "
+            "Keep punchy paragraphs, include an inviting hook, and finish with 6-10 relevant hashtags."
+        )
+    if platform == "x":
+        return (
+            "Write for X (Twitter): direct, high-impact, fast to scan, and trend-aware. "
+            "Use short sections and include 3-6 relevant hashtags at the end."
+        )
+    return (
+        "Write as an SEO-optimized blog post: strong keyword-rich title, semantic subheadings, "
+        "search-friendly phrasing, internal clarity, and readable long-form flow."
+    )
+
+
+def build_initial_prompt(urls: List[str], current_date: str, platform: str) -> str:
     sources = "\n".join(f"- {url}" for url in urls)
+    style_instruction = platform_instruction(platform)
     return f"""
 You are an expert editor and analyst.
 Today is {current_date}.
+
+Target platform: {normalize_platform(platform)}
+Platform style instruction: {style_instruction}
 
 Task:
 1) Research the provided source URLs.
@@ -289,14 +479,19 @@ def build_regen_prompt(
     prior_article: str,
     review: ReviewResult,
     attempt: int,
+    platform: str,
 ) -> str:
     sources = "\n".join(f"- {url}" for url in urls)
     improvement_points = "\n".join(f"- {p}" for p in review.improvements)
+    style_instruction = platform_instruction(platform)
 
     return f"""
 You previously generated an article that scored {review.score}/10 from a quality reviewer.
 Today is {current_date}.
 This is regeneration attempt #{attempt}.
+
+Target platform: {normalize_platform(platform)}
+Platform style instruction: {style_instruction}
 
 Improve the article by addressing all feedback below and rewrite it fully.
 
@@ -326,13 +521,18 @@ def build_apply_suggestions_prompt(
     article: str,
     review_summary: str,
     improvements: List[str],
+    platform: str,
 ) -> str:
     sources = "\n".join(f"- {url}" for url in urls)
     improvements_text = "\n".join(f"- {item}" for item in improvements)
+    style_instruction = platform_instruction(platform)
 
     return f"""
 Today is {current_date}.
 You are revising an existing article using reviewer feedback.
+
+Target platform: {normalize_platform(platform)}
+Platform style instruction: {style_instruction}
 
 Task:
 - Apply all reviewer suggestions below.
@@ -346,6 +546,39 @@ Suggestions to apply:
 {improvements_text}
 
 Source URLs (keep claims grounded):
+{sources}
+
+Current article:
+{article}
+""".strip()
+
+
+def build_manual_regen_prompt(
+    urls: List[str],
+    current_date: str,
+    article: str,
+    change_request: str,
+    platform: str,
+) -> str:
+    sources = "\n".join(f"- {url}" for url in urls)
+    style_instruction = platform_instruction(platform)
+    return f"""
+Today is {current_date}.
+You are revising an existing article based on explicit user requests.
+
+Target platform: {normalize_platform(platform)}
+Platform style instruction: {style_instruction}
+
+User-requested changes:
+{change_request}
+
+Task:
+- Apply every requested change.
+- Keep the strongest parts of the original article.
+- Preserve factual grounding using the provided URLs.
+- Return one complete revised article in Markdown.
+
+Source URLs:
 {sources}
 
 Current article:
@@ -381,7 +614,20 @@ async def health() -> Dict[str, Any]:
         "frontend_port": frontend_port,
         "gemini_key_configured": bool(settings["gemini_key"]),
         "claude_key_configured": bool(settings["claude_key"]),
+        "max_parallel_articles": settings["max_parallel_articles"],
+        "active_generations": ACTIVE_GENERATIONS,
+        "waiting_generations": WAITING_GENERATIONS,
     }
+
+
+@app.get("/api/articles")
+async def get_articles() -> Dict[str, List[Dict[str, str]]]:
+    return {"articles": list_saved_articles()}
+
+
+@app.get("/api/articles/{article_id}")
+async def get_article(article_id: str) -> Dict[str, str]:
+    return read_saved_article(article_id)
 
 
 @app.post("/api/generate-stream")
@@ -399,6 +645,7 @@ async def generate_stream(request: GenerateRequest) -> StreamingResponse:
         current_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         article_text: Optional[str] = None
         last_review: Optional[ReviewResult] = None
+        acquired_slot = False
 
         yield sse_event(
             "status",
@@ -408,142 +655,179 @@ async def generate_stream(request: GenerateRequest) -> StreamingResponse:
             },
         )
 
-        timeout = httpx.Timeout(settings["request_timeout_seconds"])
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            for attempt in range(1, max_attempts + 1):
-                if attempt == 1:
-                    yield sse_event(
-                        "status",
-                        {
-                            "step": "gemini_research",
-                            "attempt": attempt,
-                            "message": "Gemini is researching URLs and drafting the first article.",
-                        },
-                    )
-                    prompt = build_initial_prompt(urls, current_date)
-                else:
-                    yield sse_event(
-                        "status",
-                        {
-                            "step": "gemini_regenerate",
-                            "attempt": attempt,
-                            "message": f"Gemini is regenerating article with reviewer feedback (attempt {attempt}/{max_attempts}).",
-                        },
-                    )
-                    prompt = build_regen_prompt(
-                        urls,
-                        current_date,
-                        article_text or "",
-                        last_review or ReviewResult(score=0, summary="", improvements=[]),
-                        attempt,
-                    )
+        try:
+            slot_info = await acquire_generation_slot()
+            acquired_slot = True
 
-                try:
-                    article_text = await generate_with_gemini(
-                        client=client,
-                        api_key=settings["gemini_key"],
-                        api_base=settings["gemini_api_base"],
-                        model=settings["gemini_model"],
-                        prompt=prompt,
-                        temperature=settings["gemini_temperature"],
-                        max_output_tokens=settings["gemini_max_output_tokens"],
-                    )
-                except Exception as exc:  # noqa: BLE001
-                    yield sse_event(
-                        "error",
-                        {
-                            "step": "gemini_error",
-                            "attempt": attempt,
-                            "message": format_gemini_error(exc),
-                        },
-                    )
-                    return
-
+            if slot_info["was_queued"]:
                 yield sse_event(
                     "status",
                     {
-                        "step": "claude_review",
-                        "attempt": attempt,
-                        "message": "Claude is reviewing article quality and assigning score.",
+                        "step": "waiting_for_slot",
+                        "message": (
+                            f"Generation queued. Waiting for an available worker slot "
+                            f"(queue position {slot_info['queue_position']})."
+                        ),
                     },
                 )
 
-                try:
-                    last_review = await review_with_claude(
-                        client=client,
-                        api_key=settings["claude_key"],
-                        api_url=settings["claude_api_url"],
-                        anthropic_version=settings["claude_anthropic_version"],
-                        model=settings["claude_model"],
-                        temperature=settings["claude_temperature"],
-                        max_tokens=settings["claude_max_tokens"],
-                        article=article_text,
-                    )
-                except Exception as exc:  # noqa: BLE001
-                    yield sse_event(
-                        "error",
-                        {
-                            "step": "claude_error",
-                            "attempt": attempt,
-                            "message": format_claude_error(exc),
-                        },
-                    )
-                    return
+            yield sse_event(
+                "status",
+                {
+                    "step": "slot_acquired",
+                    "message": (
+                        f"Worker slot acquired. Running jobs: {slot_info['active_now']}/"
+                        f"{settings['max_parallel_articles']}."
+                    ),
+                },
+            )
 
-                yield sse_event(
-                    "review",
-                    {
-                        "step": "review_complete",
-                        "attempt": attempt,
-                        "score": last_review.score,
-                        "summary": last_review.summary,
-                        "improvements": last_review.improvements,
-                    },
-                )
+            timeout = httpx.Timeout(settings["request_timeout_seconds"])
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                for attempt in range(1, max_attempts + 1):
+                    if attempt == 1:
+                        yield sse_event(
+                            "status",
+                            {
+                                "step": "gemini_research",
+                                "attempt": attempt,
+                                "message": "Gemini is researching URLs and drafting the first article.",
+                            },
+                        )
+                        prompt = build_initial_prompt(urls, current_date, request.platform)
+                    else:
+                        yield sse_event(
+                            "status",
+                            {
+                                "step": "gemini_regenerate",
+                                "attempt": attempt,
+                                "message": f"Gemini is regenerating article with reviewer feedback (attempt {attempt}/{max_attempts}).",
+                            },
+                        )
+                        prompt = build_regen_prompt(
+                            urls,
+                            current_date,
+                            article_text or "",
+                            last_review or ReviewResult(score=0, summary="", improvements=[]),
+                            attempt,
+                            request.platform,
+                        )
 
-                if last_review.score >= min_score:
-                    yield sse_event(
-                        "done",
-                        {
-                            "status": "success",
-                            "attempts_used": attempt,
-                            "final_score": last_review.score,
-                            "review_summary": last_review.summary,
-                            "article": article_text,
-                            "improvements": last_review.improvements,
-                            "message": "Article passed quality threshold.",
-                        },
-                    )
-                    return
+                    try:
+                        article_text = await generate_with_gemini(
+                            client=client,
+                            api_key=settings["gemini_key"],
+                            api_base=settings["gemini_api_base"],
+                            model=settings["gemini_model"],
+                            prompt=prompt,
+                            temperature=settings["gemini_temperature"],
+                            max_output_tokens=settings["gemini_max_output_tokens"],
+                        )
+                    except Exception as exc:  # noqa: BLE001
+                        yield sse_event(
+                            "error",
+                            {
+                                "step": "gemini_error",
+                                "attempt": attempt,
+                                "message": format_gemini_error(exc),
+                            },
+                        )
+                        return
 
-                if attempt < max_attempts:
                     yield sse_event(
                         "status",
                         {
-                            "step": "retrying",
+                            "step": "claude_review",
                             "attempt": attempt,
-                            "message": (
-                                f"Score was {last_review.score}/10 (<{min_score}). Regenerating with reviewer feedback."
-                            ),
+                            "message": "Claude is reviewing article quality and assigning score.",
                         },
                     )
-                else:
+
+                    try:
+                        last_review = await review_with_claude(
+                            client=client,
+                            api_key=settings["claude_key"],
+                            api_url=settings["claude_api_url"],
+                            anthropic_version=settings["claude_anthropic_version"],
+                            model=settings["claude_model"],
+                            temperature=settings["claude_temperature"],
+                            max_tokens=settings["claude_max_tokens"],
+                            article=article_text,
+                        )
+                    except Exception as exc:  # noqa: BLE001
+                        yield sse_event(
+                            "error",
+                            {
+                                "step": "claude_error",
+                                "attempt": attempt,
+                                "message": format_claude_error(exc),
+                            },
+                        )
+                        return
+
                     yield sse_event(
-                        "done",
+                        "review",
                         {
-                            "status": "failed_quality",
-                            "attempts_used": attempt,
-                            "final_score": last_review.score,
-                            "review_summary": last_review.summary,
-                            "article": article_text,
+                            "step": "review_complete",
+                            "attempt": attempt,
+                            "score": last_review.score,
+                            "summary": last_review.summary,
                             "improvements": last_review.improvements,
-                            "message": (
-                                "Article did not pass quality threshold after max retries. "
-                                "Review feedback is provided for improvement."
-                            ),
                         },
                     )
-                    return
+
+                    if last_review.score >= min_score:
+                        saved = save_article_markdown(article_text, request.article_id)
+                        yield sse_event(
+                            "done",
+                            {
+                                "status": "success",
+                                "attempts_used": attempt,
+                                "final_score": last_review.score,
+                                "review_summary": last_review.summary,
+                                "article": article_text,
+                                "improvements": last_review.improvements,
+                                "message": "Article passed quality threshold.",
+                                "article_id": saved["article_id"],
+                                "article_title": saved["article_title"],
+                            },
+                        )
+                        return
+
+                    if attempt < max_attempts:
+                        yield sse_event(
+                            "status",
+                            {
+                                "step": "retrying",
+                                "attempt": attempt,
+                                "message": (
+                                    f"Score was {last_review.score}/10 (<{min_score}). Regenerating with reviewer feedback."
+                                ),
+                            },
+                        )
+                    else:
+                        saved = save_article_markdown(article_text or "", request.article_id)
+                        yield sse_event(
+                            "done",
+                            {
+                                "status": "failed_quality",
+                                "attempts_used": attempt,
+                                "final_score": last_review.score,
+                                "review_summary": last_review.summary,
+                                "article": article_text,
+                                "improvements": last_review.improvements,
+                                "message": (
+                                    "Article did not pass quality threshold after max retries. "
+                                    "Review feedback is provided for improvement."
+                                ),
+                                "article_id": saved["article_id"],
+                                "article_title": saved["article_title"],
+                            },
+                        )
+                        return
+        finally:
+            if acquired_slot:
+                await release_generation_slot()
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
@@ -564,6 +848,7 @@ async def apply_suggestions_stream(request: ApplySuggestionsRequest) -> Streamin
     async def event_stream() -> AsyncGenerator[str, None]:
         min_score = settings["min_score"]
         current_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        acquired_slot = False
 
         yield sse_event(
             "status",
@@ -573,88 +858,268 @@ async def apply_suggestions_stream(request: ApplySuggestionsRequest) -> Streamin
             },
         )
 
-        prompt = build_apply_suggestions_prompt(
-            urls=urls,
-            current_date=current_date,
-            article=request.article,
-            review_summary=request.review_summary or "No summary provided.",
-            improvements=request.improvements,
-        )
+        try:
+            slot_info = await acquire_generation_slot()
+            acquired_slot = True
 
-        timeout = httpx.Timeout(settings["request_timeout_seconds"])
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            try:
-                refined_article = await generate_with_gemini(
-                    client=client,
-                    api_key=settings["gemini_key"],
-                    api_base=settings["gemini_api_base"],
-                    model=settings["gemini_model"],
-                    prompt=prompt,
-                    temperature=settings["gemini_temperature"],
-                    max_output_tokens=settings["gemini_max_output_tokens"],
-                )
-            except Exception as exc:  # noqa: BLE001
+            if slot_info["was_queued"]:
                 yield sse_event(
-                    "error",
+                    "status",
                     {
-                        "step": "gemini_apply_error",
-                        "message": format_gemini_error(exc),
+                        "step": "waiting_for_slot",
+                        "message": (
+                            f"Refinement queued. Waiting for an available worker slot "
+                            f"(queue position {slot_info['queue_position']})."
+                        ),
                     },
                 )
-                return
 
             yield sse_event(
                 "status",
                 {
-                    "step": "apply_suggestions_review",
-                    "message": "Claude is reviewing the refined article.",
+                    "step": "slot_acquired",
+                    "message": (
+                        f"Worker slot acquired. Running jobs: {slot_info['active_now']}/"
+                        f"{settings['max_parallel_articles']}."
+                    ),
                 },
             )
 
-            try:
-                review = await review_with_claude(
-                    client=client,
-                    api_key=settings["claude_key"],
-                    api_url=settings["claude_api_url"],
-                    anthropic_version=settings["claude_anthropic_version"],
-                    model=settings["claude_model"],
-                    temperature=settings["claude_temperature"],
-                    max_tokens=settings["claude_max_tokens"],
-                    article=refined_article,
-                )
-            except Exception as exc:  # noqa: BLE001
+            prompt = build_apply_suggestions_prompt(
+                urls=urls,
+                current_date=current_date,
+                article=request.article,
+                review_summary=request.review_summary or "No summary provided.",
+                improvements=request.improvements,
+                platform=request.platform,
+            )
+
+            timeout = httpx.Timeout(settings["request_timeout_seconds"])
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                try:
+                    refined_article = await generate_with_gemini(
+                        client=client,
+                        api_key=settings["gemini_key"],
+                        api_base=settings["gemini_api_base"],
+                        model=settings["gemini_model"],
+                        prompt=prompt,
+                        temperature=settings["gemini_temperature"],
+                        max_output_tokens=settings["gemini_max_output_tokens"],
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    yield sse_event(
+                        "error",
+                        {
+                            "step": "gemini_apply_error",
+                            "message": format_gemini_error(exc),
+                        },
+                    )
+                    return
+
                 yield sse_event(
-                    "error",
+                    "status",
                     {
-                        "step": "claude_apply_error",
-                        "message": format_claude_error(exc),
+                        "step": "apply_suggestions_review",
+                        "message": "Claude is reviewing the refined article.",
                     },
                 )
-                return
+
+                try:
+                    review = await review_with_claude(
+                        client=client,
+                        api_key=settings["claude_key"],
+                        api_url=settings["claude_api_url"],
+                        anthropic_version=settings["claude_anthropic_version"],
+                        model=settings["claude_model"],
+                        temperature=settings["claude_temperature"],
+                        max_tokens=settings["claude_max_tokens"],
+                        article=refined_article,
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    yield sse_event(
+                        "error",
+                        {
+                            "step": "claude_apply_error",
+                            "message": format_claude_error(exc),
+                        },
+                    )
+                    return
+
+                yield sse_event(
+                    "review",
+                    {
+                        "step": "apply_review_complete",
+                        "attempt": 1,
+                        "score": review.score,
+                        "summary": review.summary,
+                        "improvements": review.improvements,
+                    },
+                )
+
+                saved = save_article_markdown(refined_article, request.article_id)
+                final_status = "success" if review.score >= min_score else "needs_more_work"
+                yield sse_event(
+                    "done",
+                    {
+                        "status": final_status,
+                        "attempts_used": 1,
+                        "final_score": review.score,
+                        "review_summary": review.summary,
+                        "article": refined_article,
+                        "improvements": review.improvements,
+                        "message": "Refinement completed using Claude suggestions.",
+                        "article_id": saved["article_id"],
+                        "article_title": saved["article_title"],
+                    },
+                )
+        finally:
+            if acquired_slot:
+                await release_generation_slot()
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+@app.post("/api/manual-regenerate-stream")
+async def manual_regenerate_stream(request: ManualRegenerateRequest) -> StreamingResponse:
+    settings = get_runtime_settings()
+    validate_keys(settings)
+
+    urls = [str(url) for url in request.urls]
+    if not urls:
+        raise HTTPException(status_code=400, detail="At least one URL is required.")
+    if not request.article.strip():
+        raise HTTPException(status_code=400, detail="Current article is required.")
+    if not request.change_request.strip():
+        raise HTTPException(status_code=400, detail="Change request is required.")
+
+    async def event_stream() -> AsyncGenerator[str, None]:
+        min_score = settings["min_score"]
+        current_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        acquired_slot = False
+
+        yield sse_event(
+            "status",
+            {
+                "step": "manual_regen_start",
+                "message": "Applying your requested changes with Gemini.",
+            },
+        )
+
+        try:
+            slot_info = await acquire_generation_slot()
+            acquired_slot = True
+
+            if slot_info["was_queued"]:
+                yield sse_event(
+                    "status",
+                    {
+                        "step": "waiting_for_slot",
+                        "message": (
+                            f"Manual regeneration queued. Waiting for an available worker slot "
+                            f"(queue position {slot_info['queue_position']})."
+                        ),
+                    },
+                )
 
             yield sse_event(
-                "review",
+                "status",
                 {
-                    "step": "apply_review_complete",
-                    "attempt": 1,
-                    "score": review.score,
-                    "summary": review.summary,
-                    "improvements": review.improvements,
+                    "step": "slot_acquired",
+                    "message": (
+                        f"Worker slot acquired. Running jobs: {slot_info['active_now']}/"
+                        f"{settings['max_parallel_articles']}."
+                    ),
                 },
             )
 
-            final_status = "success" if review.score >= min_score else "needs_more_work"
-            yield sse_event(
-                "done",
-                {
-                    "status": final_status,
-                    "attempts_used": 1,
-                    "final_score": review.score,
-                    "review_summary": review.summary,
-                    "article": refined_article,
-                    "improvements": review.improvements,
-                    "message": "Refinement completed using Claude suggestions.",
-                },
+            prompt = build_manual_regen_prompt(
+                urls=urls,
+                current_date=current_date,
+                article=request.article,
+                change_request=request.change_request,
+                platform=request.platform,
             )
+
+            timeout = httpx.Timeout(settings["request_timeout_seconds"])
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                try:
+                    revised_article = await generate_with_gemini(
+                        client=client,
+                        api_key=settings["gemini_key"],
+                        api_base=settings["gemini_api_base"],
+                        model=settings["gemini_model"],
+                        prompt=prompt,
+                        temperature=settings["gemini_temperature"],
+                        max_output_tokens=settings["gemini_max_output_tokens"],
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    yield sse_event(
+                        "error",
+                        {
+                            "step": "gemini_manual_error",
+                            "message": format_gemini_error(exc),
+                        },
+                    )
+                    return
+
+                yield sse_event(
+                    "status",
+                    {
+                        "step": "manual_regen_review",
+                        "message": "Claude is reviewing the updated article.",
+                    },
+                )
+
+                try:
+                    review = await review_with_claude(
+                        client=client,
+                        api_key=settings["claude_key"],
+                        api_url=settings["claude_api_url"],
+                        anthropic_version=settings["claude_anthropic_version"],
+                        model=settings["claude_model"],
+                        temperature=settings["claude_temperature"],
+                        max_tokens=settings["claude_max_tokens"],
+                        article=revised_article,
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    yield sse_event(
+                        "error",
+                        {
+                            "step": "claude_manual_error",
+                            "message": format_claude_error(exc),
+                        },
+                    )
+                    return
+
+                yield sse_event(
+                    "review",
+                    {
+                        "step": "manual_review_complete",
+                        "attempt": 1,
+                        "score": review.score,
+                        "summary": review.summary,
+                        "improvements": review.improvements,
+                    },
+                )
+
+                saved = save_article_markdown(revised_article, request.article_id)
+                final_status = "success" if review.score >= min_score else "needs_more_work"
+                yield sse_event(
+                    "done",
+                    {
+                        "status": final_status,
+                        "attempts_used": 1,
+                        "final_score": review.score,
+                        "review_summary": review.summary,
+                        "article": revised_article,
+                        "improvements": review.improvements,
+                        "message": "Manual regeneration completed.",
+                        "article_id": saved["article_id"],
+                        "article_title": saved["article_title"],
+                    },
+                )
+        finally:
+            if acquired_slot:
+                await release_generation_slot()
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
