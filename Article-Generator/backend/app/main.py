@@ -13,16 +13,25 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, HttpUrl
 
-BASE_DIR = Path(__file__).resolve().parent
-BACKEND_DIR = BASE_DIR.parent
-PROJECT_DIR = BACKEND_DIR.parent
-GENERATED_DIR = PROJECT_DIR / "generated_articles"
+# Directory structure constants
+BASE_DIR = Path(__file__).resolve().parent  # backend/app/
+BACKEND_DIR = BASE_DIR.parent  # backend/
+PROJECT_DIR = BACKEND_DIR.parent  # project root
+GENERATED_DIR = PROJECT_DIR / "generated_articles"  # output directory
 
-# Always load backend/app/.env first.
+# Load environment variables from .env file
 load_dotenv(BASE_DIR / ".env")
 
 
 def load_app_config() -> Dict[str, Any]:
+    """Load application configuration from JSON file.
+    
+    Reads config file path from APP_CONFIG_PATH environment variable.
+    Path is resolved relative to backend directory if not absolute.
+    
+    Returns:
+        Configuration dictionary, or empty dict if file not found.
+    """
     config_path_value = os.getenv("APP_CONFIG_PATH", "app/config.json")
     config_path = Path(config_path_value)
 
@@ -38,8 +47,10 @@ def load_app_config() -> Dict[str, Any]:
 
 APP_CONFIG = load_app_config()
 
+# FastAPI application instance
 app = FastAPI(title="Article Generator API", version="1.0.0")
 
+# Enable CORS for frontend communication
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -50,12 +61,29 @@ app.add_middleware(
 
 
 class GenerateRequest(BaseModel):
+    """Request model for article generation.
+    
+    Attributes:
+        urls: List of source URLs to research and generate article from.
+        article_id: Optional ID for updating an existing article.
+        platform: Target platform (blog, linkedin, instagram, x) for style optimization.
+    """
     urls: List[HttpUrl]
     article_id: Optional[str] = None
     platform: Literal["blog", "linkedin", "instagram", "x"] = "blog"
 
 
 class ApplySuggestionsRequest(BaseModel):
+    """Request model for applying Claude's improvement suggestions.
+    
+    Attributes:
+        urls: Source URLs for factual grounding.
+        article: Current article text to improve.
+        improvements: List of specific improvements from Claude review.
+        review_summary: Optional summary from Claude's review.
+        article_id: Optional ID for updating existing article.
+        platform: Target platform for style optimization.
+    """
     urls: List[HttpUrl]
     article: str
     improvements: List[str]
@@ -65,6 +93,15 @@ class ApplySuggestionsRequest(BaseModel):
 
 
 class ManualRegenerateRequest(BaseModel):
+    """Request model for manual article regeneration with user-specified changes.
+    
+    Attributes:
+        urls: Source URLs for factual grounding.
+        article: Current article text to modify.
+        change_request: User's description of desired changes.
+        article_id: Optional ID for updating existing article.
+        platform: Target platform for style optimization.
+    """
     urls: List[HttpUrl]
     article: str
     change_request: str
@@ -73,16 +110,41 @@ class ManualRegenerateRequest(BaseModel):
 
 
 class ReviewResult(BaseModel):
+    """Model for Claude's article quality review results.
+    
+    Attributes:
+        score: Quality score from 1-10 (10 being excellent).
+        summary: Brief summary of the review assessment.
+        improvements: List of specific suggestions for improvement.
+    """
     score: int
     summary: str
     improvements: List[str]
 
 
 def sse_event(event: str, payload: Dict[str, Any]) -> str:
+    """Format a Server-Sent Event (SSE) message.
+    
+    Args:
+        event: Event type name (e.g., 'status', 'review', 'done', 'error').
+        payload: Event data as dictionary to be JSON-encoded.
+    
+    Returns:
+        Formatted SSE string ready for streaming.
+    """
     return f"event: {event}\ndata: {json.dumps(payload)}\n\n"
 
 
 def get_config(path: str, default: Any = None) -> Any:
+    """Retrieve nested configuration value using dot notation.
+    
+    Args:
+        path: Dot-separated path to config value (e.g., 'llm.gemini.model').
+        default: Value to return if path doesn't exist.
+    
+    Returns:
+        Configuration value or default if not found.
+    """
     node: Any = APP_CONFIG
     for part in path.split("."):
         if not isinstance(node, dict) or part not in node:
@@ -92,6 +154,15 @@ def get_config(path: str, default: Any = None) -> Any:
 
 
 def get_runtime_settings() -> Dict[str, Any]:
+    """Load all runtime settings from environment and config file.
+    
+    Merges settings from .env file and config.json, with environment
+    variables taking precedence. Includes API keys, model configurations,
+    quality thresholds, and concurrency limits.
+    
+    Returns:
+        Dictionary containing all runtime configuration settings.
+    """
     return {
         "gemini_key": os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"),
         "claude_key": os.getenv("ANTHROPIC_API_KEY"),
@@ -120,14 +191,23 @@ def get_runtime_settings() -> Dict[str, Any]:
     }
 
 
+# Concurrency control: limit parallel article generations
 MAX_PARALLEL_ARTICLES = max(1, int(get_config("processing.max_parallel_articles", 3)))
 GENERATION_SEMAPHORE = asyncio.Semaphore(MAX_PARALLEL_ARTICLES)
 GENERATION_STATE_LOCK = asyncio.Lock()
-ACTIVE_GENERATIONS = 0
-WAITING_GENERATIONS = 0
+ACTIVE_GENERATIONS = 0  # Current number of active generations
+WAITING_GENERATIONS = 0  # Number of generations in queue
 
 
-async def acquire_generation_slot() -> Dict[str, int | bool]:
+async def acquire_generation_slot() -> Dict[str, Any]:
+    """Acquire a generation slot for article processing.
+    
+    Manages concurrency by enforcing max_parallel_articles limit.
+    Queues requests when all slots are occupied.
+    
+    Returns:
+        Dictionary with queue status: was_queued, queue_position, active_now, waiting_now.
+    """
     global ACTIVE_GENERATIONS, WAITING_GENERATIONS
 
     async with GENERATION_STATE_LOCK:
@@ -155,6 +235,11 @@ async def acquire_generation_slot() -> Dict[str, int | bool]:
 
 
 async def release_generation_slot() -> Dict[str, int]:
+    """Release a generation slot after completion.
+    
+    Returns:
+        Dictionary with current active and waiting generation counts.
+    """
     global ACTIVE_GENERATIONS
 
     GENERATION_SEMAPHORE.release()
@@ -168,10 +253,19 @@ async def release_generation_slot() -> Dict[str, int]:
 
 
 def ensure_generated_dir() -> None:
+    """Ensure the generated_articles directory exists."""
     GENERATED_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def sanitize_article_id(article_id: str) -> str:
+    """Sanitize article ID to prevent directory traversal.
+    
+    Args:
+        article_id: User-provided article ID/filename.
+    
+    Returns:
+        Safe filename with .md extension.
+    """
     safe_name = Path(article_id).name
     if not safe_name.endswith(".md"):
         safe_name = f"{safe_name}.md"
@@ -179,12 +273,31 @@ def sanitize_article_id(article_id: str) -> str:
 
 
 def slugify(text: str) -> str:
+    """Convert text to URL-friendly slug.
+    
+    Args:
+        text: Text to slugify (typically article title).
+    
+    Returns:
+        Lowercase slug with hyphens, max 60 characters.
+    """
     cleaned = re.sub(r"[^a-zA-Z0-9\s-]", "", text).strip().lower()
     slug = re.sub(r"[\s_-]+", "-", cleaned)
     return slug[:60] or "article"
 
 
 def extract_title(article: str) -> str:
+    """Extract title from markdown article.
+    
+    Tries to find first markdown heading (# Title), falls back to
+    first non-empty line if no heading found.
+    
+    Args:
+        article: Markdown article text.
+    
+    Returns:
+        Extracted title (max 120 chars) or 'Generated Article' if none found.
+    """
     for line in article.splitlines():
         stripped = line.strip()
         if stripped.startswith("#"):
@@ -199,6 +312,15 @@ def extract_title(article: str) -> str:
 
 
 def save_article_markdown(article: str, article_id: Optional[str] = None) -> Dict[str, str]:
+    """Save article as markdown file to generated_articles directory.
+    
+    Args:
+        article: Markdown article content.
+        article_id: Optional filename; if None, generates timestamp-based name.
+    
+    Returns:
+        Dictionary with article_id (filename) and article_title.
+    """
     ensure_generated_dir()
     title = extract_title(article)
 
@@ -215,6 +337,12 @@ def save_article_markdown(article: str, article_id: Optional[str] = None) -> Dic
 
 
 def list_saved_articles() -> List[Dict[str, str]]:
+    """List all saved articles with metadata.
+    
+    Returns:
+        List of article dictionaries sorted by updated_at (newest first).
+        Each dict contains: article_id, title, updated_at.
+    """
     ensure_generated_dir()
     articles: List[Dict[str, str]] = []
 
@@ -238,6 +366,17 @@ def list_saved_articles() -> List[Dict[str, str]]:
 
 
 def read_saved_article(article_id: str) -> Dict[str, str]:
+    """Read a saved article from disk.
+    
+    Args:
+        article_id: Article filename/ID.
+    
+    Returns:
+        Dictionary with article_id, title, content, and updated_at.
+    
+    Raises:
+        HTTPException: 404 if article not found.
+    """
     ensure_generated_dir()
     safe_id = sanitize_article_id(article_id)
     path = GENERATED_DIR / safe_id
@@ -257,6 +396,17 @@ def read_saved_article(article_id: str) -> Dict[str, str]:
 
 
 def parse_json_object(text: str) -> Dict[str, Any]:
+    """Extract and parse JSON object from text (handles markdown code blocks).
+    
+    Args:
+        text: Text containing JSON, possibly wrapped in markdown code blocks.
+    
+    Returns:
+        Parsed JSON as dictionary.
+    
+    Raises:
+        ValueError: If no valid JSON object found.
+    """
     text = text.strip()
     if text.startswith("```"):
         text = text.strip("`")
@@ -271,6 +421,14 @@ def parse_json_object(text: str) -> Dict[str, Any]:
 
 
 def format_gemini_error(exc: Exception) -> str:
+    """Format Gemini API errors into user-friendly messages.
+    
+    Args:
+        exc: Exception from Gemini API request.
+    
+    Returns:
+        User-friendly error message with troubleshooting guidance.
+    """
     if isinstance(exc, httpx.HTTPStatusError):
         status = exc.response.status_code
         if status in (400, 401, 403):
@@ -291,6 +449,14 @@ def format_gemini_error(exc: Exception) -> str:
 
 
 def format_claude_error(exc: Exception) -> str:
+    """Format Claude API errors into user-friendly messages.
+    
+    Args:
+        exc: Exception from Claude API request.
+    
+    Returns:
+        User-friendly error message with troubleshooting guidance.
+    """
     if isinstance(exc, httpx.HTTPStatusError):
         status = exc.response.status_code
         if status in (401, 403):
@@ -326,6 +492,24 @@ async def generate_with_gemini(
     temperature: float,
     max_output_tokens: int,
 ) -> str:
+    """Generate text using Google Gemini API.
+    
+    Args:
+        client: Async HTTP client.
+        api_key: Google API key.
+        api_base: Gemini API base URL.
+        model: Model name (e.g., 'gemini-2.0-flash').
+        prompt: Generation prompt.
+        temperature: Sampling temperature (0.0-1.0).
+        max_output_tokens: Maximum tokens to generate.
+    
+    Returns:
+        Generated text content.
+    
+    Raises:
+        httpx.HTTPStatusError: On API request failure.
+        ValueError: If response is empty or invalid.
+    """
     endpoint = f"{api_base.rstrip('/')}/{model}:generateContent"
     response = await client.post(
         endpoint,
@@ -364,6 +548,25 @@ async def review_with_claude(
     max_tokens: int,
     article: str,
 ) -> ReviewResult:
+    """Review article quality using Anthropic Claude API.
+    
+    Args:
+        client: Async HTTP client.
+        api_key: Anthropic API key.
+        api_url: Claude API endpoint URL.
+        anthropic_version: API version string.
+        model: Model name (e.g., 'claude-3-5-sonnet-latest').
+        temperature: Sampling temperature.
+        max_tokens: Maximum tokens for response.
+        article: Article text to review.
+    
+    Returns:
+        ReviewResult with score (1-10), summary, and improvements list.
+    
+    Raises:
+        httpx.HTTPStatusError: On API request failure.
+        ValueError: If response format is invalid.
+    """
     system_prompt = (
         "You are a strict content quality reviewer. "
         "Return only valid JSON with keys: score (integer 1-10), summary (string), "
@@ -416,6 +619,15 @@ async def review_with_claude(
 
 
 def normalize_platform(platform: str) -> str:
+    """Normalize platform string to valid value.
+    
+    Args:
+        platform: Platform name (case-insensitive).
+    
+    Returns:
+        Normalized platform: 'blog', 'linkedin', 'instagram', or 'x'.
+        Defaults to 'blog' if invalid.
+    """
     value = (platform or "blog").strip().lower()
     if value in {"linkedin", "instagram", "x", "blog"}:
         return value
@@ -423,6 +635,14 @@ def normalize_platform(platform: str) -> str:
 
 
 def platform_instruction(platform: str) -> str:
+    """Get platform-specific writing style instructions.
+    
+    Args:
+        platform: Target platform name.
+    
+    Returns:
+        Detailed style guide instructions for the platform.
+    """
     platform = normalize_platform(platform)
     if platform == "linkedin":
         return (
@@ -438,7 +658,9 @@ def platform_instruction(platform: str) -> str:
     if platform == "x":
         return (
             "Write for X (Twitter): direct, high-impact, fast to scan, and trend-aware. "
-            "Use short sections and include 3-6 relevant hashtags at the end."
+            "Use short sections and include 3-6 relevant hashtags for each of the section."
+            "Generate in a format that can be easily adapted into a thread of 5-10 tweets, with clear breakpoints for each tweet."
+            "Avoid long paragraphs and maintain a conversational tone."
         )
     return (
         "Write as an SEO-optimized blog post: strong keyword-rich title, semantic subheadings, "
@@ -447,6 +669,16 @@ def platform_instruction(platform: str) -> str:
 
 
 def build_initial_prompt(urls: List[str], current_date: str, platform: str) -> str:
+    """Build initial article generation prompt for Gemini.
+    
+    Args:
+        urls: Source URLs to research.
+        current_date: Current date for context.
+        platform: Target platform for style.
+    
+    Returns:
+        Formatted prompt string for article generation.
+    """
     sources = "\n".join(f"- {url}" for url in urls)
     style_instruction = platform_instruction(platform)
     return f"""
@@ -481,6 +713,19 @@ def build_regen_prompt(
     attempt: int,
     platform: str,
 ) -> str:
+    """Build regeneration prompt incorporating Claude's feedback.
+    
+    Args:
+        urls: Source URLs for grounding.
+        current_date: Current date.
+        prior_article: Previous article version.
+        review: Claude's review with score and improvements.
+        attempt: Current regeneration attempt number.
+        platform: Target platform.
+    
+    Returns:
+        Formatted prompt for article regeneration.
+    """
     sources = "\n".join(f"- {url}" for url in urls)
     improvement_points = "\n".join(f"- {p}" for p in review.improvements)
     style_instruction = platform_instruction(platform)
@@ -523,6 +768,19 @@ def build_apply_suggestions_prompt(
     improvements: List[str],
     platform: str,
 ) -> str:
+    """Build prompt for applying Claude's improvement suggestions.
+    
+    Args:
+        urls: Source URLs for grounding.
+        current_date: Current date.
+        article: Current article text.
+        review_summary: Claude's review summary.
+        improvements: List of specific improvements to apply.
+        platform: Target platform.
+    
+    Returns:
+        Formatted prompt for article refinement.
+    """
     sources = "\n".join(f"- {url}" for url in urls)
     improvements_text = "\n".join(f"- {item}" for item in improvements)
     style_instruction = platform_instruction(platform)
@@ -560,6 +818,18 @@ def build_manual_regen_prompt(
     change_request: str,
     platform: str,
 ) -> str:
+    """Build prompt for manual article regeneration.
+    
+    Args:
+        urls: Source URLs for grounding.
+        current_date: Current date.
+        article: Current article text.
+        change_request: User's description of desired changes.
+        platform: Target platform.
+    
+    Returns:
+        Formatted prompt for custom article revision.
+    """
     sources = "\n".join(f"- {url}" for url in urls)
     style_instruction = platform_instruction(platform)
     return f"""
@@ -587,6 +857,14 @@ Current article:
 
 
 def validate_keys(settings: Dict[str, Any]) -> None:
+    """Validate that required API keys are configured.
+    
+    Args:
+        settings: Runtime settings dictionary.
+    
+    Raises:
+        HTTPException: If any required API keys are missing.
+    """
     missing_keys: List[str] = []
     if not settings["gemini_key"]:
         missing_keys.append("GOOGLE_API_KEY (or GEMINI_API_KEY)")
@@ -605,6 +883,12 @@ def validate_keys(settings: Dict[str, Any]) -> None:
 
 @app.get("/api/health")
 async def health() -> Dict[str, Any]:
+    """Health check endpoint with system status.
+    
+    Returns:
+        System status including port configuration, API key status,
+        and current generation queue state.
+    """
     backend_port = int(os.getenv("PORT", get_config("backend.port", 8000)))
     frontend_port = int(os.getenv("FRONTEND_PORT", get_config("frontend.port", 5173)))
     settings = get_runtime_settings()
@@ -622,16 +906,77 @@ async def health() -> Dict[str, Any]:
 
 @app.get("/api/articles")
 async def get_articles() -> Dict[str, List[Dict[str, str]]]:
+    """List all saved articles.
+    
+    Returns:
+        Dictionary with 'articles' list containing article metadata
+        (article_id, title, updated_at) sorted by modification time.
+    """
     return {"articles": list_saved_articles()}
 
 
 @app.get("/api/articles/{article_id}")
 async def get_article(article_id: str) -> Dict[str, str]:
+    """Retrieve a specific saved article.
+    
+    Args:
+        article_id: Filename/ID of the article.
+    
+    Returns:
+        Article data including content, title, and metadata.
+    
+    Raises:
+        HTTPException: 404 if article not found.
+    """
     return read_saved_article(article_id)
+
+
+@app.delete("/api/articles/{article_id}")
+async def delete_article(article_id: str) -> Dict[str, str]:
+    """Delete a saved article.
+    
+    Args:
+        article_id: Filename/ID of the article to delete.
+    
+    Returns:
+        Dictionary with success message and deleted article_id.
+    
+    Raises:
+        HTTPException: 404 if article not found.
+    """
+    ensure_generated_dir()
+    safe_id = sanitize_article_id(article_id)
+    path = GENERATED_DIR / safe_id
+
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Article not found.")
+
+    path.unlink()
+    return {
+        "message": "Article deleted successfully.",
+        "article_id": safe_id,
+    }
 
 
 @app.post("/api/generate-stream")
 async def generate_stream(request: GenerateRequest) -> StreamingResponse:
+    """Generate article with auto-retry based on quality score.
+    
+    Streams events via Server-Sent Events (SSE):
+    - status: Generation progress updates
+    - review: Claude quality review results
+    - error: Error messages
+    - done: Final result with article
+    
+    Args:
+        request: Generation request with URLs and platform.
+    
+    Returns:
+        StreamingResponse with SSE events.
+    
+    Raises:
+        HTTPException: If URLs missing or API keys not configured.
+    """
     settings = get_runtime_settings()
     validate_keys(settings)
 
@@ -834,6 +1179,20 @@ async def generate_stream(request: GenerateRequest) -> StreamingResponse:
 
 @app.post("/api/apply-suggestions-stream")
 async def apply_suggestions_stream(request: ApplySuggestionsRequest) -> StreamingResponse:
+    """Apply Claude's improvement suggestions to regenerate article.
+    
+    Takes existing article and Claude's suggestions, prompts Gemini to
+    revise accordingly, then reviews the result with Claude.
+    
+    Args:
+        request: Request with article, improvements, and source URLs.
+    
+    Returns:
+        StreamingResponse with SSE events for progress and results.
+    
+    Raises:
+        HTTPException: If required fields missing or API keys not configured.
+    """
     settings = get_runtime_settings()
     validate_keys(settings)
 
@@ -981,6 +1340,20 @@ async def apply_suggestions_stream(request: ApplySuggestionsRequest) -> Streamin
 
 @app.post("/api/manual-regenerate-stream")
 async def manual_regenerate_stream(request: ManualRegenerateRequest) -> StreamingResponse:
+    """Regenerate article based on user's manual change request.
+    
+    Allows users to specify custom changes they want applied to the article.
+    Gemini applies the changes, then Claude reviews the updated version.
+    
+    Args:
+        request: Request with article, change_request, and source URLs.
+    
+    Returns:
+        StreamingResponse with SSE events for progress and results.
+    
+    Raises:
+        HTTPException: If required fields missing or API keys not configured.
+    """
     settings = get_runtime_settings()
     validate_keys(settings)
 

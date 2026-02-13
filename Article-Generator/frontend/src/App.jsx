@@ -233,6 +233,30 @@ export default function App() {
     }
   }
 
+  const deleteArticle = async (articleId, event) => {
+    event.stopPropagation()
+    if (!confirm('Are you sure you want to delete this article? This cannot be undone.')) {
+      return
+    }
+    try {
+      const response = await fetch(`${API_BASE}/api/articles/${encodeURIComponent(articleId)}`, {
+        method: 'DELETE',
+      })
+      if (!response.ok) {
+        throw new Error(await getApiErrorMessage(response))
+      }
+      await loadHistory()
+      if (result?.article_id === articleId) {
+        setResult(null)
+        setReviews([])
+        setLogs([])
+      }
+      addLog(`Article deleted: ${articleId}`)
+    } catch (err) {
+      setError(toUserFriendlyError(err?.message || 'Failed to delete article.'))
+    }
+  }
+
   useEffect(() => {
     loadHistory()
   }, [])
@@ -450,14 +474,26 @@ export default function App() {
                 <ul className="space-y-2">
                   {historyArticles.map((item) => (
                     <li key={item.article_id}>
-                      <button
-                        type="button"
-                        onClick={() => openHistoryArticle(item.article_id)}
-                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left shadow-sm transition-all duration-200 hover:scale-[1.02] hover:border-indigo-300 hover:bg-indigo-50 hover:shadow-md active:scale-[0.98]"
-                      >
-                        <p className="line-clamp-2 text-sm font-medium text-slate-800">{item.title}</p>
-                        <p className="mt-1 text-xs text-slate-500">{formatDateTime(item.updated_at)}</p>
-                      </button>
+                      <div className="group relative rounded-lg border border-slate-200 bg-slate-50 shadow-sm transition-all duration-200 hover:border-indigo-300 hover:bg-indigo-50 hover:shadow-md">
+                        <button
+                          type="button"
+                          onClick={() => openHistoryArticle(item.article_id)}
+                          className="w-full px-3 py-2 text-left transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                        >
+                          <p className="line-clamp-2 text-sm font-medium text-slate-800">{item.title}</p>
+                          <p className="mt-1 text-xs text-slate-500">{formatDateTime(item.updated_at)}</p>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => deleteArticle(item.article_id, e)}
+                          className="absolute right-2 top-2 rounded-md p-1.5 text-slate-400 opacity-0 transition-all duration-200 hover:bg-red-50 hover:text-red-600 hover:scale-110 active:scale-95 group-hover:opacity-100"
+                          title="Delete article"
+                        >
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
                     </li>
                   ))}
 
@@ -467,7 +503,10 @@ export default function App() {
           </aside>
 
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">AI Article Generator</h1>
+            <div className="flex items-center gap-3">
+              <img src="/Page-Icon.png" alt="Article Generator" className="h-14 w-14" />
+              <h1 className="text-4xl font-bold tracking-tight">Article Generator</h1>
+            </div>
             <p className="mt-2 text-slate-700">
               Provide source URLs. Gemini researches and writes. Claude reviews and scores quality.
               If score is below 7, regeneration runs for up to 2 retries.
