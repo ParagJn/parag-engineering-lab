@@ -1,0 +1,19 @@
+{
+  "app": {
+    "title": "PDF Comparison Tool",
+    "description": "Upload two PDF files and generate a detailed, formatted comparison report."
+  },
+  "pdf": {
+    "max_pages": 300,
+    "max_characters_for_llm": 180000,
+    "include_page_markers": true
+  },
+  "llm": {
+    "max_output_tokens": 4000,
+    "report_style": "detailed"
+  },
+  "report": {
+    "show_raw_text_preview": false,
+    "summary_top_n": 12
+  }
+}
