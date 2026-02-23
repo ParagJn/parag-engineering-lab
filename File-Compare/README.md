@@ -1,19 +1,21 @@
-# PDF File Comparison Tool (Streamlit + Azure OpenAI)
+# Document File Comparison Tool (Streamlit + Azure OpenAI)
 
-A simple but powerful 2-file PDF comparison tool.
+A simple but powerful 2-file comparison tool for PDF and DOCX.
 
 ## Features
-- Upload **2 PDF files**
-- Extract text from both files
-- Compute quick structural diff stats locally
-- Generate a **detailed, formatted AI report** using Azure OpenAI
+- Upload **2 files** (`.pdf` or `.docx`)
+- Extract text and split content into sections
+  - PDF: sectioned by page
+  - DOCX: sectioned by heading style (fallback to paragraph blocks)
+- Quick heuristic diff (line-level + section-level)
+- Generate a **detailed section-by-section AI report** using Azure OpenAI
 - Download report as Markdown
 - Runtime behavior configured via `config.json`
 - Secrets and endpoints loaded from `.env`
 
 ## Project Files
 - `app.py` - Streamlit application
-- `config.json` - App/PDF/LLM/report configuration
+- `config.json` - App/document/LLM/report configuration
 - `.env.example` - Required environment variables template
 - `requirements.txt` - Python dependencies
 
@@ -40,4 +42,4 @@ streamlit run app.py
 
 ## Notes
 - If a PDF is image-only/scanned, text extraction may fail without OCR.
-- For large PDFs, content is truncated based on `pdf.max_characters_for_llm` in `config.json`.
+- For large documents, content is truncated based on `pdf.max_characters_for_llm` in `config.json`.

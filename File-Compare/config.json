@@ -1,15 +1,16 @@
 {
   "app": {
-    "title": "PDF Comparison Tool",
-    "description": "Upload two PDF files and generate a detailed, formatted comparison report."
+    "title": "Document Comparison Tool",
+    "description": "Upload two PDF/DOCX files and generate a detailed, section-by-section comparison report."
   },
   "pdf": {
     "max_pages": 300,
     "max_characters_for_llm": 180000,
-    "include_page_markers": true
+    "include_page_markers": true,
+    "docx_paragraphs_per_section": 8
   },
   "llm": {
-    "max_output_tokens": 4000,
+    "max_output_tokens": 7000,
     "report_style": "detailed"
   },
   "report": {
