@@ -1,4 +1,5 @@
 import difflib
+import base64
 import json
 import logging
 import os
@@ -128,6 +129,135 @@ def extract_docx_text_and_sections(
     return full_text, sections, len(sections)
 
 
+def _split_markdown_sections(markdown_text: str) -> List[Dict[str, str]]:
+    lines = markdown_text.splitlines()
+    sections: List[Dict[str, str]] = []
+    current_title = "Visual Overview"
+    current_lines: List[str] = []
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("#"):
+            if current_lines:
+                sections.append({"title": current_title, "content": "\n".join(current_lines).strip()})
+            current_title = stripped.lstrip("#").strip() or "Untitled Section"
+            current_lines = []
+            continue
+        current_lines.append(line)
+
+    if current_lines:
+        sections.append({"title": current_title, "content": "\n".join(current_lines).strip()})
+
+    if not sections:
+        sections = [{"title": "Visual Overview", "content": markdown_text.strip()}]
+
+    return sections
+
+
+def _mime_type_for_image(file_name: str) -> str:
+    suffix = Path(file_name).suffix.lower()
+    if suffix == ".png":
+        return "image/png"
+    if suffix in {".jpg", ".jpeg"}:
+        return "image/jpeg"
+    if suffix == ".webp":
+        return "image/webp"
+    return "application/octet-stream"
+
+
+def extract_image_markup_with_azure(
+    client: AzureOpenAI,
+    deployment: str,
+    image_bytes: bytes,
+    image_name: str,
+    max_output_tokens: int,
+) -> Tuple[str, List[Dict[str, str]], int]:
+    image_b64 = base64.b64encode(image_bytes).decode("utf-8")
+    image_mime = _mime_type_for_image(image_name)
+    image_data_url = f"data:{image_mime};base64,{image_b64}"
+
+    vision_instruction = (
+        "Convert this image into structured markdown. "
+        "Preserve visible text exactly where possible, and organize output into sections "
+        "using markdown headings. Include tables/lists when visible. "
+        "If a region is unclear, mark it as [unclear]. Output markdown only."
+    )
+
+    markdown_text = ""
+    responses_error = None
+    chat_error = None
+
+    # Attempt 1: Responses API (newer multimodal format)
+    try:
+        response = client.responses.create(
+            model=deployment,
+            input=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "input_text", "text": vision_instruction},
+                        {"type": "input_image", "image_url": image_data_url},
+                    ],
+                }
+            ],
+            max_output_tokens=max_output_tokens,
+        )
+        markdown_text = getattr(response, "output_text", "") or ""
+        if isinstance(markdown_text, list):
+            markdown_text = "\n".join(
+                part.strip() for part in markdown_text if isinstance(part, str) and part.strip()
+            )
+    except Exception as exc:
+        responses_error = exc
+
+    # Attempt 2: Chat Completions API (some Azure deployments only support this multimodal shape)
+    if not isinstance(markdown_text, str) or not markdown_text.strip():
+        try:
+            chat_response = client.chat.completions.create(
+                model=deployment,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": vision_instruction},
+                            {"type": "image_url", "image_url": {"url": image_data_url}},
+                        ],
+                    }
+                ],
+                max_completion_tokens=max_output_tokens,
+            )
+
+            choice = chat_response.choices[0] if chat_response.choices else None
+            message = getattr(choice, "message", None) if choice else None
+            content = getattr(message, "content", None)
+            if isinstance(content, str):
+                markdown_text = content
+            elif isinstance(content, list):
+                parts: List[str] = []
+                for item in content:
+                    text_val = item.get("text") if isinstance(item, dict) else getattr(item, "text", None)
+                    if isinstance(text_val, str) and text_val.strip():
+                        parts.append(text_val.strip())
+                markdown_text = "\n".join(parts)
+        except Exception as exc:
+            chat_error = exc
+
+    if not isinstance(markdown_text, str) or not markdown_text.strip():
+        msg_parts = ["Image-to-markdown conversion returned empty output."]
+        if responses_error is not None:
+            msg_parts.append(f"Responses API error: {type(responses_error).__name__}: {responses_error}")
+        if chat_error is not None:
+            msg_parts.append(f"Chat Completions API error: {type(chat_error).__name__}: {chat_error}")
+        raise RuntimeError(" | ".join(msg_parts))
+        
+    if responses_error is not None:
+        logger.warning("Responses vision call failed, but chat-completions vision fallback succeeded: %s", responses_error)
+
+    markdown_text = markdown_text.strip()
+    sections = _split_markdown_sections(markdown_text)
+    return markdown_text, sections, len(sections)
+
+
 def extract_document(
     file_name: str,
     content_bytes: bytes,
@@ -152,7 +282,9 @@ def extract_document(
         )
         return full_text, sections, count, "sections", "docx"
 
-    raise ValueError(f"Unsupported file type: {suffix}. Only .pdf and .docx are supported.")
+    raise ValueError(
+        f"Unsupported file type: {suffix}. Only .pdf, .docx, .png, .jpg, .jpeg, and .webp are supported."
+    )
 
 
 def truncate_for_llm(text: str, max_chars: int) -> str:
@@ -279,24 +411,59 @@ def build_prompt(
     section_diff: Dict,
     report_style: str,
 ) -> str:
+    # Determine if we're comparing images, documents, or mixed
+    is_image_a = file_a_type == "image-markdown"
+    is_image_b = file_b_type == "image-markdown"
+    both_images = is_image_a and is_image_b
+    mixed_types = is_image_a != is_image_b
+    
+    # Customize language based on file types
+    if both_images:
+        analyst_role = "meticulous visual comparison analyst"
+        content_type = "images"
+        comparison_unit = "visual element"
+        comparison_instruction = "Compare two images (represented as markdown extracted from visual content) and produce a precise, element-by-element comparison report in markdown."
+        requirement_2 = "2) Element-by-Element Comparison (for each visual region/component)"
+        requirement_5 = "5) Missing visual elements/components from either image"
+        table_header = "Element/Region | File A | File B | Severity | Notes"
+        detail_table_header = "Element A | Element B | Similarity | Status"
+    elif mixed_types:
+        analyst_role = "meticulous content comparison analyst"
+        content_type = "files"
+        comparison_unit = "content section"
+        comparison_instruction = "Compare an image (represented as markdown) and a document, producing a precise, content-by-content comparison report in markdown."
+        requirement_2 = "2) Content-by-Content Comparison (for each aligned content area)"
+        requirement_5 = "5) Missing content areas/topics from either file"
+        table_header = "Content Area | File A | File B | Severity | Notes"
+        detail_table_header = "Content A | Content B | Similarity | Status"
+    else:
+        analyst_role = "meticulous document comparison analyst"
+        content_type = "documents"
+        comparison_unit = "section"
+        comparison_instruction = "Compare two documents and produce a precise, section-by-section report in markdown."
+        requirement_2 = "2) Section-by-Section Comparison (for each aligned section)"
+        requirement_5 = "5) Missing sections/topics from either document"
+        table_header = "Section | File A | File B | Severity | Notes"
+        detail_table_header = "Section A | Section B | Similarity | Status"
+    
     return f"""
-You are a meticulous document comparison analyst.
-Compare two documents and produce a precise, section-by-section report in markdown.
+You are a {analyst_role}.
+{comparison_instruction}
 
 Report requirements:
 1) Executive Summary
-2) Section-by-Section Comparison (for each aligned section)
+{requirement_2}
 3) Similarities
 4) Differences (major first)
-5) Missing sections/topics from either document
+{requirement_5}
 6) Final verdict with confidence score (0-100)
 
 Formatting requirements:
 - Use markdown headings and bullet points.
 - Use a table for high-priority differences with columns:
-  Section | File A | File B | Severity | Notes
-- Include a separate section-level table with columns:
-  Section A | Section B | Similarity | Status
+  {table_header}
+- Include a separate {comparison_unit}-level table with columns:
+  {detail_table_header}
 - Be specific and quote short snippets when needed.
 - If content seems truncated, mention that clearly.
 - Output must be concise but detailed and actionable.
@@ -305,6 +472,7 @@ Comparison context:
 - Report style: {report_style}
 - File A: {file_a_name} ({file_a_type})
 - File B: {file_b_name} ({file_b_type})
+- If a file type is image-markdown, treat its content as markdown extracted from the image's visual content.
 - Quick line diff summary: {json.dumps(quick_diff, ensure_ascii=True)}
 - Quick section diff summary: {json.dumps(section_diff, ensure_ascii=True)}
 
@@ -325,7 +493,7 @@ def generate_llm_report(
     max_output_tokens: int,
 ) -> str:
     messages = [
-        {"role": "system", "content": "You produce accurate document comparison reports with clear structure."},
+        {"role": "system", "content": "You produce accurate comparison reports with clear structure and detailed analysis."},
         {"role": "user", "content": prompt},
     ]
 
@@ -409,7 +577,12 @@ def main() -> None:
     st.set_page_config(page_title=app_cfg.get("title", "Document Compare"), layout="wide")
 
     st.title(app_cfg.get("title", "Document Comparison Tool"))
-    st.caption(app_cfg.get("description", "Upload two PDF/DOCX files and compare section by section."))
+    st.caption(
+        app_cfg.get(
+            "description",
+            "Upload two files (PDF, DOCX, or image) and compare section by section.",
+        )
+    )
 
     with st.sidebar:
         st.header("Configuration")
@@ -418,9 +591,17 @@ def main() -> None:
 
     col1, col2 = st.columns(2)
     with col1:
-        file_a = st.file_uploader("Upload File A (PDF or DOCX)", type=["pdf", "docx"], key="file_a")
+        file_a = st.file_uploader(
+            "Upload File A (PDF, DOCX, PNG, JPG, WEBP)",
+            type=["pdf", "docx", "png", "jpg", "jpeg", "webp"],
+            key="file_a",
+        )
     with col2:
-        file_b = st.file_uploader("Upload File B (PDF or DOCX)", type=["pdf", "docx"], key="file_b")
+        file_b = st.file_uploader(
+            "Upload File B (PDF, DOCX, PNG, JPG, WEBP)",
+            type=["pdf", "docx", "png", "jpg", "jpeg", "webp"],
+            key="file_b",
+        )
 
     if not file_a or not file_b:
         st.info("Please upload both files to continue.")
@@ -428,17 +609,65 @@ def main() -> None:
 
     if st.button("Compare Files", type="primary"):
         try:
-            with st.spinner("Extracting document text and sections..."):
-                text_a, sections_a, units_a, units_label_a, type_a = extract_document(
-                    file_a.name,
-                    file_a.getvalue(),
-                    pdf_cfg,
-                )
-                text_b, sections_b, units_b, units_label_b, type_b = extract_document(
-                    file_b.name,
-                    file_b.getvalue(),
-                    pdf_cfg,
-                )
+            client = build_azure_client()
+            deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT")
+            if not deployment:
+                st.error("Missing AZURE_OPENAI_DEPLOYMENT in .env")
+                return
+
+            suffix_a = Path(file_a.name).suffix.lower()
+            suffix_b = Path(file_b.name).suffix.lower()
+            image_suffixes = {".png", ".jpg", ".jpeg", ".webp"}
+            
+            # Determine file types for appropriate messaging
+            is_image_a = suffix_a in image_suffixes
+            is_image_b = suffix_b in image_suffixes
+            
+            # Set progress message based on file types
+            if is_image_a and is_image_b:
+                progress_msg = "Analyzing image content and extracting visual elements..."
+                report_title = "Detailed Image Comparison Report"
+            elif is_image_a or is_image_b:
+                progress_msg = "Extracting content from image and document..."
+                report_title = "Detailed Content Comparison Report"
+            else:
+                progress_msg = "Extracting document content and sections..."
+                report_title = "Detailed Section-by-Section Report"
+            
+            with st.spinner(progress_msg):
+                if suffix_a in image_suffixes:
+                    text_a, sections_a, units_a = extract_image_markup_with_azure(
+                        client=client,
+                        deployment=deployment,
+                        image_bytes=file_a.getvalue(),
+                        image_name=file_a.name,
+                        max_output_tokens=pdf_cfg.get("image_markup_max_output_tokens", 1600),
+                    )
+                    units_label_a = "sections"
+                    type_a = "image-markdown"
+                else:
+                    text_a, sections_a, units_a, units_label_a, type_a = extract_document(
+                        file_a.name,
+                        file_a.getvalue(),
+                        pdf_cfg,
+                    )
+
+                if suffix_b in image_suffixes:
+                    text_b, sections_b, units_b = extract_image_markup_with_azure(
+                        client=client,
+                        deployment=deployment,
+                        image_bytes=file_b.getvalue(),
+                        image_name=file_b.name,
+                        max_output_tokens=pdf_cfg.get("image_markup_max_output_tokens", 1600),
+                    )
+                    units_label_b = "sections"
+                    type_b = "image-markdown"
+                else:
+                    text_b, sections_b, units_b, units_label_b, type_b = extract_document(
+                        file_b.name,
+                        file_b.getvalue(),
+                        pdf_cfg,
+                    )
 
                 if not text_a.strip() or not text_b.strip():
                     st.error(
@@ -488,12 +717,6 @@ def main() -> None:
                     st.divider()
 
             with st.spinner("Generating detailed section-by-section AI report..."):
-                client = build_azure_client()
-                deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT")
-                if not deployment:
-                    st.error("Missing AZURE_OPENAI_DEPLOYMENT in .env")
-                    return
-
                 prompt = build_prompt(
                     file_a_name=file_a.name,
                     file_b_name=file_b.name,
@@ -513,7 +736,7 @@ def main() -> None:
                     max_output_tokens=llm_cfg.get("max_output_tokens", 7000),
                 )
 
-            st.subheader("Detailed Section-by-Section Report")
+            st.subheader(report_title)
             st.markdown(report)
 
             st.download_button(

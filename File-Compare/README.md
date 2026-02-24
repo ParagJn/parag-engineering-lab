@@ -1,12 +1,13 @@
 # Document File Comparison Tool (Streamlit + Azure OpenAI)
 
-A simple but powerful 2-file comparison tool for PDF and DOCX.
+A simple but powerful 2-file comparison tool for PDF, DOCX, and images.
 
 ## Features
-- Upload **2 files** (`.pdf` or `.docx`)
+- Upload **2 files** (`.pdf`, `.docx`, `.png`, `.jpg`, `.jpeg`, `.webp`)
 - Extract text and split content into sections
   - PDF: sectioned by page
   - DOCX: sectioned by heading style (fallback to paragraph blocks)
+  - Image: converted to markdown first, then sectioned by markdown headings
 - Quick heuristic diff (line-level + section-level)
 - Generate a **detailed section-by-section AI report** using Azure OpenAI
 - Download report as Markdown
@@ -41,5 +42,6 @@ streamlit run app.py
 ```
 
 ## Notes
+- Image comparison uses Azure vision input to convert each image into markdown first. Your deployment must support image input.
 - If a PDF is image-only/scanned, text extraction may fail without OCR.
 - For large documents, content is truncated based on `pdf.max_characters_for_llm` in `config.json`.
