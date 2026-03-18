@@ -1,0 +1,6 @@
+streamlit
+python-docx
+markdown-it-py
+mdit-py-plugins
+Pillow
+requests
