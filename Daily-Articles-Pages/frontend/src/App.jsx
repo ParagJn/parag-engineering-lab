@@ -79,6 +79,26 @@ const Icons = {
       <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
     </svg>
   ),
+  pdf: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6" /><path d="M9 15h2a1 1 0 001-1v-1a1 1 0 00-1-1H9v5" /><path d="M17 12h-2v5h2a2 2 0 000-5z" />
+    </svg>
+  ),
+  mail: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="4" width="20" height="16" rx="2" /><path d="M22 7l-10 7L2 7" />
+    </svg>
+  ),
+  send: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
+    </svg>
+  ),
+  x: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  ),
 }
 
 /* ── Source Icons Map ── */
@@ -107,6 +127,11 @@ function App() {
   const [archive, setArchive] = useState([])
   const [currentArchiveEntry, setCurrentArchiveEntry] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [emailModalOpen, setEmailModalOpen] = useState(false)
+  const [emailTo, setEmailTo] = useState('')
+  const [emailSending, setEmailSending] = useState(false)
+  const [emailStatus, setEmailStatus] = useState(null)
+  const [pdfDownloading, setPdfDownloading] = useState(false)
   const iframeRef = useRef(null)
 
   // Load sources + archive on mount
@@ -267,6 +292,52 @@ function App() {
     a.download = `morning-edition-${new Date().toISOString().split('T')[0]}.html`
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  const downloadPdf = async () => {
+    if (!currentArchiveEntry?.filename) return
+    setPdfDownloading(true)
+    try {
+      const resp = await fetch(`/api/archive/${currentArchiveEntry.filename}/pdf`)
+      if (!resp.ok) throw new Error('PDF generation failed')
+      const blob = await resp.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = currentArchiveEntry.filename.replace('.html', '.pdf')
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setPdfDownloading(false)
+    }
+  }
+
+  const sendEmail = async () => {
+    if (!currentArchiveEntry?.filename || !emailTo.trim()) return
+    const emails = emailTo.split(',').map(e => e.trim()).filter(Boolean)
+    if (!emails.length) return
+    setEmailSending(true)
+    setEmailStatus(null)
+    try {
+      const resp = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: currentArchiveEntry.filename, to_emails: emails }),
+      })
+      if (!resp.ok) {
+        const err = await resp.json()
+        throw new Error(err.detail || 'Failed to send email')
+      }
+      const data = await resp.json()
+      setEmailStatus({ ok: true, msg: `Sent to ${data.recipients} recipient${data.recipients > 1 ? 's' : ''}` })
+      setTimeout(() => { setEmailModalOpen(false); setEmailStatus(null) }, 2000)
+    } catch (e) {
+      setEmailStatus({ ok: false, msg: e.message })
+    } finally {
+      setEmailSending(false)
+    }
   }
 
   return (
@@ -520,14 +591,32 @@ function App() {
                   className="flex items-center gap-2 bg-white border border-stone-200 hover:border-stone-300 text-stone-600 hover:text-stone-800 font-medium px-5 py-2.5 rounded-xl transition-all text-sm shadow-sm"
                 >
                   {Icons.download}
-                  Download
+                  HTML
                 </button>
                 {currentArchiveEntry && (
                   <>
                     <button
+                      onClick={downloadPdf}
+                      disabled={pdfDownloading}
+                      className="flex items-center gap-2 bg-white border border-stone-200 hover:border-stone-300 text-stone-600 hover:text-stone-800 font-medium px-5 py-2.5 rounded-xl transition-all text-sm shadow-sm disabled:opacity-50"
+                    >
+                      {pdfDownloading ? (
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                      ) : Icons.pdf}
+                      PDF
+                    </button>
+                    <button
+                      onClick={() => { setEmailModalOpen(true); setEmailStatus(null) }}
+                      className="flex items-center gap-2 bg-white border border-indigo-200 hover:border-indigo-300 text-indigo-600 hover:text-indigo-700 font-medium px-5 py-2.5 rounded-xl transition-all text-sm shadow-sm"
+                    >
+                      {Icons.mail}
+                      Email
+                    </button>
+                    <div className="w-px h-6 bg-stone-200" />
+                    <button
                       onClick={handleRegenerateCurrent}
                       disabled={loading}
-                      className="flex items-center gap-2 bg-white border border-indigo-200 hover:border-indigo-300 text-indigo-600 hover:text-indigo-700 font-medium px-5 py-2.5 rounded-xl transition-all text-sm shadow-sm disabled:opacity-50"
+                      className="flex items-center gap-2 bg-white border border-stone-200 hover:border-stone-300 text-stone-600 hover:text-stone-800 font-medium px-5 py-2.5 rounded-xl transition-all text-sm shadow-sm disabled:opacity-50"
                     >
                       {Icons.refreshLg}
                       Regenerate
@@ -611,6 +700,82 @@ function App() {
           <span className="ml-auto">Morning Edition v1.0</span>
         </footer>
       </main>
+
+      {/* ── Email Modal ── */}
+      {emailModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setEmailModalOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden" onClick={e => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="px-6 py-5 border-b border-stone-100 flex items-center gap-3">
+              <span className="text-indigo-500">{Icons.mail}</span>
+              <h3 className="font-semibold text-stone-800 text-lg">Send Magazine via Email</h3>
+              <button onClick={() => setEmailModalOpen(false)} className="ml-auto text-stone-400 hover:text-stone-600 p-1 rounded-lg hover:bg-stone-100 transition-colors">
+                {Icons.x}
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="px-6 py-5">
+              <p className="text-stone-500 text-sm mb-4">
+                Recipients will get a styled email digest with the full magazine PDF attached. All article links remain clickable in the PDF.
+              </p>
+
+              <label className="block text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">
+                To (comma-separated)
+              </label>
+              <input
+                type="text"
+                value={emailTo}
+                onChange={e => setEmailTo(e.target.value)}
+                placeholder="alice@example.com, bob@example.com"
+                className="w-full px-4 py-3 border border-stone-200 rounded-xl text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                onKeyDown={e => e.key === 'Enter' && sendEmail()}
+              />
+
+              {currentArchiveEntry && (
+                <div className="mt-4 flex items-center gap-2 text-xs text-stone-400 bg-stone-50 rounded-lg px-3 py-2">
+                  {Icons.pdf}
+                  <span>Attaching: <strong className="text-stone-600">{currentArchiveEntry.filename.replace('.html', '.pdf')}</strong></span>
+                </div>
+              )}
+
+              {/* Status */}
+              {emailStatus && (
+                <div className={`mt-4 px-4 py-3 rounded-xl text-sm ${emailStatus.ok ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-600 border border-red-200'}`}>
+                  {emailStatus.ok ? '✓' : '⚠'} {emailStatus.msg}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-stone-100 flex justify-end gap-3">
+              <button
+                onClick={() => setEmailModalOpen(false)}
+                className="px-5 py-2.5 rounded-xl text-sm font-medium text-stone-500 hover:text-stone-700 hover:bg-stone-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={sendEmail}
+                disabled={emailSending || !emailTo.trim()}
+                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-stone-300 disabled:cursor-not-allowed text-white font-semibold px-6 py-2.5 rounded-xl transition-all text-sm shadow-md shadow-indigo-200"
+              >
+                {emailSending ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                    Sending…
+                  </>
+                ) : (
+                  <>
+                    {Icons.send}
+                    Send
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

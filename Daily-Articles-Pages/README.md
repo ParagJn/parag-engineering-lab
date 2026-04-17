@@ -25,6 +25,8 @@ Self-contained HTML magazine with TOC, SEO, JSON-LD, 10 visual spreads
 - **SEO-Ready HTML** — meta description, keywords, Open Graph, Twitter Cards, JSON-LD structured data
 - **Archive System** — Every generated magazine is saved to disk with metadata; browse, reload, delete, or regenerate from the sidebar
 - **Delete & Regenerate** — Available in both the archive sidebar and the main action bar
+- **PDF Export** — Chromium-rendered PDF with pixel-perfect styling and clickable hyperlinks (via Playwright)
+- **Email Newsletter** — Send a styled HTML digest with the full magazine PDF attached via SMTP
 
 ## News Sources
 
@@ -50,6 +52,8 @@ Self-contained HTML magazine with TOC, SEO, JSON-LD, 10 visual spreads
 │   ├── fetcher.py       # RSS fetching (httpx + feedparser) + Gemini enrichment
 │   ├── curator.py       # Anthropic Claude editorial curation
 │   ├── magazine.py      # HTML magazine renderer (spreads, TOC, SEO, JSON-LD)
+│   ├── pdf_generator.py # PDF export via Playwright (headless Chromium)
+│   ├── emailer.py       # Email delivery with PDF attachment (SMTP)
 │   └── requirements.txt
 ├── frontend/
 │   ├── src/
@@ -86,7 +90,16 @@ Create a `.env` file in the project root:
 ```
 ANTHROPIC_API_KEY=sk-ant-...
 GEMINI_API_KEY=AI...
+
+# Optional: Email delivery
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=you@gmail.com
+SMTP_PASSWORD=your-app-password
+SMTP_FROM_NAME=Morning Edition
 ```
+
+> **Gmail users**: Use an [App Password](https://myaccount.google.com/apppasswords) for `SMTP_PASSWORD`.
 
 ### 2. Backend
 
@@ -95,6 +108,7 @@ cd backend
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+playwright install chromium
 uvicorn main:app --reload --port 8000
 ```
 
@@ -118,6 +132,8 @@ Open [http://localhost:5173](http://localhost:5173).
 | `GET` | `/api/archive/{filename}` | Serve archived HTML |
 | `DELETE` | `/api/archive/{filename}` | Delete a specific archive entry |
 | `DELETE` | `/api/archive` | Clear all archives |
+| `GET` | `/api/archive/{filename}/pdf` | Download magazine as PDF |
+| `POST` | `/api/send-email` | Send magazine email `{ filename, to_emails: [...] }` |
 
 ## Tech Stack
 
@@ -128,4 +144,6 @@ Open [http://localhost:5173](http://localhost:5173).
 | AI — Enrichment | Google Gemini 2.0 Flash |
 | AI — Editorial | Anthropic Claude Sonnet 4 |
 | RSS Parsing | feedparser, httpx |
+| PDF Generation | Playwright (headless Chromium) |
+| Email | smtplib (SMTP/TLS) |
 | Fonts | Fraunces, Inter, JetBrains Mono |
