@@ -1,6 +1,6 @@
 ---
 name: scqa-writing-framework
-description: Structure compelling communication using the SCQA framework for clear, logical storytelling.
+description: Structure compelling communication using Situation-Complication-Question-Answer methodology.
 license: Complete terms in LICENSE.txt
 ---
 
@@ -8,61 +8,61 @@ license: Complete terms in LICENSE.txt
 
 ## Overview
 
-This skill applies the proven SCQA (Situation-Complication-Question-Answer) framework to transform complex ideas into compelling, structured communication. Perfect for business writing, presentations, consulting reports, and content creation that needs to engage audiences and drive understanding.
+This skill applies the proven SCQA (Situation-Complication-Question-Answer) framework to transform complex ideas into compelling, logical narratives. Perfect for business professionals, consultants, content creators, and anyone seeking to communicate with maximum clarity and impact.
 
-**Keywords**: SCQA, business writing, storytelling, structure, communication, consulting, presentations
+**Keywords**: business writing, communication framework, storytelling, consulting methodology, structured writing
 
 ## Core Framework
 
 ### Situation (S)
-- Establish context and background information
-- Set the current state or starting point
-- Provide necessary details for audience understanding
+- Establish clear context and background
+- Set the scene with relevant details
+- Ensure audience understands the starting point
 
 ### Complication (C)
-- Introduce problems, tensions, or challenges
-- Disrupt the established situation
-- Create interest and urgency
+- Introduce the problem, tension, or challenge
+- Create urgency and engagement
+- Highlight what disrupts the status quo
 
 ### Question (Q)
-- Pose the natural question arising from the complication
-- Focus on what the audience wants answered
+- Formulate the key question arising from the complication
+- Focus on what the audience needs to know
 - Bridge the gap between problem and solution
 
 ### Answer (A)
 - Provide clear solutions, insights, or recommendations
-- Address the question logically and completely
-- Deliver actionable outcomes
+- Address the question directly and logically
+- Deliver actionable conclusions
 
 ## Features
 
 - Transforms complex topics into digestible narratives
 - Creates natural flow from context to solution
-- Maintains audience engagement through structured tension
-- Applicable across multiple communication formats
-- Emphasizes logical progression and clarity
+- Engages readers through strategic tension building
+- Ensures logical progression of ideas
+- Adaptable for various communication formats
 
 ## Output Format
 
-- **Situation**: Context-setting paragraph(s)
-- **Complication**: Problem identification and impact
-- **Question**: Clear, focused question statement
-- **Answer**: Structured solution with supporting details
+- Structured content following SCQA sequence
+- Clear section headers for each framework element
+- Smooth transitions between components
+- Compelling narrative flow with logical conclusions
 
 ## Instructions
 
-- Begin by clearly defining the situation without assuming prior knowledge
-- Introduce complications that genuinely disrupt the established situation
-- Formulate questions that feel natural and urgent to the audience
-- Provide comprehensive answers that fully resolve the posed questions
-- Maintain logical flow between each SCQA element
-- Adapt complexity and tone to target audience
+- Begin with comprehensive situation analysis
+- Identify and articulate the core complication
+- Formulate questions that naturally arise from complications
+- Provide thorough, actionable answers
+- Maintain consistent narrative thread throughout
+- Adapt tone and complexity to target audience
 
 ## Constraints
 
-- Each SCQA element must be clearly identifiable and distinct
-- Complications must be genuine problems, not artificial tensions
-- Questions should arise naturally from the complication
-- Answers must directly address the posed questions
-- Avoid jumping between SCQA elements without clear transitions
-- Maintain consistent perspective and voice throughout
+- Must follow SCQA sequence strictly
+- Each section should be proportionally balanced
+- Avoid jumping to answers without proper setup
+- Ensure complications are genuinely problematic
+- Questions must logically flow from complications
+- Answers must directly address posed questions
