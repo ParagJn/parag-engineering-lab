@@ -298,14 +298,19 @@ async def delete_skill(skill_id: str):
     if skill_id not in meta:
         raise HTTPException(status_code=404, detail="Skill not found")
     m = meta[skill_id]
+    skill_name = m.get("skill_dir", m.get("name", ""))
     # Remove skill directory (or legacy file)
-    skill_dir = SKILLS_DIR / m.get("skill_dir", "")
+    skill_dir = SKILLS_DIR / skill_name
     if skill_dir.is_dir():
         shutil.rmtree(str(skill_dir))
     elif "filename" in m:
         fp = SKILLS_DIR / m["filename"]
         if fp.exists():
             fp.unlink()
+    # Also remove from .claude/skills/ if present
+    claude_skill_dir = BASE_DIR / ".claude" / "skills" / skill_name
+    if claude_skill_dir.is_dir():
+        shutil.rmtree(str(claude_skill_dir))
     del meta[skill_id]
     _save_meta(meta)
     return {"status": "deleted"}
@@ -339,13 +344,18 @@ async def regenerate_skill(skill_id: str):
     thought, platform = m["thought"], m["platform"]
 
     # Remove old artefacts
-    old_dir = SKILLS_DIR / m.get("skill_dir", "")
+    old_skill_name = m.get("skill_dir", m.get("name", ""))
+    old_dir = SKILLS_DIR / old_skill_name
     if old_dir.is_dir():
         shutil.rmtree(str(old_dir))
     elif "filename" in m:
         old_fp = SKILLS_DIR / m["filename"]
         if old_fp.exists():
             old_fp.unlink()
+    # Also remove old .claude/skills/ entry if present
+    old_claude_dir = BASE_DIR / ".claude" / "skills" / old_skill_name
+    if old_claude_dir.is_dir():
+        shutil.rmtree(str(old_claude_dir))
     del meta[skill_id]
     _save_meta(meta)
 
