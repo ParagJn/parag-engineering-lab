@@ -32,7 +32,11 @@ ARCHIVE_DIR.mkdir(exist_ok=True)
 METADATA_FILE = SKILLS_DIR / ".metadata.json"
 
 # LLM clients
-openai_client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+azure_openai_client = openai.AzureOpenAI(
+    azure_endpoint=os.getenv("AZURE_OPENAI_GPT54_BASE"),
+    api_key=os.getenv("AZURE_OPENAI_GPT54_KEY"),
+    api_version=os.getenv("AZURE_OPENAI_GPT54_VERSION"),
+)
 anthropic_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
@@ -172,17 +176,16 @@ Skill definition:
 
 async def _call_llm(platform: str, prompt: str) -> str:
     if platform == "chatgpt":
-        resp = openai_client.chat.completions.create(
-            model="gpt-4o",
+        resp = azure_openai_client.chat.completions.create(
+            model=os.getenv("AZURE_OPENAI_GPT54_DEPLOYMENT", "gpt-5.4-common"),
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=2048,
-            temperature=0.7,
+            reasoning_effort="high",
         )
         return resp.choices[0].message.content
     elif platform == "anthropic":
         resp = anthropic_client.messages.create(
             model="claude-sonnet-4-20250514",
-            max_tokens=2048,
+            max_tokens=4000,
             messages=[{"role": "user", "content": prompt}],
         )
         return resp.content[0].text
@@ -208,6 +211,12 @@ def _save_skill(content: str, platform: str, thought: str, skill_id: str | None 
     skill_dir = SKILLS_DIR / skill_name
     skill_dir.mkdir(exist_ok=True)
     (skill_dir / "SKILL.md").write_text(content)
+
+    # For Anthropic skills, also copy to .claude/skills/ inside the project
+    if platform == "anthropic":
+        claude_skills_dir = BASE_DIR / ".claude" / "skills" / skill_name
+        claude_skills_dir.mkdir(parents=True, exist_ok=True)
+        (claude_skills_dir / "SKILL.md").write_text(content)
 
     meta = _load_meta()
     meta[skill_id] = {

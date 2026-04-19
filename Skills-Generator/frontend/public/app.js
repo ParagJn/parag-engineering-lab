@@ -34,7 +34,7 @@ const PLATFORMS = {
         badgeText: "text-green-700",
         iconColor: "text-google-green",
         icon: "smart_toy",
-        label: "ChatGPT",
+        label: "GPT-5.4",
     },
 };
 
