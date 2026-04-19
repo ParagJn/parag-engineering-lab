@@ -210,7 +210,10 @@
                                 </div>
                                 <!-- Action buttons -->
                                 <div class="flex items-center gap-1 flex-shrink-0">
-                                    <button onclick="downloadSkill()" class="p-2 hover:bg-gray-100 rounded-lg transition-colors group" title="Download">
+                                    <button onclick="copySkillContent()" class="p-2 hover:bg-gray-100 rounded-lg transition-colors group" title="Copy to Clipboard">
+                                        <span id="copy-icon" class="material-symbols-outlined text-gray-400 group-hover:text-google-blue" style="font-size:22px">content_copy</span>
+                                    </button>
+                                    <button onclick="downloadSkill()" class="p-2 hover:bg-gray-100 rounded-lg transition-colors group" title="Download (.zip for Anthropic)">
                                         <span class="material-symbols-outlined text-gray-400 group-hover:text-google-green" style="font-size:22px">download</span>
                                     </button>
                                     <button onclick="regenerateSkill()" class="p-2 hover:bg-gray-100 rounded-lg transition-colors group" title="Regenerate">

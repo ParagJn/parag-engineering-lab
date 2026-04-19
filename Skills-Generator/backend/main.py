@@ -1,13 +1,15 @@
 import os
+import io
 import json
 import uuid
 import shutil
+import zipfile
 from datetime import datetime
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -58,6 +60,15 @@ def _load_meta() -> dict:
 
 def _save_meta(data: dict):
     METADATA_FILE.write_text(json.dumps(data, indent=2))
+
+
+def _skill_file(m: dict) -> Path:
+    """Return the path to the skill content file, handling both old and new formats."""
+    # New format: skill_dir/SKILL.md
+    if "skill_dir" in m:
+        return SKILLS_DIR / m["skill_dir"] / "SKILL.md"
+    # Legacy format: flat file
+    return SKILLS_DIR / m["filename"]
 
 
 # ---------------------------------------------------------------------------
@@ -192,14 +203,17 @@ def _save_skill(content: str, platform: str, thought: str, skill_id: str | None 
             break
 
     skill_id = skill_id or uuid.uuid4().hex[:8]
-    filename = f"{skill_name}.md"
-    (SKILLS_DIR / filename).write_text(content)
+
+    # Save as a directory with SKILL.md (Anthropic-compatible format)
+    skill_dir = SKILLS_DIR / skill_name
+    skill_dir.mkdir(exist_ok=True)
+    (skill_dir / "SKILL.md").write_text(content)
 
     meta = _load_meta()
     meta[skill_id] = {
         "id": skill_id,
         "name": skill_name,
-        "filename": filename,
+        "skill_dir": skill_name,
         "platform": platform,
         "thought": thought,
         "created_at": datetime.now().isoformat(),
@@ -207,7 +221,7 @@ def _save_skill(content: str, platform: str, thought: str, skill_id: str | None 
         "usage_notes": "",
     }
     _save_meta(meta)
-    return {"id": skill_id, "name": skill_name, "content": content, "filename": filename, "platform": platform, "usage_notes": ""}
+    return {"id": skill_id, "name": skill_name, "content": content, "skill_dir": skill_name, "platform": platform, "usage_notes": ""}
 
 
 # ---------------------------------------------------------------------------
@@ -252,7 +266,7 @@ async def list_skills():
     for sid, m in meta.items():
         if m.get("archived"):
             continue
-        fp = SKILLS_DIR / m["filename"]
+        fp = _skill_file(m)
         content = fp.read_text() if fp.exists() else ""
         out.append({**m, "content": content})
     return sorted(out, key=lambda x: x.get("created_at", ""), reverse=True)
@@ -264,7 +278,7 @@ async def get_skill(skill_id: str):
     if skill_id not in meta:
         raise HTTPException(status_code=404, detail="Skill not found")
     m = meta[skill_id]
-    fp = SKILLS_DIR / m["filename"]
+    fp = _skill_file(m)
     content = fp.read_text() if fp.exists() else ""
     return {**m, "content": content, "usage_notes": m.get("usage_notes", "")}
 
@@ -274,9 +288,15 @@ async def delete_skill(skill_id: str):
     meta = _load_meta()
     if skill_id not in meta:
         raise HTTPException(status_code=404, detail="Skill not found")
-    fp = SKILLS_DIR / meta[skill_id]["filename"]
-    if fp.exists():
-        fp.unlink()
+    m = meta[skill_id]
+    # Remove skill directory (or legacy file)
+    skill_dir = SKILLS_DIR / m.get("skill_dir", "")
+    if skill_dir.is_dir():
+        shutil.rmtree(str(skill_dir))
+    elif "filename" in m:
+        fp = SKILLS_DIR / m["filename"]
+        if fp.exists():
+            fp.unlink()
     del meta[skill_id]
     _save_meta(meta)
     return {"status": "deleted"}
@@ -288,10 +308,14 @@ async def archive_skill(skill_id: str):
     if skill_id not in meta:
         raise HTTPException(status_code=404, detail="Skill not found")
     m = meta[skill_id]
-    src = SKILLS_DIR / m["filename"]
-    dst = ARCHIVE_DIR / m["filename"]
-    if src.exists():
-        shutil.move(str(src), str(dst))
+    skill_dir = SKILLS_DIR / m.get("skill_dir", m.get("name", ""))
+    dst = ARCHIVE_DIR / m.get("skill_dir", m.get("name", ""))
+    if skill_dir.is_dir():
+        shutil.move(str(skill_dir), str(dst))
+    elif "filename" in m:
+        src = SKILLS_DIR / m["filename"]
+        if src.exists():
+            shutil.move(str(src), str(ARCHIVE_DIR / m["filename"]))
     meta[skill_id]["archived"] = True
     _save_meta(meta)
     return {"status": "archived"}
@@ -306,9 +330,13 @@ async def regenerate_skill(skill_id: str):
     thought, platform = m["thought"], m["platform"]
 
     # Remove old artefacts
-    old_fp = SKILLS_DIR / m["filename"]
-    if old_fp.exists():
-        old_fp.unlink()
+    old_dir = SKILLS_DIR / m.get("skill_dir", "")
+    if old_dir.is_dir():
+        shutil.rmtree(str(old_dir))
+    elif "filename" in m:
+        old_fp = SKILLS_DIR / m["filename"]
+        if old_fp.exists():
+            old_fp.unlink()
     del meta[skill_id]
     _save_meta(meta)
 
@@ -338,14 +366,20 @@ async def download_skill(skill_id: str):
     if skill_id not in meta:
         raise HTTPException(status_code=404, detail="Skill not found")
     m = meta[skill_id]
-    fp = SKILLS_DIR / m["filename"]
+    skill_name = m["name"]
+    fp = _skill_file(m)
     if not fp.exists():
         raise HTTPException(status_code=404, detail="Skill file not found")
-    return FileResponse(
-        str(fp),
-        media_type="text/markdown",
-        filename=m["filename"],
-        headers={"Content-Disposition": f'attachment; filename="{m["filename"]}"'},
+
+    # Create a zip in memory: skill-name/SKILL.md
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr(f"{skill_name}/SKILL.md", fp.read_text())
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{skill_name}.zip"'},
     )
 
 
@@ -355,7 +389,7 @@ async def test_skill(skill_id: str):
     if skill_id not in meta:
         raise HTTPException(status_code=404, detail="Skill not found")
     m = meta[skill_id]
-    fp = SKILLS_DIR / m["filename"]
+    fp = _skill_file(m)
     if not fp.exists():
         raise HTTPException(status_code=404, detail="Skill file not found")
 

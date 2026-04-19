@@ -244,6 +244,22 @@ async function deleteSkill() {
 }
 
 // ---------------------------------------------------------------------------
+// Copy to Clipboard (for Gemini / OpenAI paste workflows)
+// ---------------------------------------------------------------------------
+async function copySkillContent() {
+    if (!currentSkillId) return;
+    try {
+        const skill = await api(`/skills/${currentSkillId}`);
+        await navigator.clipboard.writeText(skill.content || "");
+        const icon = document.getElementById("copy-icon");
+        icon.textContent = "check";
+        setTimeout(() => { icon.textContent = "content_copy"; }, 1500);
+    } catch (e) {
+        alert("Copy failed: " + e.message);
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Download
 // ---------------------------------------------------------------------------
 function downloadSkill() {
