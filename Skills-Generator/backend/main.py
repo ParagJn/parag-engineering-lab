@@ -196,6 +196,12 @@ async def _call_llm(platform: str, prompt: str) -> str:
     raise HTTPException(status_code=400, detail="Invalid platform")
 
 
+PLATFORM_SKILL_DIRS = {
+    "anthropic": BASE_DIR / ".claude" / "skills",
+    "gemini":    BASE_DIR / ".gemini" / "skills",
+}
+
+
 def _save_skill(content: str, platform: str, thought: str, skill_id: str | None = None) -> dict:
     # Parse name from front-matter
     skill_name = "untitled-skill"
@@ -212,11 +218,11 @@ def _save_skill(content: str, platform: str, thought: str, skill_id: str | None 
     skill_dir.mkdir(exist_ok=True)
     (skill_dir / "SKILL.md").write_text(content)
 
-    # For Anthropic skills, also copy to .claude/skills/ inside the project
-    if platform == "anthropic":
-        claude_skills_dir = BASE_DIR / ".claude" / "skills" / skill_name
-        claude_skills_dir.mkdir(parents=True, exist_ok=True)
-        (claude_skills_dir / "SKILL.md").write_text(content)
+    # Copy to platform-specific skills folder (.claude/skills/ or .gemini/skills/)
+    if platform in PLATFORM_SKILL_DIRS:
+        target = PLATFORM_SKILL_DIRS[platform] / skill_name
+        target.mkdir(parents=True, exist_ok=True)
+        (target / "SKILL.md").write_text(content)
 
     meta = _load_meta()
     meta[skill_id] = {
@@ -306,10 +312,13 @@ async def update_skill(skill_id: str, req: UpdateSkillRequest):
     if not fp.exists():
         raise HTTPException(status_code=404, detail="Skill file not found")
     fp.write_text(req.content)
-    # Keep .claude/skills/ in sync
-    claude_skill_dir = BASE_DIR / ".claude" / "skills" / m.get("skill_dir", m["name"])
-    if claude_skill_dir.is_dir():
-        (claude_skill_dir / "SKILL.md").write_text(req.content)
+    # Keep platform-specific skills folder in sync
+    skill_name = m.get("skill_dir", m["name"])
+    platform_dir = PLATFORM_SKILL_DIRS.get(m.get("platform", ""))
+    if platform_dir:
+        target = platform_dir / skill_name
+        if target.is_dir():
+            (target / "SKILL.md").write_text(req.content)
     return {**m, "content": req.content}
 
 
@@ -328,10 +337,11 @@ async def delete_skill(skill_id: str):
         fp = SKILLS_DIR / m["filename"]
         if fp.exists():
             fp.unlink()
-    # Also remove from .claude/skills/ if present
-    claude_skill_dir = BASE_DIR / ".claude" / "skills" / skill_name
-    if claude_skill_dir.is_dir():
-        shutil.rmtree(str(claude_skill_dir))
+    # Also remove from platform-specific skills folder if present
+    for platform_dir in PLATFORM_SKILL_DIRS.values():
+        p = platform_dir / skill_name
+        if p.is_dir():
+            shutil.rmtree(str(p))
     del meta[skill_id]
     _save_meta(meta)
     return {"status": "deleted"}
@@ -373,10 +383,11 @@ async def regenerate_skill(skill_id: str):
         old_fp = SKILLS_DIR / m["filename"]
         if old_fp.exists():
             old_fp.unlink()
-    # Also remove old .claude/skills/ entry if present
-    old_claude_dir = BASE_DIR / ".claude" / "skills" / old_skill_name
-    if old_claude_dir.is_dir():
-        shutil.rmtree(str(old_claude_dir))
+    # Also remove old platform-specific skills folder entry if present
+    for platform_dir in PLATFORM_SKILL_DIRS.values():
+        p = platform_dir / old_skill_name
+        if p.is_dir():
+            shutil.rmtree(str(p))
     del meta[skill_id]
     _save_meta(meta)
 
