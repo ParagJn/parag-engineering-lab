@@ -142,6 +142,8 @@ function showLoading(text) {
 
 function showResult(skill) {
     showView("result");
+    _exitEditMode();
+    _editOriginalContent = null;
     document.getElementById("test-results").classList.add("hidden");
     document.getElementById("usage-notes").classList.add("hidden");
 
@@ -265,6 +267,66 @@ async function copySkillContent() {
 function downloadSkill() {
     if (!currentSkillId) return;
     window.open(`/api/skills/${currentSkillId}/download`, "_blank");
+}
+
+// ---------------------------------------------------------------------------
+// Edit
+// ---------------------------------------------------------------------------
+let _editOriginalContent = null;
+
+function editSkill() {
+    if (!currentSkillId) return;
+    const skill = skills.find(s => s.id === currentSkillId);
+    if (!skill) return;
+
+    _editOriginalContent = skill.content;
+
+    const editor = document.getElementById("skill-editor");
+    editor.value = skill.content;
+    // Auto-size rows to content
+    editor.rows = Math.max(20, skill.content.split("\n").length + 2);
+
+    document.getElementById("skill-content").classList.add("hidden");
+    editor.classList.remove("hidden");
+    document.getElementById("skill-actions").classList.add("hidden");
+    document.getElementById("edit-actions").classList.remove("hidden");
+    document.getElementById("edit-actions").classList.add("flex");
+    editor.focus();
+}
+
+async function saveSkill() {
+    if (!currentSkillId) return;
+    const content = document.getElementById("skill-editor").value;
+    try {
+        const updated = await api(`/skills/${currentSkillId}`, {
+            method: "PUT",
+            body: JSON.stringify({ content }),
+        });
+        // Patch local cache
+        const idx = skills.findIndex(s => s.id === currentSkillId);
+        if (idx !== -1) skills[idx].content = content;
+        _editOriginalContent = null;
+        _exitEditMode();
+        document.getElementById("skill-content").innerHTML = marked.parse(content);
+    } catch (e) {
+        alert("Save failed: " + e.message);
+    }
+}
+
+function cancelEdit() {
+    _exitEditMode();
+    if (_editOriginalContent !== null) {
+        document.getElementById("skill-content").innerHTML = marked.parse(_editOriginalContent);
+        _editOriginalContent = null;
+    }
+}
+
+function _exitEditMode() {
+    document.getElementById("skill-editor").classList.add("hidden");
+    document.getElementById("skill-content").classList.remove("hidden");
+    document.getElementById("edit-actions").classList.add("hidden");
+    document.getElementById("edit-actions").classList.remove("flex");
+    document.getElementById("skill-actions").classList.remove("hidden");
 }
 
 // ---------------------------------------------------------------------------

@@ -96,7 +96,7 @@
             <div class="hidden lg:block"></div>
             <div class="flex items-center gap-1.5 text-xs text-gray-400 font-medium">
                 <span class="material-symbols-outlined text-google-green" style="font-size:18px">bolt</span>
-                Powered by AI
+                Parag's Engineering Lab
             </div>
         </header>
 
@@ -209,7 +209,10 @@
                                     </div>
                                 </div>
                                 <!-- Action buttons -->
-                                <div class="flex items-center gap-1 flex-shrink-0">
+                                <div id="skill-actions" class="flex items-center gap-1 flex-shrink-0">
+                                    <button onclick="editSkill()" class="p-2 hover:bg-gray-100 rounded-lg transition-colors group" title="Edit">
+                                        <span class="material-symbols-outlined text-gray-400 group-hover:text-google-blue" style="font-size:22px">edit</span>
+                                    </button>
                                     <button onclick="copySkillContent()" class="p-2 hover:bg-gray-100 rounded-lg transition-colors group" title="Copy to Clipboard">
                                         <span id="copy-icon" class="material-symbols-outlined text-gray-400 group-hover:text-google-blue" style="font-size:22px">content_copy</span>
                                     </button>
@@ -226,9 +229,23 @@
                                         <span class="material-symbols-outlined text-gray-400 group-hover:text-google-red" style="font-size:22px">delete</span>
                                     </button>
                                 </div>
+                                <!-- Edit mode actions (hidden by default) -->
+                                <div id="edit-actions" class="hidden items-center gap-2 flex-shrink-0">
+                                    <button onclick="saveSkill()" class="px-4 py-1.5 bg-gray-900 hover:bg-gray-800 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-1.5">
+                                        <span class="material-symbols-outlined" style="font-size:18px">save</span>
+                                        Save
+                                    </button>
+                                    <button onclick="cancelEdit()" class="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-lg transition-colors">
+                                        Cancel
+                                    </button>
+                                </div>
                             </div>
                             <!-- Rendered markdown -->
                             <div id="skill-content" class="prose max-w-none text-gray-700 text-sm leading-relaxed"></div>
+                            <!-- Edit textarea (hidden by default) -->
+                            <textarea id="skill-editor"
+                                class="hidden w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-google-blue/40 focus:border-google-blue resize-none text-gray-900 font-mono text-sm leading-relaxed"
+                                rows="20"></textarea>
                         </div>
                     </div>
 

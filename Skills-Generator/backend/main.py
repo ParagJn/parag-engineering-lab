@@ -242,6 +242,10 @@ class GenerateRequest(BaseModel):
     platform: str  # anthropic | gemini | chatgpt
 
 
+class UpdateSkillRequest(BaseModel):
+    content: str
+
+
 # ---------------------------------------------------------------------------
 # API routes
 # ---------------------------------------------------------------------------
@@ -290,6 +294,23 @@ async def get_skill(skill_id: str):
     fp = _skill_file(m)
     content = fp.read_text() if fp.exists() else ""
     return {**m, "content": content, "usage_notes": m.get("usage_notes", "")}
+
+
+@app.put("/api/skills/{skill_id}")
+async def update_skill(skill_id: str, req: UpdateSkillRequest):
+    meta = _load_meta()
+    if skill_id not in meta:
+        raise HTTPException(status_code=404, detail="Skill not found")
+    m = meta[skill_id]
+    fp = _skill_file(m)
+    if not fp.exists():
+        raise HTTPException(status_code=404, detail="Skill file not found")
+    fp.write_text(req.content)
+    # Keep .claude/skills/ in sync
+    claude_skill_dir = BASE_DIR / ".claude" / "skills" / m.get("skill_dir", m["name"])
+    if claude_skill_dir.is_dir():
+        (claude_skill_dir / "SKILL.md").write_text(req.content)
+    return {**m, "content": req.content}
 
 
 @app.delete("/api/skills/{skill_id}")
