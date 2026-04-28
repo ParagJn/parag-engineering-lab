@@ -1,0 +1,46 @@
+# ── Python ──────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# pytest
+.pytest_cache/
+
+# ── Environment & secrets ────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Node / frontend ──────────────────────────────────────────────
+node_modules/
+dist/
+.vite/
+
+# Build output
+frontend/dist/
+
+# ── Logs ─────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── OS & editor ──────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+*.iml
