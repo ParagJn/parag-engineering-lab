@@ -39,6 +39,14 @@ OUTPUT_DIR = Path(__file__).resolve().parent.parent.parent / "output"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def _safe_error_message(error: Exception) -> str:
+    """Return a user-friendly message without exposing raw internal exceptions."""
+    if isinstance(error, KeyError):
+        return "A template formatting error occurred while generating the profile. Please try again."
+    text = str(error).strip()
+    return text or "An unexpected error occurred while processing your request."
+
+
 def _update_job(job_id: str, **kwargs):
     if job_id in JOBS:
         JOBS[job_id].update(kwargs)
@@ -134,7 +142,12 @@ async def _run_pipeline(job_id: str, session_id: str, links: list[str]):
 
     except Exception as e:
         logger.exception(f"Pipeline error for job {job_id}: {e}")
-        _update_job(job_id, status="error", error=str(e))
+        _update_job(
+            job_id,
+            status="error",
+            step_message="Generation failed.",
+            error=_safe_error_message(e),
+        )
 
 
 def _sync_gemini(combined_text: str) -> dict:
@@ -198,7 +211,13 @@ async def _run_refinement(job_id: str, instructions: str):
         logger.info(f"Refinement for job {job_id} completed.")
     except Exception as e:
         logger.exception(f"Refinement error for job {job_id}: {e}")
-        JOBS[job_id].update({"status": "done", "error": str(e), "result": old_result})
+        JOBS[job_id].update({
+            "status": "error",
+            "progress": 100,
+            "step_message": "Refinement failed.",
+            "error": _safe_error_message(e),
+            "result": old_result,
+        })
 
 
 # ─────────────────────────────────────────────

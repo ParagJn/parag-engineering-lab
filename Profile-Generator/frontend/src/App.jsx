@@ -7,6 +7,19 @@ import ProgressOverlay from './components/ProgressOverlay.jsx'
 
 const POLL_INTERVAL_MS = 2500
 
+async function readErrorMessage(response, fallbackMessage) {
+  try {
+    const data = await response.json()
+    if (typeof data?.detail === 'string' && data.detail.trim()) return data.detail
+    if (typeof data?.error === 'string' && data.error.trim()) return data.error
+    if (typeof data?.message === 'string' && data.message.trim()) return data.message
+  } catch {
+    // Ignore JSON parsing errors and fall back to a generic message.
+  }
+
+  return fallbackMessage
+}
+
 export default function App() {
   const [files, setFiles] = useState([])
   const [links, setLinks] = useState([])
@@ -30,7 +43,9 @@ export default function App() {
   const pollStatus = useCallback(async (job_id) => {
     try {
       const res = await fetch(`/api/status/${job_id}`)
-      if (!res.ok) throw new Error(`Status check failed: ${res.status}`)
+      if (!res.ok) {
+        throw new Error(await readErrorMessage(res, `Status check failed: ${res.status}`))
+      }
       const data = await res.json()
 
       setJobState({
@@ -41,21 +56,25 @@ export default function App() {
         error: data.error,
       })
 
-      if (data.done) {
-        stopPolling()
-        const resultRes = await fetch(`/api/result/${job_id}`)
-        if (resultRes.ok) {
-          const resultData = await resultRes.json()
-          setResult(resultData)
-        }
-        setRefining(false)
-      } else if (data.status === 'error') {
+      if (data.status === 'error') {
         stopPolling()
         setError(data.error || 'An unexpected error occurred.')
         setRefining(false)
+      } else if (data.done) {
+        stopPolling()
+        const resultRes = await fetch(`/api/result/${job_id}`)
+        if (!resultRes.ok) {
+          throw new Error(await readErrorMessage(resultRes, 'The job finished, but the result could not be loaded.'))
+        }
+
+        const resultData = await resultRes.json()
+        setResult(resultData)
+        setRefining(false)
       }
     } catch (err) {
-      console.error('Poll error:', err)
+      stopPolling()
+      setRefining(false)
+      setError(err instanceof Error ? err.message : 'Unable to check job status right now.')
     }
   }, [])
 
@@ -77,8 +96,7 @@ export default function App() {
 
         const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData })
         if (!uploadRes.ok) {
-          const err = await uploadRes.json()
-          throw new Error(err.detail || 'Upload failed')
+          throw new Error(await readErrorMessage(uploadRes, 'Upload failed'))
         }
         const uploadData = await uploadRes.json()
         session_id = uploadData.session_id
@@ -90,8 +108,7 @@ export default function App() {
         body: JSON.stringify({ session_id, links }),
       })
       if (!genRes.ok) {
-        const err = await genRes.json()
-        throw new Error(err.detail || 'Failed to start generation')
+        throw new Error(await readErrorMessage(genRes, 'Failed to start generation'))
       }
       const { job_id } = await genRes.json()
 
@@ -100,7 +117,7 @@ export default function App() {
       stopPolling()
       pollTimer.current = setInterval(() => pollStatus(job_id), POLL_INTERVAL_MS)
     } catch (err) {
-      setError(err.message)
+      setError(err instanceof Error ? err.message : 'Unable to start generation.')
       setJobState(null)
     }
   }
@@ -116,15 +133,14 @@ export default function App() {
         body: JSON.stringify({ job_id: jobState.job_id, instructions: refineText.trim() }),
       })
       if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.detail || 'Refinement failed')
+        throw new Error(await readErrorMessage(res, 'Refinement failed'))
       }
       setJobState((prev) => ({ ...prev, status: 'refining', progress: 10, stepMessage: 'Starting refinement…' }))
       setRefineText('')
       stopPolling()
       pollTimer.current = setInterval(() => pollStatus(jobState.job_id), POLL_INTERVAL_MS)
     } catch (err) {
-      setError(err.message)
+      setError(err instanceof Error ? err.message : 'Unable to start refinement.')
       setRefining(false)
     }
   }

@@ -36,7 +36,7 @@ export default function ProgressOverlay({ status, progress, stepMessage }) {
       </div>
 
       <p className="text-gray-800 font-semibold text-lg mb-1">{stepMessage || 'Processing…'}</p>
-      <p className="text-gray-400 text-xs mb-8">This may take 30–90 seconds</p>
+      <p className="text-gray-400 text-xs mb-8">This may take upto 5 minutes</p>
 
       {/* Step indicators */}
       <div className="flex gap-5 flex-wrap justify-center px-4">

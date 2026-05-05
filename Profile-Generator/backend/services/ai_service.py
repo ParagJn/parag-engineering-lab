@@ -154,6 +154,7 @@ DESIGN REQUIREMENTS:
 - Timeline for work history with colored dots
 - Responsive: max-width 1100px, centered, good mobile layout
 - Print CSS: keep dark gradient header (print-color-adjust: exact), disable animations, 2-column print layout
+- A4 PAGE LAYOUT: The main content wrapper must use class "page" with width: 210mm, min-height: 297mm, padding: 0.5in (all four sides), margin: 0 auto, box-sizing: border-box. This ensures pixel-perfect A4 output with 0.5-inch margins on all sides when printed or exported to PDF.
 
 SECTIONS (in order):
 1. Header: name (3rem bold white), title, contact row with FA icons (email, phone, location, LinkedIn, GitHub)
@@ -165,6 +166,7 @@ SECTIONS (in order):
 7. Certifications & Honors
 8. Education
 9. Value Proposition footer block (dark background)
+10. Copyright footer: a <footer class="cv-footer"> element OUTSIDE the dark value-proposition block, containing a full-width horizontal rule followed by centered text: © Parag Jain | Parag.Jn@GMail.com | 2026  — use small, muted (#64748b) font at 0.78rem.
 
 PRINT/PDF CSS:
 ```
@@ -173,6 +175,8 @@ PRINT/PDF CSS:
   .header {{ background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%) !important; }}
   .reveal {{ opacity: 1 !important; transform: none !important; }}
   @page {{ size: A4; margin: 0; }}
+  .page {{ padding: 0.5in !important; }}
+  .cv-footer {{ border-top: 1px solid #cbd5e1 !important; padding-top: 10px !important; text-align: center !important; font-size: 0.78rem !important; color: #64748b !important; }}
 }}
 ```
 
