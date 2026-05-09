@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color: #111827;
+  background: #f6f7f9;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button, textarea, input {
+  font: inherit;
+}
+
+.markdown h1 {
+  font-size: 1.45rem;
+  font-weight: 750;
+  margin: 0.4rem 0 0.8rem;
+}
+
+.markdown h2 {
+  font-size: 1.05rem;
+  font-weight: 750;
+  margin: 1.1rem 0 0.45rem;
+}
+
+.markdown h3 {
+  font-size: 0.95rem;
+  font-weight: 750;
+  margin: 0.9rem 0 0.35rem;
+}
+
+.markdown p {
+  margin: 0.45rem 0;
+}
+
+.markdown ul {
+  list-style: disc;
+  padding-left: 1.2rem;
+  margin: 0.45rem 0;
+}
+
+.markdown li {
+  margin: 0.28rem 0;
+}
+
+.markdown strong {
+  color: #0f172a;
+}
+
+.chat-markdown h1 {
+  font-size: 1.05rem;
+}
+
+.chat-markdown h2 {
+  font-size: 1rem;
+}
+
+.chat-markdown h3 {
+  font-size: 0.95rem;
+}
+
+.chat-markdown p:first-child,
+.chat-markdown h1:first-child,
+.chat-markdown h2:first-child,
+.chat-markdown h3:first-child {
+  margin-top: 0;
+}
+
+.chat-markdown p:last-child,
+.chat-markdown ul:last-child,
+.chat-markdown ol:last-child {
+  margin-bottom: 0;
+}
