@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Geist:wght@400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(8px);
+            border: 1px solid #E2E8F0;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-highest": "#e4e2e3",
+                        "on-tertiary-fixed": "#271902",
+                        "on-surface-variant": "#45474c",
+                        "surface-tint": "#545f73",
+                        "on-secondary-fixed": "#0b1c30",
+                        "secondary-fixed": "#d3e4fe",
+                        "secondary": "#505f76",
+                        "primary": "#091426",
+                        "primary-fixed": "#d8e3fb",
+                        "surface-container-high": "#eae7e9",
+                        "surface-container": "#f0edef",
+                        "tertiary-fixed": "#fadfb8",
+                        "on-tertiary": "#ffffff",
+                        "surface-bright": "#fbf8fa",
+                        "surface-container-low": "#f5f3f4",
+                        "outline": "#75777d",
+                        "inverse-primary": "#bcc7de",
+                        "inverse-surface": "#303032",
+                        "surface-dim": "#dcd9db",
+                        "primary-container": "#1e293b",
+                        "on-primary-fixed": "#111c2d",
+                        "inverse-on-surface": "#f3f0f2",
+                        "tertiary-container": "#35260c",
+                        "secondary-container": "#d0e1fb",
+                        "on-tertiary-fixed-variant": "#564427",
+                        "on-primary": "#ffffff",
+                        "surface": "#fbf8fa",
+                        "tertiary": "#1e1200",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-variant": "#e4e2e3",
+                        "on-background": "#1b1b1d",
+                        "tertiary-fixed-dim": "#ddc39d",
+                        "error-container": "#ffdad6",
+                        "background": "#fbf8fa",
+                        "error": "#ba1a1a",
+                        "on-error": "#ffffff",
+                        "secondary-fixed-dim": "#b7c8e1",
+                        "on-secondary": "#ffffff",
+                        "on-surface": "#1b1b1d",
+                        "on-secondary-fixed-variant": "#38485d",
+                        "on-error-container": "#93000a",
+                        "primary-fixed-dim": "#bcc7de",
+                        "on-secondary-container": "#54647a",
+                        "outline-variant": "#c5c6cd",
+                        "on-tertiary-container": "#a38c6a",
+                        "on-primary-container": "#8590a6",
+                        "on-primary-fixed-variant": "#3c475a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "container-margin": "32px",
+                        "section-gap": "40px",
+                        "input-padding": "12px",
+                        "card-padding": "24px",
+                        "gutter": "24px",
+                        "unit": "4px"
+                    },
+                    "fontFamily": {
+                        "body-sm": ["Inter"],
+                        "label-sm": ["Geist"],
+                        "display-lg": ["Geist"],
+                        "body-md": ["Inter"],
+                        "headline-sm": ["Geist"],
+                        "headline-md": ["Geist"],
+                        "label-md": ["Geist"],
+                        "mono-data": ["Geist"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                        "display-lg": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                        "mono-data": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}]
+                    }
+                },
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface font-body-md">
+<!-- SideNavBar -->
+<aside class="w-[280px] h-screen fixed left-0 top-0 flex flex-col bg-surface border-r border-outline-variant shadow-sm z-50">
+<div class="px-container-margin py-8 flex flex-col gap-2">
+<h1 class="font-headline-md text-headline-md font-bold tracking-tight text-primary">GridData OS</h1>
+<p class="font-label-md text-label-md text-on-surface-variant">Enterprise Pipeline Control</p>
+</div>
+<nav class="flex-1 flex flex-col gap-1 px-4">
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container transition-colors duration-150 rounded" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-label-md text-label-md">Pipeline Overview</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container transition-colors duration-150 rounded" href="#">
+<span class="material-symbols-outlined" data-icon="monitoring">monitoring</span>
+<span class="font-label-md text-label-md">Real-Time Monitor</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-primary font-bold border-r-2 border-primary bg-surface-container-low transition-colors duration-150 rounded-l" href="#">
+<span class="material-symbols-outlined" data-icon="fact_check">fact_check</span>
+<span class="font-label-md text-label-md">Data Quality Lab</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container transition-colors duration-150 rounded" href="#">
+<span class="material-symbols-outlined" data-icon="history_edu">history_edu</span>
+<span class="font-label-md text-label-md">Load History</span>
+</a>
+</nav>
+<div class="px-4 py-6 mt-auto border-t border-outline-variant">
+<div class="px-4 py-2 mb-4 bg-secondary-container text-on-secondary-container rounded font-label-sm text-center">
+                System Status: Healthy
+            </div>
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span class="font-label-md text-label-md">Support</span>
+</a>
+</div>
+</aside>
+<!-- TopAppBar -->
+<header class="fixed top-0 left-[280px] right-0 z-40 bg-surface/80 backdrop-blur-md border-b border-outline-variant flex items-center justify-between h-16 px-container-margin">
+<h2 class="font-headline-sm text-headline-sm font-semibold text-primary">Pipeline Control Center</h2>
+<div class="flex items-center gap-6">
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-outline" data-icon="search">search</span>
+<input class="pl-10 pr-4 py-1.5 bg-surface-container-low border border-outline-variant rounded-lg text-body-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-64" placeholder="Search validation logs..." type="text"/>
+</div>
+<div class="flex items-center gap-4">
+<button class="px-4 py-1.5 bg-primary text-on-primary rounded font-label-md hover:opacity-90 transition-opacity">Refresh Data</button>
+<button class="px-4 py-1.5 border border-outline-variant text-on-surface rounded font-label-md hover:bg-surface-container-low transition-colors">Export Logs</button>
+<div class="flex gap-2">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary" data-icon="notifications_active">notifications_active</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary" data-icon="account_circle">account_circle</span>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-[280px] pt-16 min-h-screen">
+<div class="p-container-margin">
+<!-- Header Section -->
+<div class="mb-section-gap flex justify-between items-end">
+<div>
+<h3 class="font-headline-md text-headline-md text-primary mb-1">Data Quality Lab</h3>
+<p class="font-body-md text-on-surface-variant max-w-2xl">Deep dive into the cleansing and validation stages for the Western Region Energy Cluster.</p>
+</div>
+<div class="flex items-center gap-2 px-3 py-1.5 bg-surface-container-high rounded border border-outline-variant">
+<span class="material-symbols-outlined text-label-md" data-icon="calendar_today">calendar_today</span>
+<span class="font-label-md text-label-md">Last 24 Hours</span>
+</div>
+</div>
+<!-- Metrics Bento Grid -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-gutter mb-section-gap">
+<div class="glass-card p-card-padding rounded-xl shadow-sm border border-outline-variant">
+<div class="flex justify-between items-start mb-4">
+<span class="font-label-md text-label-md text-on-surface-variant">Null Rate</span>
+<span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">Low</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-display-lg text-display-lg text-primary">0.02%</span>
+<span class="text-green-600 text-body-sm">↓ 0.01</span>
+</div>
+<div class="mt-4 h-1 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-secondary w-[2%]" style="width: 2%;"></div>
+</div>
+</div>
+<div class="glass-card p-card-padding rounded-xl shadow-sm border border-outline-variant">
+<div class="flex justify-between items-start mb-4">
+<span class="font-label-md text-label-md text-on-surface-variant">Schema Drift</span>
+<span class="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded">Warning</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-display-lg text-display-lg text-primary">3</span>
+<span class="text-amber-600 text-body-sm font-mono-data">ALERTS</span>
+</div>
+<div class="mt-4 flex gap-1">
+<span class="w-2 h-2 rounded-full bg-amber-500"></span>
+<span class="w-2 h-2 rounded-full bg-amber-500"></span>
+<span class="w-2 h-2 rounded-full bg-amber-500"></span>
+<span class="w-2 h-2 rounded-full bg-surface-container"></span>
+</div>
+</div>
+<div class="glass-card p-card-padding rounded-xl shadow-sm border border-outline-variant">
+<div class="flex justify-between items-start mb-4">
+<span class="font-label-md text-label-md text-on-surface-variant">Outliers</span>
+<span class="px-2 py-1 bg-surface-container-high text-on-surface-variant text-xs font-bold rounded">Normal</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-display-lg text-display-lg text-primary">124</span>
+<span class="text-on-surface-variant text-body-sm">Daily Avg</span>
+</div>
+<div class="mt-4 h-1 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[45%]" style="width: 45%;"></div>
+</div>
+</div>
+<div class="glass-card p-card-padding rounded-xl shadow-sm border border-outline-variant">
+<div class="flex justify-between items-start mb-4">
+<span class="font-label-md text-label-md text-on-surface-variant">Duplicate Count</span>
+<span class="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded">Critical</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-display-lg text-display-lg text-primary">1,402</span>
+<span class="text-red-600 text-body-sm">↑ 14%</span>
+</div>
+<div class="mt-4 h-1 w-full bg-red-100 rounded-full overflow-hidden">
+<div class="h-full bg-error w-[78%]" style="width: 78%;"></div>
+</div>
+</div>
+</div>
+<!-- Comparison & Charts Section -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter mb-section-gap">
+<!-- Comparison View -->
+<div class="lg:col-span-2 glass-card rounded-xl border border-outline-variant flex flex-col">
+<div class="p-card-padding border-b border-outline-variant flex justify-between items-center">
+<h4 class="font-headline-sm text-headline-sm text-primary">Transformation Preview</h4>
+<div class="flex bg-surface-container-low p-1 rounded-lg">
+<button class="px-3 py-1 text-label-sm bg-white shadow-sm rounded">Side-by-Side</button>
+<button class="px-3 py-1 text-label-sm text-on-surface-variant">Diff Only</button>
+</div>
+</div>
+<div class="flex flex-1 divide-x divide-outline-variant">
+<div class="w-1/2 p-4">
+<div class="mb-2 font-label-md text-on-surface-variant flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-red-400"></span>
+                                'Dirty' Incoming Data
+                            </div>
+<pre class="bg-surface-container-lowest p-4 rounded text-mono-data text-body-sm overflow-x-auto border border-outline-variant/30 leading-relaxed">{
+  "sensor_id": "G-409",
+  "ts": "2023-10-27 14:02:11",
+  "val": "NaN",
+  "unit": null,
+  "flag": 999,
+  "meta": "{\"raw\":\"err_0x2\"}"
+}</pre>
+</div>
+<div class="w-1/2 p-4 bg-primary/5">
+<div class="mb-2 font-label-md text-primary flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-green-500"></span>
+                                'Clean' Processed Data
+                            </div>
+<pre class="bg-surface-container-lowest p-4 rounded text-mono-data text-body-sm overflow-x-auto border border-outline-variant/30 leading-relaxed shadow-inner">{
+  "sensor_id": "G-409",
+  "timestamp": "2023-10-27T14:02:11Z",
+  "value": 0.0,
+  "unit": "kW",
+  "status": "VALIDATED_ZERO",
+  "origin": "GRID_SENSOR"
+}</pre>
+</div>
+</div>
+</div>
+<!-- Quality by Source Chart -->
+<div class="glass-card rounded-xl border border-outline-variant p-card-padding">
+<h4 class="font-headline-sm text-headline-sm text-primary mb-6">Quality by Source</h4>
+<div class="space-y-6">
+<div>
+<div class="flex justify-between mb-2">
+<span class="font-label-md text-on-surface">Smart Meters</span>
+<span class="font-mono-data text-on-surface-variant">99.8%</span>
+</div>
+<div class="h-6 w-full bg-surface-container rounded overflow-hidden">
+<div class="h-full bg-secondary" style="width: 99.8%;"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between mb-2">
+<span class="font-label-md text-on-surface">Grid Sensors</span>
+<span class="font-mono-data text-on-surface-variant">94.2%</span>
+</div>
+<div class="h-6 w-full bg-surface-container rounded overflow-hidden">
+<div class="h-full bg-secondary" style="width: 94.2%;"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between mb-2">
+<span class="font-label-md text-on-surface">Substation Feed</span>
+<span class="font-mono-data text-on-surface-variant">88.5%</span>
+</div>
+<div class="h-6 w-full bg-surface-container rounded overflow-hidden">
+<div class="h-full bg-amber-500" style="width: 88.5%;"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between mb-2">
+<span class="font-label-md text-on-surface">External API</span>
+<span class="font-mono-data text-on-surface-variant">72.1%</span>
+</div>
+<div class="h-6 w-full bg-surface-container rounded overflow-hidden">
+<div class="h-full bg-error" style="width: 72.1%;"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Quarantine Table -->
+<div class="glass-card rounded-xl border border-outline-variant overflow-hidden">
+<div class="p-card-padding border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+<div>
+<h4 class="font-headline-sm text-headline-sm text-primary">Quarantine Management</h4>
+<p class="font-body-sm text-on-surface-variant">Sample records that failed validation and require manual attention.</p>
+</div>
+<button class="px-4 py-2 bg-error text-on-error rounded font-label-md flex items-center gap-2 hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined text-[18px]" data-icon="delete_sweep">delete_sweep</span>
+                        Purge All Failures
+                    </button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-lowest border-b border-outline-variant">
+<th class="px-6 py-4 font-label-md text-on-surface-variant">Record ID</th>
+<th class="px-6 py-4 font-label-md text-on-surface-variant">Origin Source</th>
+<th class="px-6 py-4 font-label-md text-on-surface-variant">Failure Reason</th>
+<th class="px-6 py-4 font-label-md text-on-surface-variant">Timestamp</th>
+<th class="px-6 py-4 font-label-md text-on-surface-variant text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="px-6 py-4 font-mono-data text-primary">REC-00982</td>
+<td class="px-6 py-4 font-body-sm">Main Substation 4A</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded">SCHEMA_MISMATCH</span>
+</td>
+<td class="px-6 py-4 font-mono-data text-on-surface-variant">2023-10-27 14:02:11</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-3">
+<button class="text-primary hover:underline font-label-sm">Edit</button>
+<button class="text-error hover:underline font-label-sm">Drop</button>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="px-6 py-4 font-mono-data text-primary">REC-00985</td>
+<td class="px-6 py-4 font-body-sm">External Weather API</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-semibold rounded">NULL_CRITICAL_FIELD</span>
+</td>
+<td class="px-6 py-4 font-mono-data text-on-surface-variant">2023-10-27 14:05:44</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-3">
+<button class="text-primary hover:underline font-label-sm">Edit</button>
+<button class="text-error hover:underline font-label-sm">Drop</button>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="px-6 py-4 font-mono-data text-primary">REC-01004</td>
+<td class="px-6 py-4 font-body-sm">Consumer Meter Cluster</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded">OUTLIER_RANGE_ERR</span>
+</td>
+<td class="px-6 py-4 font-mono-data text-on-surface-variant">2023-10-27 14:08:19</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-3">
+<button class="text-primary hover:underline font-label-sm">Edit</button>
+<button class="text-error hover:underline font-label-sm">Drop</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-4 border-t border-outline-variant bg-surface-container-lowest flex justify-between items-center">
+<span class="font-body-sm text-on-surface-variant">Showing 3 of 124 failed records</span>
+<div class="flex gap-2">
+<button class="p-1 border border-outline-variant rounded hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined" data-icon="chevron_left">chevron_left</span>
+</button>
+<button class="p-1 border border-outline-variant rounded hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>
