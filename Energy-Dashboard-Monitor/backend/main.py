@@ -25,11 +25,31 @@ PROCESSED_DIR = os.path.join(BASE_DIR, "..", "data", "processed")
 # Ensure processed directory exists
 os.makedirs(PROCESSED_DIR, exist_ok=True)
 
+# Pipeline run history file (rolling snapshot log)
+HISTORY_FILE = os.path.join(PROCESSED_DIR, "run_history.json")
+MAX_HISTORY_RUNS = 20
+
 # Global variables to simulate dynamic system changes over time
 system_state = {
     "runs": 0,
     "last_run_time": None
 }
+
+def load_run_history():
+    """Load pipeline run history snapshots"""
+    if os.path.exists(HISTORY_FILE):
+        with open(HISTORY_FILE, "r") as f:
+            return json.load(f)
+    return []
+
+def append_run_snapshot(snapshot: dict):
+    """Append a run snapshot and keep rolling window of MAX_HISTORY_RUNS"""
+    history = load_run_history()
+    history.append(snapshot)
+    if len(history) > MAX_HISTORY_RUNS:
+        history = history[-MAX_HISTORY_RUNS:]
+    with open(HISTORY_FILE, "w") as f:
+        json.dump(history, f, indent=2)
 
 def load_data(filename):
     """Load data from processed directory first, fallback to raw"""
@@ -91,7 +111,27 @@ def run_simulation():
     
     system_state["runs"] += 1
     system_state["last_run_time"] = datetime.now().isoformat()
-    
+
+    # Quick quality metrics for the snapshot
+    total_records = (len(customers) + len(smart_meters) + len(meter_readings) +
+                     len(grid_sensors) + len(sensor_readings) + len(billing_records) + len(weather_data))
+    null_issues = (sum(1 for r in meter_readings if r.get("power_usage_kwh") is None) +
+                   sum(1 for r in sensor_readings if r.get("line_tension_kg") is None))
+    outlier_issues = (sum(1 for r in meter_readings if r.get("voltage") and r["voltage"] > 250) +
+                      sum(1 for r in billing_records if r.get("amount_due") and r["amount_due"] < 0))
+    total_issues = null_issues + outlier_issues
+    quality_score = round(max(0, 100 - (total_issues / total_records * 100)), 1) if total_records > 0 else 100
+
+    # Record snapshot for chart history
+    append_run_snapshot({
+        "run_id": f"RUN-{system_state['runs']}",
+        "timestamp": system_state["last_run_time"],
+        "records_processed": total_records,
+        "quality_score": quality_score,
+        "issues_found": total_issues,
+        "duration_s": 1
+    })
+
     # Small delay to simulate processing time
     time.sleep(1)
     
@@ -707,6 +747,9 @@ def get_history():
             "failed": random.randint(0, 5)
         })
     
+    # Load real pipeline run snapshots for chart binding
+    pipeline_runs = load_run_history()
+
     return {
         "logs": history,
         "orchestration": {
@@ -714,7 +757,8 @@ def get_history():
             "failed": failed,
             "retrying": retrying
         },
-        "volume_chart": chart_data
+        "volume_chart": chart_data,
+        "pipeline_runs": pipeline_runs[-10:]  # last 10 runs for the chart
     }
 
 # ============================================================================

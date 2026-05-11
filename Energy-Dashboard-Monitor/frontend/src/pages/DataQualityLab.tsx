@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 
 const API_URL = '/api';
@@ -14,6 +14,8 @@ const DataQualityLab = () => {
   const [aiProgress, setAiProgress] = useState(0);
   const [aiFixedCounts, setAiFixedCounts] = useState({ nulls: 0, schema: 0, outliers: 0 });
   const [aiApplied, setAiApplied] = useState(false);
+  const [explanations, setExplanations] = useState<string[]>([]);
+  const explanationsEndRef = useRef<HTMLDivElement>(null);
   const itemsPerPage = 5;
 
   const fetchData = () => {
@@ -45,6 +47,12 @@ const DataQualityLab = () => {
       console.error('Error fetching dataset stats:', error);
     }
   };
+
+  useEffect(() => {
+    if (explanations.length > 0) {
+      explanationsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [explanations]);
 
   useEffect(() => {
     fetchData();
@@ -84,43 +92,116 @@ const DataQualityLab = () => {
     setShowAIModal(true);
     setAiFixStage('analyzing');
     setAiProgress(0);
-    
+    setExplanations([]);
+
+    // Helper: generate a human-readable AI explanation for a quarantine item
+    const explainFix = (item: any): string => {
+      const ts = new Date().toLocaleTimeString('en-US', { hour12: false });
+      const id = item.id?.length > 14 ? item.id.substring(0, 14) + '…' : (item.id || 'UNKNOWN');
+      if (item.issue_type === 'null') {
+        const field = item.issue?.toLowerCase().includes('email') ? 'email' :
+                      item.issue?.toLowerCase().includes('phone') ? 'phone' :
+                      item.issue?.toLowerCase().includes('temperature') ? 'temperature_c' :
+                      item.issue?.toLowerCase().includes('tension') ? 'line_tension_kg' :
+                      item.issue?.toLowerCase().includes('power') ? 'power_usage_kwh' :
+                      item.issue?.toLowerCase().includes('billing') ? 'billing_period_start' :
+                      item.issue?.toLowerCase().includes('install') ? 'installation_date' : 'field';
+        const strategy = field === 'email' ? 'domain pattern (id@example.com)' :
+                         field === 'phone' ? 'E.164 placeholder (+1-555-0100)' :
+                         field === 'temperature_c' ? 'sensor baseline → 20.0°C' :
+                         field === 'installation_date' ? 'registration date proxy' :
+                         'historical average imputation';
+        return `[${ts}] ✓ ${id} | null ${field} → ${strategy}`;
+      }
+      if (item.issue_type === 'outlier') {
+        const fix = item.issue?.toLowerCase().includes('negative') ? 'reflected to absolute value' :
+                    item.issue?.toLowerCase().includes('voltage') ? 'clamped to 249V (safe threshold)' :
+                    item.issue?.toLowerCase().includes('temperature') ? 'bounded to ±50°C operational range' :
+                    item.issue?.toLowerCase().includes('wind') ? 'capped at 199 km/h' :
+                    'clamped to 99th percentile';
+        return `[${ts}] ✓ ${id} | outlier → ${fix}`;
+      }
+      if (item.issue_type === 'schema') {
+        const fix = item.issue?.toLowerCase().includes('email') ? 'regex-corrected format' :
+                    item.issue?.toLowerCase().includes('state') ? 'geolocation lookup → CA' :
+                    item.issue?.toLowerCase().includes('status') ? 'enum standardized → PENDING' :
+                    'schema constraint enforced';
+        return `[${ts}] ✓ ${id} | schema → ${fix}`;
+      }
+      return `[${ts}] ✓ ${id} | resolved`;
+    };
+
+    let localProgress = 0;
     const stages = [
-      { stage: 'analyzing' as const, duration: 1500, progress: 20 },
-      { stage: 'identifying' as const, duration: 2000, progress: 40 },
-      { stage: 'fixing' as const, duration: 2500, progress: 70 },
-      { stage: 'validating' as const, duration: 1500, progress: 90 },
-      { stage: 'complete' as const, duration: 1000, progress: 100 }
+      { stage: 'analyzing' as const, duration: 1500, targetProgress: 20 },
+      { stage: 'identifying' as const, duration: 2000, targetProgress: 40 },
+      { stage: 'fixing' as const, duration: 2800, targetProgress: 70 },
+      { stage: 'validating' as const, duration: 1500, targetProgress: 90 },
+      { stage: 'complete' as const, duration: 1000, targetProgress: 100 }
     ];
 
-    for (const { stage, duration, progress } of stages) {
+    for (const { stage, duration, targetProgress } of stages) {
       setAiFixStage(stage);
-      
-      // Animate progress
-      const steps = 20;
-      const increment = (progress - aiProgress) / steps;
-      for (let i = 0; i < steps; i++) {
-        await new Promise(resolve => setTimeout(resolve, duration / steps));
-        setAiProgress(prev => Math.min(progress, prev + increment));
+
+      if (stage === 'identifying') {
+        // Seed the log with scanner header lines
+        const ts = new Date().toLocaleTimeString('en-US', { hour12: false });
+        setExplanations([
+          `[${ts}] 🔍 AI ENGINE: Initializing remediation pipeline...`,
+          `[${ts}] 🔍 Scanning ${data?.total_records_analyzed?.toLocaleString() || '35,050'} records across 7 datasets`,
+          `[${ts}] 🔍 Detected ${allQuarantineItems.length} violations — classifying by type...`
+        ]);
       }
-      
+
       if (stage === 'fixing') {
-        // Calculate 95% reduction
-        const fixedNulls = Math.floor(nulls * 0.95);
-        const fixedSchema = Math.floor(schema_mismatch * 0.95);
-        const fixedOutliers = Math.floor(outliers * 0.95);
+        // Calculate fix counts first
+        const fixedNulls = Math.floor(originalNulls * 0.95);
+        const fixedSchema = Math.floor(originalSchema * 0.95);
+        const fixedOutliers = Math.floor(originalOutliers * 0.95);
         setAiFixedCounts({ nulls: fixedNulls, schema: fixedSchema, outliers: fixedOutliers });
+
+        // Pick a random sample of up to 35 items to show as rolling log
+        const sample = [...allQuarantineItems]
+          .sort(() => 0.5 - Math.random())
+          .slice(0, 35);
+
+        const delayMs = Math.floor(duration / (sample.length + 1));
+        for (const item of sample) {
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+          const line = explainFix(item);
+          setExplanations(prev => [...prev, line]);
+          // Advance progress proportionally during fixing stage
+          localProgress = Math.min(targetProgress, localProgress + (targetProgress - 40) / sample.length);
+          setAiProgress(localProgress);
+        }
+        localProgress = targetProgress;
+        setAiProgress(localProgress);
+      } else {
+        // Smooth progress animation for non-fixing stages
+        const steps = 20;
+        const stepSize = (targetProgress - localProgress) / steps;
+        for (let i = 0; i < steps; i++) {
+          await new Promise(resolve => setTimeout(resolve, duration / steps));
+          localProgress = Math.min(targetProgress, localProgress + stepSize);
+          setAiProgress(localProgress);
+        }
+      }
+
+      if (stage === 'complete') {
+        const total = Math.floor(allQuarantineItems.length * 0.95);
+        const residual = allQuarantineItems.length - total;
+        const ts = new Date().toLocaleTimeString('en-US', { hour12: false });
+        setExplanations(prev => [
+          ...prev,
+          `[${ts}] ────────────────────────────────`,
+          `[${ts}] ✨ ${total.toLocaleString()} issues resolved automatically`,
+          `[${ts}] ⚠️  ${residual} residual issues → human review queue`,
+          `[${ts}] 🎯 COMPLETE — quality score improved ~18%`
+        ]);
       }
     }
-    
-    // After completion, refresh data
-    setTimeout(() => {
-      setShowAIModal(false);
-      setAiFixStage('idle');
-      setAiProgress(0);
-      // In a real scenario, this would call the backend to actually fix the data
-      // For now, we just show the simulation
-    }, 3000);
+
+    // Modal stays open — user dismisses via X button or clicking backdrop
   };
 
   // Filter quarantine items based on selected filter
@@ -660,8 +741,11 @@ const DataQualityLab = () => {
 
       {/* AI Fixes Modal */}
       {showAIModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-surface rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-auto">
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => { setShowAIModal(false); setAiFixStage('idle'); setAiProgress(0); }}
+        >
+          <div className="bg-surface rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-auto" onClick={e => e.stopPropagation()}>
             {/* Modal Header */}
             <div className="p-6 border-b border-outline-variant bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-t-2xl">
               <div className="flex items-center justify-between">
@@ -686,7 +770,7 @@ const DataQualityLab = () => {
             {/* Modal Body */}
             <div className="p-8">
               {/* Progress Bar */}
-              <div className="mb-8">
+              <div className="mb-6">
                 <div className="flex justify-between items-center mb-2">
                   <span className="font-label-lg text-on-surface">Processing Progress</span>
                   <span className="font-mono-data text-primary font-bold">{Math.round(aiProgress)}%</span>
@@ -698,6 +782,35 @@ const DataQualityLab = () => {
                   ></div>
                 </div>
               </div>
+
+              {/* AI Decision Log — terminal style, visible from 'identifying' stage onwards */}
+              {explanations.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="font-label-lg font-bold text-on-surface mb-2 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-lg text-purple-500">terminal</span>
+                    AI Decision Log
+                  </h4>
+                  <div className="bg-gray-950 rounded-lg p-4 font-mono text-[12px] leading-relaxed max-h-44 overflow-y-auto border border-purple-900/40 shadow-inner">
+                    <p className="text-purple-400 mb-1 select-none">$ voltstream-ai --mode=remediate --confidence=0.95</p>
+                    {explanations.map((line, i) => {
+                      const isHeader = line.includes('🔍') || line.includes('ENGINE');
+                      const isComplete = line.includes('COMPLETE') || line.includes('✨') || line.includes('⚠️') || line.includes('────');
+                      const isNull = line.includes('null') && !isHeader && !isComplete;
+                      const isOutlier = line.includes('outlier') && !isHeader && !isComplete;
+                      return (
+                        <p key={i} className={`mb-0.5 ${
+                          isHeader ? 'text-purple-400' :
+                          isComplete ? 'text-emerald-400 font-bold' :
+                          isNull ? 'text-amber-400' :
+                          isOutlier ? 'text-red-400' :
+                          'text-blue-300'
+                        }`}>{line}</p>
+                      );
+                    })}
+                    <div ref={explanationsEndRef} />
+                  </div>
+                </div>
+              )}
 
               {/* ETL Processing Flow */}
               <div className="mb-8">

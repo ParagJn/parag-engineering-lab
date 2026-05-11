@@ -81,35 +81,65 @@ const LoadHistory = () => {
           <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-8 gap-4">
             <div>
               <h3 className="font-headline-sm text-headline-sm text-primary">Volume Trends</h3>
-              <p className="font-label-sm text-label-sm text-on-surface-variant">Total Volume Loaded (Last 7 Days)</p>
+              <p className="font-label-sm text-label-sm text-on-surface-variant">Records processed per pipeline run (last 10)</p>
             </div>
             <div className="flex gap-2">
-              <button className="px-3 py-1 rounded bg-surface-container border border-outline-variant text-xs font-medium text-primary">Daily</button>
-              <button className="px-3 py-1 rounded text-xs font-medium text-on-surface-variant hover:bg-surface-container border border-transparent">Weekly</button>
+              <button className="px-3 py-1 rounded bg-surface-container border border-outline-variant text-xs font-medium text-primary">Per Run</button>
+              <button className="px-3 py-1 rounded text-xs font-medium text-on-surface-variant hover:bg-surface-container border border-transparent">Quality</button>
             </div>
           </div>
           
-          {/* Simulated Line Chart */}
-          <div className="relative h-64 w-full bg-surface-container-lowest rounded-lg border border-outline-variant/30 flex items-end p-4">
-            <div className="absolute inset-0 flex flex-col justify-between py-4 px-2 pointer-events-none">
-              <div className="w-full border-t border-outline-variant/20 text-[10px] text-outline pt-1">5.0 TB</div>
-              <div className="w-full border-t border-outline-variant/20 text-[10px] text-outline pt-1">2.5 TB</div>
-              <div className="w-full border-t border-outline-variant/20 text-[10px] text-outline pt-1">1.0 TB</div>
-              <div className="w-full border-t border-outline-variant/20 text-[10px] text-outline pt-1">0 TB</div>
-            </div>
-            <div className="relative w-full h-full flex items-end justify-between px-8">
-              {/* Chart Logic: Dynamic shapes */}
-              <svg className="absolute bottom-0 left-0 w-full h-[80%] text-primary/10 fill-current overflow-visible" viewBox="0 0 1000 200" preserveAspectRatio="none">
-                <path d="M0 200 L0 150 C 100 120, 200 180, 300 140 C 400 100, 500 160, 600 80 C 700 40, 800 120, 900 60 C 950 40, 1000 20, 1000 20 L1000 200 Z"></path>
-                <path className="text-primary" d="M0 150 C 100 120, 200 180, 300 140 C 400 100, 500 160, 600 80 C 700 40, 800 120, 900 60 C 950 40, 1000 20, 1000 20" fill="none" stroke="currentColor" strokeWidth="3"></path>
-              </svg>
-              <div className="absolute right-10 top-10 flex items-center gap-2 bg-surface/90 backdrop-blur px-3 py-2 border border-outline-variant rounded shadow-lg transition-all duration-300">
-                <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
-                <span className="text-xs font-bold">Today: {data?.volume_chart?.[6]?.success || 0}00 GB</span>
-              </div>
-            </div>
+          {/* Dynamic Bar Chart — bound to real pipeline_runs snapshots */}
+          <div className="relative h-64 w-full bg-surface-container-lowest rounded-lg border border-outline-variant/30 p-4 overflow-hidden">
+            {(() => {
+              const runs: any[] = data?.pipeline_runs || [];
+              if (runs.length === 0) {
+                return (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-on-surface-variant">
+                    <span className="material-symbols-outlined text-4xl opacity-30">bar_chart</span>
+                    <p className="text-sm font-medium">No runs yet</p>
+                    <p className="text-xs opacity-70">Run a simulation to populate this chart</p>
+                  </div>
+                );
+              }
+              const maxRecords = Math.max(...runs.map((r: any) => r.records_processed ?? 0));
+              return (
+                <>
+                  {/* Y-axis gridlines */}
+                  <div className="absolute inset-0 flex flex-col justify-between py-4 px-10 pointer-events-none">
+                    <div className="w-full border-t border-outline-variant/20 text-[10px] text-outline pt-1">{maxRecords.toLocaleString()}</div>
+                    <div className="w-full border-t border-outline-variant/20 text-[10px] text-outline pt-1">{Math.round(maxRecords / 2).toLocaleString()}</div>
+                    <div className="w-full border-t border-outline-variant/20 text-[10px] text-outline pt-1">0</div>
+                  </div>
+                  {/* Bars */}
+                  <div className="relative h-full flex items-end justify-around gap-1 px-2 pt-2 pb-5">
+                    {runs.map((run: any, i: number) => {
+                      const isLatest = i === runs.length - 1;
+                      const heightPct = maxRecords > 0 ? Math.max(4, (run.records_processed / maxRecords) * 90) : 4;
+                      const label = new Date(run.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+                      return (
+                        <div key={i} className="relative flex flex-col items-center gap-0.5 flex-1 h-full justify-end group">
+                          <div
+                            className={`w-full rounded-t-md transition-all duration-700 ${isLatest ? 'bg-primary' : 'bg-primary/35 group-hover:bg-primary/55'}`}
+                            style={{ height: `${heightPct}%` }}
+                          />
+                          {isLatest && (
+                            <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-surface/95 backdrop-blur border border-outline-variant rounded shadow-lg px-2 py-1 flex items-center gap-1.5 whitespace-nowrap z-10">
+                              <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                              <span className="text-[10px] font-bold">{run.records_processed?.toLocaleString()} rec</span>
+                            </div>
+                          )}
+                          <span className="absolute bottom-0 text-[9px] text-on-surface-variant truncate max-w-full">{label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
+
 
         {/* Orchestration Pie Chart */}
         <div className="col-span-12 lg:col-span-4 bg-surface/70 backdrop-blur border border-outline-variant rounded-xl p-card-padding shadow-sm flex flex-col">
