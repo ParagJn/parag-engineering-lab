@@ -24,6 +24,12 @@ echo "-> Verifying backend dependencies..."
 cd "$BACKEND_DIR" || exit
 # This will quickly check/install missing dependencies
 "$VENV_PATH/bin/python" -m pip install -r requirements.txt
+
+# Check if mock data exists, if not, generate it
+if [ ! -f "../data/raw/smart_meter_data.json" ]; then
+  echo "-> Mock data not found. Generating initial data files..."
+  "$VENV_PATH/bin/python" generate_mock_data.py
+fi
 cd ..
 
 # 3. Build Frontend
