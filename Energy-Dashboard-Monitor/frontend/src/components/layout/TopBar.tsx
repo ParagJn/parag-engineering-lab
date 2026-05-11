@@ -1,6 +1,8 @@
-
+import { useSimulation } from '../../context/SimulationContext';
 
 const TopBar = () => {
+  const { triggerSimulation, simStage } = useSimulation();
+
   return (
     <header className="fixed top-0 left-[280px] right-0 z-40 bg-surface/80 backdrop-blur-md border-b border-outline-variant h-16 px-container-margin flex items-center justify-between">
       <h2 className="font-headline-sm text-headline-sm font-semibold text-primary">Pipeline Control Center</h2>
@@ -20,23 +22,18 @@ const TopBar = () => {
         <div className="flex items-center gap-4">
           <button 
             onClick={async () => {
-              const btn = document.getElementById('sim-btn');
-              if (btn) btn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">refresh</span>Simulating...';
-              try {
-                await fetch('http://localhost:8000/api/simulate', { method: 'POST' });
-                window.dispatchEvent(new CustomEvent('run-simulation'));
-                window.dispatchEvent(new CustomEvent('refresh-data'));
-              } catch (e) {
-                console.error("Simulation failed", e);
-              } finally {
-                if (btn) btn.innerHTML = '<span class="material-symbols-outlined text-[18px]">play_circle</span>Run-Simulator';
-              }
+              if (simStage !== 'idle') return;
+              await triggerSimulation();
             }}
             id="sim-btn"
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded font-label-md hover:opacity-90 active:scale-95 transition-all"
+            disabled={simStage !== 'idle'}
+            className={`flex items-center gap-2 px-4 py-2 text-on-primary rounded font-label-md transition-all ${simStage !== 'idle' ? 'bg-primary/50 cursor-not-allowed' : 'bg-primary hover:opacity-90 active:scale-95'}`}
           >
-            <span className="material-symbols-outlined text-[18px]">play_circle</span>
-            Run-Simulator
+            {simStage !== 'idle' ? (
+              <><span className="material-symbols-outlined text-[18px] animate-spin">refresh</span>Simulating...</>
+            ) : (
+              <><span className="material-symbols-outlined text-[18px]">play_circle</span>Run-Simulator</>
+            )}
           </button>
           
           <button className="p-2 text-on-surface-variant hover:text-primary transition-colors">

@@ -5,6 +5,25 @@ const API_URL = 'http://localhost:8000/api';
 
 const LoadHistory = () => {
   const [data, setData] = useState<any>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  const exportLogs = () => {
+    if (!data?.logs || data.logs.length === 0) return;
+    const header = "Run ID,Target Pipeline,Status,Volume,Errors,Duration,Timestamp\n";
+    const csvContent = data.logs.map((l: any) => 
+      `"${l.id}","${l.target}","${l.status}","${l.volume}","${l.errors}","${l.duration}","${l.timestamp}"`
+    ).join("\n");
+    
+    const blob = new Blob([header + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'load_history_export.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const fetchData = () => {
     axios.get(`${API_URL}/history`).then(res => setData(res.data)).catch(console.error);
@@ -31,6 +50,10 @@ const LoadHistory = () => {
   const totalRuns = (data?.orchestration?.completed || 0) + (data?.orchestration?.failed || 0) + (data?.orchestration?.retrying || 0);
   const uptime = totalRuns > 0 ? ((data?.orchestration?.completed || 0) / totalRuns * 100).toFixed(1) : 100;
 
+  const logsList = data?.logs || [];
+  const totalPages = Math.max(1, Math.ceil(logsList.length / itemsPerPage));
+  const currentLogs = logsList.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   return (
     <div className="pb-12">
       {/* Action Header */}
@@ -40,7 +63,7 @@ const LoadHistory = () => {
           <p className="font-body-md text-on-surface-variant">Historical performance for the Lakehouse database loads.</p>
         </div>
         <div className="flex gap-3">
-          <button className="px-4 py-2 bg-surface-container-low border border-outline-variant text-primary rounded-lg text-sm font-medium hover:bg-surface-container transition-colors flex items-center gap-2">
+          <button onClick={exportLogs} className="px-4 py-2 bg-surface-container-low border border-outline-variant text-primary rounded-lg text-sm font-medium hover:bg-surface-container transition-colors flex items-center gap-2">
             <span className="material-symbols-outlined text-sm">file_download</span>
             Export Logs
           </button>
@@ -156,7 +179,7 @@ const LoadHistory = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant">
-              {data?.logs?.map((log: any, i: number) => (
+              {currentLogs.map((log: any, i: number) => (
                 <tr key={i} className={`transition-colors ${getRowClass(log.status)}`}>
                   <td className="px-6 py-4">
                     <div className={`font-mono-data font-medium ${log.status === 'Failed' ? 'text-error' : 'text-primary'}`}>{log.timestamp}</div>
@@ -202,15 +225,23 @@ const LoadHistory = () => {
         </div>
         
         <div className="px-6 py-4 bg-surface-container-lowest border-t border-outline-variant flex justify-between items-center">
-          <span className="text-sm text-on-surface-variant">Showing {data?.logs?.length || 0} of {totalRuns} historical entries</span>
+          <span className="text-sm text-on-surface-variant">
+            Showing {currentLogs.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} - {Math.min(currentPage * itemsPerPage, logsList.length)} of {logsList.length} logs
+          </span>
           <div className="flex gap-1 items-center">
-            <button className="p-1 rounded hover:bg-surface-container disabled:opacity-30 flex items-center" disabled>
+            <button 
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="p-1 rounded hover:bg-surface-container disabled:opacity-30 flex items-center"
+            >
               <span className="material-symbols-outlined">chevron_left</span>
             </button>
-            <button className="px-3 py-1 bg-primary text-white rounded text-xs font-bold">1</button>
-            <button className="px-3 py-1 rounded hover:bg-surface-container text-xs font-medium text-on-surface">2</button>
-            <button className="px-3 py-1 rounded hover:bg-surface-container text-xs font-medium text-on-surface">3</button>
-            <button className="p-1 rounded hover:bg-surface-container flex items-center">
+            <span className="text-xs text-on-surface mx-2 font-bold">Page {currentPage} of {totalPages}</span>
+            <button 
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="p-1 rounded hover:bg-surface-container disabled:opacity-30 flex items-center"
+            >
               <span className="material-symbols-outlined">chevron_right</span>
             </button>
           </div>

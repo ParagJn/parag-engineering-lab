@@ -8,19 +8,23 @@ import DataQualityLab from './pages/DataQualityLab'
 import LoadHistory from './pages/LoadHistory'
 import './index.css'
 
+import { SimulationProvider } from './context/SimulationContext'
+
 // No more placeholders
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<DashboardLayout />}>
-          <Route index element={<PipelineOverview />} />
-          <Route path="monitor" element={<RealTimeMonitor />} />
-          <Route path="quality" element={<DataQualityLab />} />
-          <Route path="history" element={<LoadHistory />} />
-        </Route>
-      </Routes>
+      <SimulationProvider>
+        <Routes>
+          <Route path="/" element={<DashboardLayout />}>
+            <Route index element={<PipelineOverview />} />
+            <Route path="monitor" element={<RealTimeMonitor />} />
+            <Route path="quality" element={<DataQualityLab />} />
+            <Route path="history" element={<LoadHistory />} />
+          </Route>
+        </Routes>
+      </SimulationProvider>
     </BrowserRouter>
   </React.StrictMode>,
 )

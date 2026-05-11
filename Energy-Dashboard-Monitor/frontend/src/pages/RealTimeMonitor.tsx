@@ -1,60 +1,13 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef } from 'react';
+import { useSimulation } from '../context/SimulationContext';
 
 const RealTimeMonitor = () => {
-  const [simStage, setSimStage] = useState('idle');
-  const [logs, setLogs] = useState<string[]>([
-    "[14:22:01] INFO: Initializing cleansing sequence for bucket_882",
-    "[14:22:03] WARN: Duplicate entries detected in set 04 (auto-merged)",
-    "[14:22:05] INFO: Applying schema transformation ruleset v2.4.1",
-    "SUCCESS: Batch 091 verified and ready for Lakehouse export"
-  ]);
+  const { simStage, logs } = useSimulation();
   const logsEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
-
-  useEffect(() => {
-    const handleSimulate = () => {
-      if (simStage !== 'idle') return;
-      
-      setSimStage('acquisition');
-      setLogs(["[SIM] INFO: Simulator started. Acquiring streaming data..."]);
-      
-      // Delays to simulate production cycle load
-      setTimeout(() => {
-        setSimStage('validation');
-        setLogs(prev => [...prev, "[SIM] INFO: 10,000 records acquired. Starting validation..."]);
-      }, 2500);
-
-      setTimeout(() => {
-        setSimStage('cleansing');
-        setLogs(prev => [...prev, "[SIM] WARN: Found 124 outliers. Initiating cleansing protocols..."]);
-      }, 5500);
-
-      setTimeout(() => {
-        setLogs(prev => [...prev, "[SIM] INFO: Applying custom interpolation for null values..."]);
-      }, 7000);
-
-      setTimeout(() => {
-        setSimStage('transformation');
-        setLogs(prev => [...prev, "[SIM] INFO: Cleansing complete. Transforming schema for Lakehouse..."]);
-      }, 9500);
-
-      setTimeout(() => {
-        setSimStage('lakehouse');
-        setLogs(prev => [...prev, "[SIM] INFO: Transformations successful. Loading to Lakehouse..."]);
-      }, 12500);
-
-      setTimeout(() => {
-        setSimStage('idle');
-        setLogs(prev => [...prev, "[SIM] SUCCESS: Cycle complete. Pipeline idle."]);
-      }, 15000);
-    };
-
-    window.addEventListener('run-simulation', handleSimulate);
-    return () => window.removeEventListener('run-simulation', handleSimulate);
-  }, [simStage]);
 
   // Helpers for stage styling
   const getStageClass = (stage: string, isActive: boolean, isPast: boolean) => {

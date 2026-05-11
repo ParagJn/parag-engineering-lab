@@ -182,6 +182,27 @@ def get_quality():
         "quarantine": quarantine
     }
 
+@app.post("/api/quality/purge")
+def purge_failures():
+    # Load processed data
+    smart_meters = load_data("smart_meter_data.json")
+    grid_sensors = load_data("grid_sensor_data.json")
+    
+    # "Fix" the data instead of deleting to keep the simulation volume
+    for record in smart_meters:
+        if record.get("power_usage_kwh") is None:
+            record["power_usage_kwh"] = 0.0
+            
+    for record in grid_sensors:
+        if record.get("line_tension_kg", 0) < 0:
+            record["line_tension_kg"] = abs(record["line_tension_kg"])
+            
+    # Save processed data
+    save_processed("smart_meter_data.json", smart_meters)
+    save_processed("grid_sensor_data.json", grid_sensors)
+    
+    return {"status": "success", "message": "Quarantine purged and data fixed"}
+
 @app.get("/api/history")
 def get_history():
     runs = system_state["runs"]

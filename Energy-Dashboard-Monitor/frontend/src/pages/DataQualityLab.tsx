@@ -5,6 +5,9 @@ const API_URL = 'http://localhost:8000/api';
 
 const DataQualityLab = () => {
   const [data, setData] = useState<any>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isPurging, setIsPurging] = useState(false);
+  const itemsPerPage = 3;
 
   const fetchData = () => {
     axios.get(`${API_URL}/quality`).then(res => setData(res.data)).catch(console.error);
@@ -15,6 +18,24 @@ const DataQualityLab = () => {
     window.addEventListener('refresh-data', fetchData);
     return () => window.removeEventListener('refresh-data', fetchData);
   }, []);
+
+  const handlePurge = async () => {
+    if (isPurging) return;
+    setIsPurging(true);
+    try {
+      await axios.post(`${API_URL}/quality/purge`);
+      fetchData();
+      setCurrentPage(1);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsPurging(false);
+    }
+  };
+
+  const quarantineItems = data?.quarantine || [];
+  const totalPages = Math.max(1, Math.ceil(quarantineItems.length / itemsPerPage));
+  const currentItems = quarantineItems.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const nulls = data?.issues?.nulls || 0;
   const outliers = data?.issues?.outliers || 0;
@@ -202,9 +223,15 @@ const DataQualityLab = () => {
             <h4 className="font-headline-sm text-headline-sm text-primary">Quarantine Management</h4>
             <p className="font-body-sm text-on-surface-variant">Sample records that failed validation and require manual attention.</p>
           </div>
-          <button className="px-4 py-2 bg-error text-on-error rounded font-label-md flex items-center gap-2 hover:opacity-90 transition-opacity">
-            <span className="material-symbols-outlined text-[18px]">delete_sweep</span>
-            Purge All Failures
+          <button 
+            onClick={handlePurge}
+            disabled={isPurging || quarantineItems.length === 0}
+            className={`px-4 py-2 text-on-error rounded font-label-md flex items-center gap-2 transition-opacity ${isPurging || quarantineItems.length === 0 ? 'bg-error/50 cursor-not-allowed' : 'bg-error hover:opacity-90'}`}
+          >
+            <span className={`material-symbols-outlined text-[18px] ${isPurging ? 'animate-spin' : ''}`}>
+              {isPurging ? 'refresh' : 'delete_sweep'}
+            </span>
+            {isPurging ? 'Purging...' : 'Purge All Failures'}
           </button>
         </div>
         <div className="overflow-x-auto">
@@ -219,7 +246,7 @@ const DataQualityLab = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant">
-              {data?.quarantine?.map((item: any, i: number) => (
+              {currentItems.map((item: any, i: number) => (
                 <tr key={i} className="hover:bg-surface-container-low/50 transition-colors">
                   <td className="px-6 py-4 font-mono-data text-primary">{item.id}</td>
                   <td className="px-6 py-4 font-body-sm">{item.source}</td>
@@ -246,12 +273,23 @@ const DataQualityLab = () => {
           </table>
         </div>
         <div className="p-4 border-t border-outline-variant bg-surface-container-lowest flex justify-between items-center">
-          <span className="font-body-sm text-on-surface-variant">Showing {data?.quarantine?.length || 0} of {nulls + outliers} failed records</span>
-          <div className="flex gap-2">
-            <button className="p-1 flex items-center justify-center border border-outline-variant rounded hover:bg-surface-container transition-colors disabled:opacity-50">
+          <span className="font-body-sm text-on-surface-variant">
+            Showing {currentItems.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} - {Math.min(currentPage * itemsPerPage, quarantineItems.length)} of {quarantineItems.length} failed records
+          </span>
+          <div className="flex gap-2 items-center">
+            <span className="text-xs text-on-surface-variant mr-2">Page {currentPage} of {totalPages}</span>
+            <button 
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="p-1 flex items-center justify-center border border-outline-variant rounded hover:bg-surface-container transition-colors disabled:opacity-50"
+            >
               <span className="material-symbols-outlined">chevron_left</span>
             </button>
-            <button className="p-1 flex items-center justify-center border border-outline-variant rounded hover:bg-surface-container transition-colors disabled:opacity-50">
+            <button 
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="p-1 flex items-center justify-center border border-outline-variant rounded hover:bg-surface-container transition-colors disabled:opacity-50"
+            >
               <span className="material-symbols-outlined">chevron_right</span>
             </button>
           </div>
