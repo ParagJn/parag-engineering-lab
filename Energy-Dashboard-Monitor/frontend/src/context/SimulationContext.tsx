@@ -23,7 +23,7 @@ export const SimulationProvider: React.FC<{ children: ReactNode }> = ({ children
 
     // Trigger backend simulation
     try {
-      await fetch('http://localhost:8000/api/simulate', { method: 'POST' });
+      await fetch(`http://${window.location.hostname}:8000/api/simulate`, { method: 'POST' });
     } catch (e) {
       console.error("Simulation API failed", e);
     }

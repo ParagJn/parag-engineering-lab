@@ -1,7 +1,9 @@
 #!/bin/bash
 
 # Configuration
-VENV_PATH="/Users/paragjain/ibm-git-repositories/myenv"
+# Override VENV_PATH by setting it in your environment before running this script:
+#   export VENV_PATH=/path/to/your/venv
+VENV_PATH="${VENV_PATH:-/Users/paragjain/ibm-git-repositories/myenv}"
 BACKEND_DIR="backend"
 FRONTEND_DIR="frontend"
 
