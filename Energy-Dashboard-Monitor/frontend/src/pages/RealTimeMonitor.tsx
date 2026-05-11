@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useSimulation } from '../context/SimulationContext';
 
 const RealTimeMonitor = () => {
-  const { simStage, logs } = useSimulation();
+  const { simStage, logs, summary } = useSimulation();
   const logsEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -297,18 +297,156 @@ const RealTimeMonitor = () => {
               </div>
             </div>
           </div>
-
-          <div className="bg-primary text-on-primary rounded-xl p-card-padding shadow-lg relative overflow-hidden">
-            <div className="relative z-10">
-              <h6 className="font-headline-sm font-bold mb-2">Performance Optimization</h6>
-              <p className="text-body-sm opacity-80 mb-6">Automated node scaling is currently managing {simStage !== 'idle' ? '12' : '4'} on-demand instances to handle peak morning load.</p>
-              <button className="w-full bg-white text-primary py-3 rounded-lg font-bold hover:bg-white/90 transition-all">View Scaling Logs</button>
-            </div>
-            {/* Abstract overlay */}
-            <div className="absolute -right-12 -bottom-12 w-48 h-48 bg-white opacity-5 rounded-full"></div>
-          </div>
         </div>
       </div>
+
+      {/* Simulation Summary - Shows after completion */}
+      {summary && simStage === 'idle' && (
+        <div className="mt-section-gap bg-gradient-to-br from-emerald-500 to-emerald-600 text-white rounded-xl p-8 shadow-2xl animate-[fadeIn_0.5s_ease-in]">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+              <span className="material-symbols-outlined text-3xl">check_circle</span>
+            </div>
+            <div>
+              <h3 className="font-headline-lg text-headline-lg font-bold">ETL Simulation Complete</h3>
+              <p className="text-body-sm opacity-90">All datasets processed successfully</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            {/* Total Records */}
+            <div className="bg-white/10 backdrop-blur rounded-lg p-4">
+              <p className="text-label-sm opacity-80 mb-1">Total Records</p>
+              <p className="font-display-md text-display-md font-bold">{summary.totalRecordsProcessed.toLocaleString()}</p>
+            </div>
+
+            {/* Duration */}
+            <div className="bg-white/10 backdrop-blur rounded-lg p-4">
+              <p className="text-label-sm opacity-80 mb-1">Duration</p>
+              <p className="font-display-md text-display-md font-bold">{summary.duration}</p>
+            </div>
+
+            {/* Quality Score */}
+            <div className="bg-white/10 backdrop-blur rounded-lg p-4">
+              <p className="text-label-sm opacity-80 mb-1">Quality Score</p>
+              <p className="font-display-md text-display-md font-bold">{summary.qualityScore.toFixed(1)}%</p>
+            </div>
+
+            {/* Issues Fixed */}
+            <div className="bg-white/10 backdrop-blur rounded-lg p-4">
+              <p className="text-label-sm opacity-80 mb-1">Issues Fixed</p>
+              <p className="font-display-md text-display-md font-bold">{summary.issuesFixed.toLocaleString()}</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Records by Dataset */}
+            <div className="bg-white/10 backdrop-blur rounded-lg p-6">
+              <h4 className="font-headline-sm font-bold mb-4 flex items-center gap-2">
+                <span className="material-symbols-outlined">folder_open</span>
+                Records by Dataset
+              </h4>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-body-sm">Customers</span>
+                  <span className="font-mono-data font-bold">{summary.recordsByDataset.customers.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-body-sm">Smart Meters</span>
+                  <span className="font-mono-data font-bold">{summary.recordsByDataset.smartMeters.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-body-sm">Meter Readings</span>
+                  <span className="font-mono-data font-bold">{summary.recordsByDataset.meterReadings.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-body-sm">Grid Sensors</span>
+                  <span className="font-mono-data font-bold">{summary.recordsByDataset.gridSensors.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-body-sm">Sensor Readings</span>
+                  <span className="font-mono-data font-bold">{summary.recordsByDataset.sensorReadings.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-body-sm">Billing Records</span>
+                  <span className="font-mono-data font-bold">{summary.recordsByDataset.billingRecords.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-body-sm">Weather Data</span>
+                  <span className="font-mono-data font-bold">{summary.recordsByDataset.weatherData.toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Data Quality Issues */}
+            <div className="bg-white/10 backdrop-blur rounded-lg p-6">
+              <h4 className="font-headline-sm font-bold mb-4 flex items-center gap-2">
+                <span className="material-symbols-outlined">bug_report</span>
+                Data Quality Issues
+              </h4>
+              <div className="space-y-4">
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-body-sm">NULL Values</span>
+                    <span className="font-mono-data font-bold">{summary.issuesFound.nulls.toLocaleString()}</span>
+                  </div>
+                  <div className="w-full bg-white/20 h-2 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-white rounded-full"
+                      style={{ width: `${Math.min(100, (summary.issuesFound.nulls / 1000) * 100)}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-body-sm">Outliers</span>
+                    <span className="font-mono-data font-bold">{summary.issuesFound.outliers.toLocaleString()}</span>
+                  </div>
+                  <div className="w-full bg-white/20 h-2 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-white rounded-full"
+                      style={{ width: `${Math.min(100, (summary.issuesFound.outliers / 1000) * 100)}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-body-sm">Schema Mismatches</span>
+                    <span className="font-mono-data font-bold">{summary.issuesFound.schemaMismatch.toLocaleString()}</span>
+                  </div>
+                  <div className="w-full bg-white/20 h-2 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-white rounded-full"
+                      style={{ width: `${Math.min(100, (summary.issuesFound.schemaMismatch / 500) * 100)}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-white/20">
+                  <div className="flex justify-between items-center">
+                    <span className="text-body-md font-bold">Total Issues</span>
+                    <span className="font-display-sm font-bold">
+                      {(summary.issuesFound.nulls + summary.issuesFound.outliers + summary.issuesFound.schemaMismatch).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 flex justify-center">
+            <button
+              onClick={() => window.location.href = '/quality'}
+              className="bg-white text-emerald-600 px-6 py-3 rounded-lg font-bold hover:bg-white/90 transition-all flex items-center gap-2"
+            >
+              <span className="material-symbols-outlined">analytics</span>
+              View Detailed Quality Report
+            </button>
+          </div>
+        </div>
+      )}
       
       {/* Floating Action for Alert */}
       <div className="fixed bottom-8 right-8 z-50">

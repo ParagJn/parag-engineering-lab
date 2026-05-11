@@ -1,74 +1,80 @@
 #!/bin/bash
 
-# Configuration
-# Override VENV_PATH by setting it in your environment before running this script:
-#   export VENV_PATH=/path/to/your/venv
-VENV_PATH="${VENV_PATH:-/Users/paragjain/ibm-git-repositories/myenv}"
-BACKEND_DIR="backend"
-FRONTEND_DIR="frontend"
+# Energy Dashboard Monitor - Startup Script
+# This script starts both the backend API and frontend development server
 
 echo "=========================================="
-echo " Starting Energy Dashboard Monitor"
+echo "  Energy Dashboard Monitor - VoltStream"
 echo "=========================================="
+echo ""
 
-# 1. Verify Virtual Environment
-echo "-> Checking Python virtual environment..."
-if [ ! -d "$VENV_PATH" ]; then
-  echo "Error: Virtual environment not found at $VENV_PATH"
-  echo "Please create it or update the VENV_PATH in this script."
-  exit 1
+# Colors for output
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Python virtual environment path
+PYTHON_VENV="/Users/paragjain/dev-works/myenv/bin/python"
+
+# Check if data exists
+if [ ! -f "data/raw/customers.json" ]; then
+    echo -e "${YELLOW}⚠️  Mock data not found. Generating...${NC}"
+    cd backend
+    $PYTHON_VENV generate_mock_data.py
+    cd ..
+    echo ""
 fi
 
-source "$VENV_PATH/bin/activate"
-
-# 2. Verify and install Backend Dependencies
-echo "-> Verifying backend dependencies..."
-cd "$BACKEND_DIR" || exit
-# This will quickly check/install missing dependencies
-"$VENV_PATH/bin/python" -m pip install -r requirements.txt
-
-# Check if mock data exists, if not, generate it
-if [ ! -f "../data/raw/smart_meter_data.json" ]; then
-  echo "-> Mock data not found. Generating initial data files..."
-  "$VENV_PATH/bin/python" generate_mock_data.py
-fi
-cd ..
-
-# 3. Build Frontend
-echo "-> Building frontend UI..."
-cd "$FRONTEND_DIR" || exit
-if [ ! -d "node_modules" ]; then
-  echo "Installing frontend dependencies..."
-  npm install
-fi
-npm run build
-cd ..
-
-# 4. Start Backend Server
-echo "-> Starting FastAPI Backend..."
-cd "$BACKEND_DIR" || exit
-# Run backend in background
-"$VENV_PATH/bin/python" -m uvicorn main:app --host 0.0.0.0 --port 8000 &
+# Start backend
+echo -e "${BLUE}🚀 Starting Backend API (Port 8000)...${NC}"
+cd backend
+$PYTHON_VENV -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload &
 BACKEND_PID=$!
 cd ..
 
-# 5. Start Frontend Preview Server
-echo "-> Starting React Frontend Preview..."
-cd "$FRONTEND_DIR" || exit
-# Run frontend preview in background
-npm run preview &
+# Wait for backend to start
+echo "   Waiting for backend to initialize..."
+sleep 3
+
+# Check if backend is running
+if curl -s http://localhost:8000/api/system-status > /dev/null 2>&1; then
+    echo -e "${GREEN}✓ Backend API is running${NC}"
+else
+    echo -e "${YELLOW}⚠️  Backend may still be starting...${NC}"
+fi
+
+echo ""
+
+# Start frontend
+echo -e "${BLUE}🚀 Starting Frontend Dev Server (Port 5173)...${NC}"
+cd frontend
+npm run dev &
 FRONTEND_PID=$!
 cd ..
 
+echo ""
 echo "=========================================="
-echo " All services started successfully!"
-echo " Backend:  http://localhost:8000/docs"
-echo " Frontend: http://localhost:4173"
-echo " Press [CTRL+C] to stop all services."
+echo -e "${GREEN}✓ Application Started Successfully!${NC}"
 echo "=========================================="
+echo ""
+echo "📊 Access Points:"
+echo "   Frontend:  http://localhost:5173"
+echo "   Backend:   http://localhost:8000"
+echo "   API Docs:  http://localhost:8000/docs"
+echo ""
+echo "🛑 To stop the application:"
+echo "   Press Ctrl+C or run: kill $BACKEND_PID $FRONTEND_PID"
+echo ""
+echo "📝 Logs:"
+echo "   Backend PID:  $BACKEND_PID"
+echo "   Frontend PID: $FRONTEND_PID"
+echo ""
 
-# Cleanup trap to kill background processes on exit
-trap "echo -e '\nStopping services...'; kill $BACKEND_PID $FRONTEND_PID; exit" INT TERM
+# Keep script running and handle Ctrl+C
+trap "echo ''; echo 'Stopping servers...'; kill $BACKEND_PID $FRONTEND_PID 2>/dev/null; exit" INT
 
-# Wait indefinitely for processes to run
+# Wait for both processes
 wait
+
+# Made with Bob
