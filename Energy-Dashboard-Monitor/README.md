@@ -1,10 +1,10 @@
-# Energy Dashboard Monitor - VoltStream
+# Energy & Utilities Data Pipeline Dashboard - VoltStream
 
-A comprehensive full-stack data quality monitoring and ETL pipeline visualization application for energy data management systems.
+A comprehensive data quality monitoring and ETL pipeline visualization application for energy & utilities data management systems.
 
 ## 🎯 Overview
 
-VoltStream Energy Dashboard simulates a real-time data processing system for smart meters, grid sensors, billing, and weather data. It features a relational data model with realistic data quality issues (10-12% error rate) for testing and demonstration purposes.
+VoltStream Energy Dashboard is a prototype of a real-time data processing system for smart meters, grid sensors, billing, and weather data. It features a relational data model with realistic data quality issues (10-12% error rate) for testing and demonstration purposes.
 
 ## 📊 Features
 
