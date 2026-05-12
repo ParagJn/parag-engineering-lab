@@ -6,6 +6,7 @@ const API_URL = '/api';
 const LoadHistory = () => {
   const [data, setData] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [chartView, setChartView] = useState<'volume' | 'quality'>('volume');
   const itemsPerPage = 5;
 
   const exportLogs = () => {
@@ -84,8 +85,26 @@ const LoadHistory = () => {
               <p className="font-label-sm text-label-sm text-on-surface-variant">Records processed per pipeline run (last 10)</p>
             </div>
             <div className="flex gap-2">
-              <button className="px-3 py-1 rounded bg-surface-container border border-outline-variant text-xs font-medium text-primary">Per Run</button>
-              <button className="px-3 py-1 rounded text-xs font-medium text-on-surface-variant hover:bg-surface-container border border-transparent">Quality</button>
+              <button
+                onClick={() => setChartView('volume')}
+                className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                  chartView === 'volume'
+                    ? 'bg-surface-container border border-outline-variant text-primary'
+                    : 'text-on-surface-variant hover:bg-surface-container border border-transparent'
+                }`}
+              >
+                Per Run
+              </button>
+              <button
+                onClick={() => setChartView('quality')}
+                className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                  chartView === 'quality'
+                    ? 'bg-surface-container border border-outline-variant text-primary'
+                    : 'text-on-surface-variant hover:bg-surface-container border border-transparent'
+                }`}
+              >
+                Quality
+              </button>
             </div>
           </div>
           
@@ -102,31 +121,70 @@ const LoadHistory = () => {
                   </div>
                 );
               }
-              const maxRecords = Math.max(...runs.map((r: any) => r.records_processed ?? 0));
+              
+              // Determine what to display based on chartView
+              const maxValue = chartView === 'volume'
+                ? Math.max(...runs.map((r: any) => r.records_processed ?? 0))
+                : 100; // Quality is percentage
+              
+              const yAxisLabel = chartView === 'volume' ? 'Records' : 'Quality %';
+              
               return (
                 <>
                   {/* Y-axis gridlines */}
                   <div className="absolute inset-0 flex flex-col justify-between py-4 px-10 pointer-events-none">
-                    <div className="w-full border-t border-outline-variant/20 text-[10px] text-outline pt-1">{maxRecords.toLocaleString()}</div>
-                    <div className="w-full border-t border-outline-variant/20 text-[10px] text-outline pt-1">{Math.round(maxRecords / 2).toLocaleString()}</div>
-                    <div className="w-full border-t border-outline-variant/20 text-[10px] text-outline pt-1">0</div>
+                    <div className="w-full border-t border-outline-variant/20 text-[10px] text-outline pt-1">
+                      {chartView === 'volume' ? maxValue.toLocaleString() : '100%'}
+                    </div>
+                    <div className="w-full border-t border-outline-variant/20 text-[10px] text-outline pt-1">
+                      {chartView === 'volume' ? Math.round(maxValue / 2).toLocaleString() : '50%'}
+                    </div>
+                    <div className="w-full border-t border-outline-variant/20 text-[10px] text-outline pt-1">
+                      {chartView === 'volume' ? '0' : '0%'}
+                    </div>
                   </div>
                   {/* Bars */}
                   <div className="relative h-full flex items-end justify-around gap-1 px-2 pt-2 pb-5">
                     {runs.map((run: any, i: number) => {
                       const isLatest = i === runs.length - 1;
-                      const heightPct = maxRecords > 0 ? Math.max(4, (run.records_processed / maxRecords) * 90) : 4;
+                      
+                      // Calculate height based on view
+                      let heightPct: number;
+                      let displayValue: string;
+                      let barColor: string;
+                      
+                      if (chartView === 'volume') {
+                        heightPct = maxValue > 0 ? Math.max(4, (run.records_processed / maxValue) * 90) : 4;
+                        displayValue = `${run.records_processed?.toLocaleString()} rec`;
+                        barColor = isLatest ? 'bg-primary' : 'bg-primary/35 group-hover:bg-primary/55';
+                      } else {
+                        // Quality view - use quality_score from run
+                        const quality = run.quality_score ?? 85; // Default to 85% if not available
+                        heightPct = Math.max(4, (quality / 100) * 90);
+                        displayValue = `${quality.toFixed(1)}%`;
+                        
+                        // Color based on quality
+                        if (quality >= 95) {
+                          barColor = isLatest ? 'bg-emerald-500' : 'bg-emerald-500/35 group-hover:bg-emerald-500/55';
+                        } else if (quality >= 85) {
+                          barColor = isLatest ? 'bg-amber-500' : 'bg-amber-500/35 group-hover:bg-amber-500/55';
+                        } else {
+                          barColor = isLatest ? 'bg-error' : 'bg-error/35 group-hover:bg-error/55';
+                        }
+                      }
+                      
                       const label = new Date(run.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+                      
                       return (
                         <div key={i} className="relative flex flex-col items-center gap-0.5 flex-1 h-full justify-end group">
                           <div
-                            className={`w-full rounded-t-md transition-all duration-700 ${isLatest ? 'bg-primary' : 'bg-primary/35 group-hover:bg-primary/55'}`}
+                            className={`w-full rounded-t-md transition-all duration-700 ${barColor}`}
                             style={{ height: `${heightPct}%` }}
                           />
                           {isLatest && (
                             <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-surface/95 backdrop-blur border border-outline-variant rounded shadow-lg px-2 py-1 flex items-center gap-1.5 whitespace-nowrap z-10">
                               <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                              <span className="text-[10px] font-bold">{run.records_processed?.toLocaleString()} rec</span>
+                              <span className="text-[10px] font-bold">{displayValue}</span>
                             </div>
                           )}
                           <span className="absolute bottom-0 text-[9px] text-on-surface-variant truncate max-w-full">{label}</span>
