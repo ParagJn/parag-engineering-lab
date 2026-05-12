@@ -1213,28 +1213,6 @@ const DataQualityLab = () => {
                   <div className="bg-gray-50 rounded-xl p-6 border border-outline-variant overflow-x-auto">
                     <div dangerouslySetInnerHTML={{ __html: lineageSvg }} />
                   </div>
-
-                  {/* Additional Info */}
-                  <div className="mt-6 grid grid-cols-2 gap-4">
-                    <div className="bg-surface-container rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="material-symbols-outlined text-primary">analytics</span>
-                        <span className="font-label-md text-on-surface">Analysis Method</span>
-                      </div>
-                      <p className="text-body-sm text-on-surface-variant">
-                        AI-powered trace analysis using Gemini 2.5 Pro
-                      </p>
-                    </div>
-                    <div className="bg-surface-container rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="material-symbols-outlined text-primary">schedule</span>
-                        <span className="font-label-md text-on-surface">Processing Time</span>
-                      </div>
-                      <p className="text-body-sm text-on-surface-variant">
-                        Real-time lineage generation in 2-4 seconds
-                      </p>
-                    </div>
-                  </div>
                 </div>
               )}
             </div>
