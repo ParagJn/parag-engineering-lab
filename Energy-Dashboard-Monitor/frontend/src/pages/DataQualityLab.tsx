@@ -16,6 +16,11 @@ const DataQualityLab = () => {
   const [aiApplied, setAiApplied] = useState(false);
   const [explanations, setExplanations] = useState<string[]>([]);
   const explanationsEndRef = useRef<HTMLDivElement>(null);
+  const [isQuarantineCollapsed, setIsQuarantineCollapsed] = useState(false);
+  const [showLineageModal, setShowLineageModal] = useState(false);
+  const [lineageLoading, setLineageLoading] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<any>(null);
+  const [lineageSvg, setLineageSvg] = useState<string>('');
   const itemsPerPage = 5;
 
   const fetchData = () => {
@@ -76,6 +81,103 @@ const DataQualityLab = () => {
     } finally {
       setIsPurging(false);
     }
+  };
+
+  const handleViewLineage = async (record: any) => {
+    setSelectedRecord(record);
+    setShowLineageModal(true);
+    setLineageLoading(true);
+    setLineageSvg('');
+
+    // Simulate AI lineage generation with random failure points
+    const failureStages = ['Acquisition', 'Validation', 'Cleansing', 'Transformation', 'Lakehouse Load'];
+    const randomFailureStage = failureStages[Math.floor(Math.random() * failureStages.length)];
+    
+    // Simulate API call delay (2-4 seconds)
+    const delay = 2000 + Math.random() * 2000;
+    
+    setTimeout(() => {
+      // Generate SVG lineage diagram
+      const svg = generateLineageSVG(record, randomFailureStage);
+      setLineageSvg(svg);
+      setLineageLoading(false);
+    }, delay);
+  };
+
+  const generateLineageSVG = (record: any, failureStage: string) => {
+    const stages = [
+      { name: 'Acquisition', icon: 'cloud_download', time: '120ms' },
+      { name: 'Validation', icon: 'verified_user', time: '215ms' },
+      { name: 'Cleansing', icon: 'auto_fix_high', time: '450ms' },
+      { name: 'Transformation', icon: 'transform', time: '280ms' },
+      { name: 'Lakehouse Load', icon: 'database', time: 'Idle' }
+    ];
+
+    const stageWidth = 180;
+    const stageHeight = 100;
+    const spacing = 80;
+    const totalWidth = stages.length * (stageWidth + spacing) - spacing + 100;
+    const svgHeight = 300;
+
+    let svgContent = `<svg width="${totalWidth}" height="${svgHeight}" viewBox="0 0 ${totalWidth} ${svgHeight}" xmlns="http://www.w3.org/2000/svg">`;
+    
+    // Background
+    svgContent += `<rect width="100%" height="100%" fill="#f8f9fa"/>`;
+    
+    // Title
+    svgContent += `<text x="50%" y="30" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" font-weight="600" fill="#1a1a1a">ETL Processing Flow - Record ${record.id}</text>`;
+    svgContent += `<text x="50%" y="55" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" fill="#666">Live visual representation of data packet journey</text>`;
+
+    stages.forEach((stage, index) => {
+      const x = 50 + index * (stageWidth + spacing);
+      const y = 100;
+      const isFailed = stage.name === failureStage;
+      const isPassed = stages.findIndex(s => s.name === failureStage) > index;
+      
+      const bgColor = isFailed ? '#fee' : isPassed ? '#e8f5e9' : '#f5f5f5';
+      const borderColor = isFailed ? '#dc3545' : isPassed ? '#28a745' : '#dee2e6';
+      const textColor = isFailed ? '#dc3545' : isPassed ? '#28a745' : '#495057';
+
+      // Stage box
+      svgContent += `<rect x="${x}" y="${y}" width="${stageWidth}" height="${stageHeight}" rx="8" fill="${bgColor}" stroke="${borderColor}" stroke-width="2"/>`;
+      
+      // Stage name
+      svgContent += `<text x="${x + stageWidth/2}" y="${y + 35}" text-anchor="middle" font-family="system-ui, sans-serif" font-size="15" font-weight="600" fill="${textColor}">${stage.name}</text>`;
+      
+      // Time
+      svgContent += `<text x="${x + stageWidth/2}" y="${y + 55}" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#666">${stage.time}</text>`;
+      
+      // Status badge
+      const status = isFailed ? 'FAILED' : isPassed ? 'DONE' : 'QUEUED';
+      const badgeColor = isFailed ? '#dc3545' : isPassed ? '#28a745' : '#6c757d';
+      svgContent += `<rect x="${x + stageWidth/2 - 30}" y="${y + 70}" width="60" height="20" rx="4" fill="${badgeColor}"/>`;
+      svgContent += `<text x="${x + stageWidth/2}" y="${y + 83}" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="600" fill="white">${status}</text>`;
+
+      // Connector arrow
+      if (index < stages.length - 1) {
+        const arrowX = x + stageWidth + 10;
+        const arrowY = y + stageHeight / 2;
+        const arrowEndX = arrowX + spacing - 20;
+        const arrowColor = isPassed ? '#28a745' : '#dee2e6';
+        
+        svgContent += `<line x1="${arrowX}" y1="${arrowY}" x2="${arrowEndX}" y2="${arrowY}" stroke="${arrowColor}" stroke-width="3"/>`;
+        svgContent += `<polygon points="${arrowEndX},${arrowY} ${arrowEndX - 8},${arrowY - 5} ${arrowEndX - 8},${arrowY + 5}" fill="${arrowColor}"/>`;
+      }
+    });
+
+    // Legend
+    const legendY = 230;
+    svgContent += `<circle cx="50" cy="${legendY}" r="6" fill="#28a745"/>`;
+    svgContent += `<text x="65" y="${legendY + 4}" font-family="system-ui, sans-serif" font-size="12" fill="#666">Active</text>`;
+    
+    svgContent += `<circle cx="150" cy="${legendY}" r="6" fill="#6c757d"/>`;
+    svgContent += `<text x="165" y="${legendY + 4}" font-family="system-ui, sans-serif" font-size="12" fill="#666">Queued</text>`;
+
+    svgContent += `<circle cx="250" cy="${legendY}" r="6" fill="#dc3545"/>`;
+    svgContent += `<text x="265" y="${legendY + 4}" font-family="system-ui, sans-serif" font-size="12" fill="#666">Failed</text>`;
+
+    svgContent += `</svg>`;
+    return svgContent;
   };
 
   const applyAIFixes = () => {
@@ -563,8 +665,8 @@ const DataQualityLab = () => {
 
       {/* Comparison & Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-gutter mb-section-gap">
-        {/* Transformation Preview */}
-        <div className="lg:col-span-2 bg-surface/70 backdrop-blur rounded-xl border border-outline-variant flex flex-col">
+        {/* Transformation Preview - HIDDEN (may use later) */}
+        {/* <div className="lg:col-span-2 bg-surface/70 backdrop-blur rounded-xl border border-outline-variant flex flex-col">
           <div className="p-card-padding border-b border-outline-variant flex justify-between items-center">
             <h4 className="font-headline-sm text-headline-sm text-primary">Transformation Preview</h4>
             <div className="flex bg-surface-container-low p-1 rounded-lg">
@@ -608,10 +710,10 @@ const DataQualityLab = () => {
               </pre>
             </div>
           </div>
-        </div>
+        </div> */}
 
-        {/* Issue Distribution Chart */}
-        <div className="bg-surface/70 backdrop-blur rounded-xl border border-outline-variant p-card-padding">
+        {/* Issue Distribution Chart - HIDDEN (may use later) */}
+        {/* <div className="bg-surface/70 backdrop-blur rounded-xl border border-outline-variant p-card-padding">
           <h4 className="font-headline-sm text-headline-sm text-primary mb-6">Issue Distribution</h4>
           <div className="space-y-6">
             <div>
@@ -642,31 +744,45 @@ const DataQualityLab = () => {
               </div>
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
+
+      {/* Horizontal Divider */}
+      <div className="my-8 border-t border-outline-variant"></div>
 
       {/* Quarantine Table */}
       <div className="bg-surface/70 backdrop-blur rounded-xl border border-outline-variant overflow-hidden">
-        <div className="p-card-padding border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <h4 className="font-headline-sm text-headline-sm text-primary">Quarantine Management</h4>
-              {selectedFilter !== 'all' && (
-                <span className="px-3 py-1 bg-primary text-on-primary text-xs font-bold rounded-full flex items-center gap-1">
-                  <span className="material-symbols-outlined text-sm">filter_alt</span>
-                  {selectedFilter === 'nulls' ? 'NULL Values' : selectedFilter === 'outliers' ? 'Outliers' : 'Schema Issues'}
-                </span>
-              )}
+        <div
+          className="p-card-padding border-b border-outline-variant flex justify-between items-center bg-surface-container-low cursor-pointer hover:bg-surface-container-low/80 transition-colors"
+          onClick={() => setIsQuarantineCollapsed(!isQuarantineCollapsed)}
+        >
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined text-primary transition-transform" style={{ transform: isQuarantineCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}>
+              expand_more
+            </span>
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <h4 className="font-headline-sm text-headline-sm text-primary">Quarantine Management</h4>
+                {selectedFilter !== 'all' && (
+                  <span className="px-3 py-1 bg-primary text-on-primary text-xs font-bold rounded-full flex items-center gap-1">
+                    <span className="material-symbols-outlined text-sm">filter_alt</span>
+                    {selectedFilter === 'nulls' ? 'NULL Values' : selectedFilter === 'outliers' ? 'Outliers' : 'Schema Issues'}
+                  </span>
+                )}
+              </div>
+              <p className="font-body-sm text-on-surface-variant">
+                {selectedFilter === 'all'
+                  ? 'Sample records that failed validation and require manual attention.'
+                  : `Showing ${filteredQuarantineItems.length} records with ${selectedFilter === 'nulls' ? 'NULL values' : selectedFilter === 'outliers' ? 'outlier' : 'schema'} issues. Click "Total Error Count" to see all.`
+                }
+              </p>
             </div>
-            <p className="font-body-sm text-on-surface-variant">
-              {selectedFilter === 'all'
-                ? 'Sample records that failed validation and require manual attention.'
-                : `Showing ${filteredQuarantineItems.length} records with ${selectedFilter === 'nulls' ? 'NULL values' : selectedFilter === 'outliers' ? 'outlier' : 'schema'} issues. Click "Total Error Count" to see all.`
-              }
-            </p>
           </div>
           <button
-            onClick={handlePurge}
+            onClick={(e) => {
+              e.stopPropagation();
+              handlePurge();
+            }}
             disabled={isPurging || allQuarantineItems.length === 0}
             className={`px-4 py-2 text-on-error rounded font-label-md flex items-center gap-2 transition-opacity ${isPurging || allQuarantineItems.length === 0 ? 'bg-error/50 cursor-not-allowed' : 'bg-error hover:opacity-90'}`}
           >
@@ -676,8 +792,10 @@ const DataQualityLab = () => {
             {isPurging ? 'Purging...' : 'Purge All Failures'}
           </button>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+        {!isQuarantineCollapsed && (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-surface-container-lowest border-b border-outline-variant">
                 <th className="px-6 py-4 font-label-md text-on-surface-variant">Record ID</th>
@@ -700,6 +818,13 @@ const DataQualityLab = () => {
                   <td className="px-6 py-4 font-mono-data text-on-surface-variant">{item.timestamp?.split('T')[0] || 'N/A'}</td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-3">
+                      <button
+                        onClick={() => handleViewLineage(item)}
+                        className="text-primary hover:underline font-label-sm flex items-center gap-1"
+                      >
+                        <span className="material-symbols-outlined text-sm">account_tree</span>
+                        View Lineage
+                      </button>
                       <button className="text-primary hover:underline font-label-sm">Edit</button>
                       <button className="text-error hover:underline font-label-sm">Drop</button>
                     </div>
@@ -712,31 +837,33 @@ const DataQualityLab = () => {
                 </tr>
               )}
             </tbody>
-          </table>
-        </div>
-        <div className="p-4 border-t border-outline-variant bg-surface-container-lowest flex justify-between items-center">
-          <span className="font-body-sm text-on-surface-variant">
-            Showing {currentItems.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} - {Math.min(currentPage * itemsPerPage, filteredQuarantineItems.length)} of {filteredQuarantineItems.length} filtered records
-            {selectedFilter !== 'all' && ` (${allQuarantineItems.length} total)`}
-          </span>
-          <div className="flex gap-2 items-center">
-            <span className="text-xs text-on-surface-variant mr-2">Page {currentPage} of {totalPages}</span>
-            <button 
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="p-1 flex items-center justify-center border border-outline-variant rounded hover:bg-surface-container transition-colors disabled:opacity-50"
-            >
-              <span className="material-symbols-outlined">chevron_left</span>
-            </button>
-            <button 
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="p-1 flex items-center justify-center border border-outline-variant rounded hover:bg-surface-container transition-colors disabled:opacity-50"
-            >
-              <span className="material-symbols-outlined">chevron_right</span>
-            </button>
-          </div>
-        </div>
+             </table>
+           </div>
+           <div className="p-4 border-t border-outline-variant bg-surface-container-lowest flex justify-between items-center">
+             <span className="font-body-sm text-on-surface-variant">
+               Showing {currentItems.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} - {Math.min(currentPage * itemsPerPage, filteredQuarantineItems.length)} of {filteredQuarantineItems.length} filtered records
+               {selectedFilter !== 'all' && ` (${allQuarantineItems.length} total)`}
+             </span>
+             <div className="flex gap-2 items-center">
+               <span className="text-xs text-on-surface-variant mr-2">Page {currentPage} of {totalPages}</span>
+               <button
+                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                 disabled={currentPage === 1}
+                 className="p-1 flex items-center justify-center border border-outline-variant rounded hover:bg-surface-container transition-colors disabled:opacity-50"
+               >
+                 <span className="material-symbols-outlined">chevron_left</span>
+               </button>
+               <button
+                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                 disabled={currentPage === totalPages}
+                 className="p-1 flex items-center justify-center border border-outline-variant rounded hover:bg-surface-container transition-colors disabled:opacity-50"
+               >
+                 <span className="material-symbols-outlined">chevron_right</span>
+               </button>
+             </div>
+           </div>
+         </>
+       )}
       </div>
 
       {/* AI Fixes Modal */}
@@ -993,6 +1120,142 @@ const DataQualityLab = () => {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lineage Modal */}
+      {showLineageModal && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setShowLineageModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-primary to-secondary p-6 text-white">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="font-headline-lg text-headline-lg mb-2">Data Lineage Analysis</h3>
+                  <p className="text-sm opacity-90">
+                    AI-powered visualization of data flow and failure point identification
+                  </p>
+                  {selectedRecord && (
+                    <div className="mt-3 flex items-center gap-2 text-sm">
+                      <span className="material-symbols-outlined text-base">badge</span>
+                      <span className="font-mono-data">Record ID: {selectedRecord.id}</span>
+                      <span className="mx-2">•</span>
+                      <span>Source: {selectedRecord.source}</span>
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => setShowLineageModal(false)}
+                  className="text-white hover:bg-white/20 rounded-full p-2 transition-colors"
+                >
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-8 overflow-y-auto max-h-[calc(90vh-180px)]">
+              {lineageLoading ? (
+                <div className="flex flex-col items-center justify-center py-16">
+                  <div className="relative mb-8">
+                    <div className="w-20 h-20 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+                    <span className="material-symbols-outlined absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-3xl text-primary">
+                      account_tree
+                    </span>
+                  </div>
+                  
+                  <h4 className="font-headline-md text-headline-md text-primary mb-3">
+                    Analyzing Data Lineage
+                  </h4>
+                  
+                  <div className="max-w-md text-center space-y-2">
+                    <p className="text-body-md text-on-surface">
+                      Our AI is tracing the complete journey of your data record through the ETL pipeline...
+                    </p>
+                    <p className="text-body-sm text-on-surface-variant">
+                      Identifying ingestion points, transformation stages, validation checkpoints, and pinpointing the exact failure location.
+                    </p>
+                  </div>
+
+                  <div className="mt-8 flex items-center gap-2 text-sm text-on-surface-variant">
+                    <span className="material-symbols-outlined text-base animate-pulse">schedule</span>
+                    <span>This typically takes 2-4 seconds</span>
+                  </div>
+
+                  <div className="mt-6 flex gap-2">
+                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div className="mb-6 bg-primary/5 border border-primary/20 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <span className="material-symbols-outlined text-primary text-2xl">info</span>
+                      <div>
+                        <h5 className="font-label-lg text-on-surface mb-1">Lineage Visualization Complete</h5>
+                        <p className="text-body-sm text-on-surface-variant">
+                          The diagram below shows the complete data flow from source to destination, highlighting where the record encountered issues during processing.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SVG Lineage Diagram */}
+                  <div className="bg-gray-50 rounded-xl p-6 border border-outline-variant overflow-x-auto">
+                    <div dangerouslySetInnerHTML={{ __html: lineageSvg }} />
+                  </div>
+
+                  {/* Additional Info */}
+                  <div className="mt-6 grid grid-cols-2 gap-4">
+                    <div className="bg-surface-container rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="material-symbols-outlined text-primary">analytics</span>
+                        <span className="font-label-md text-on-surface">Analysis Method</span>
+                      </div>
+                      <p className="text-body-sm text-on-surface-variant">
+                        AI-powered trace analysis using Gemini 2.5 Pro
+                      </p>
+                    </div>
+                    <div className="bg-surface-container rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="material-symbols-outlined text-primary">schedule</span>
+                        <span className="font-label-md text-on-surface">Processing Time</span>
+                      </div>
+                      <p className="text-body-sm text-on-surface-variant">
+                        Real-time lineage generation in 2-4 seconds
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            {!lineageLoading && (
+              <div className="border-t border-outline-variant p-6 bg-surface-container-low flex justify-end gap-3">
+                <button
+                  onClick={() => setShowLineageModal(false)}
+                  className="px-6 py-2 bg-white border border-outline-variant rounded-lg font-label-md hover:bg-surface-container transition-colors"
+                >
+                  Close
+                </button>
+                <button
+                  className="px-6 py-2 bg-primary text-on-primary rounded-lg font-label-md hover:opacity-90 transition-opacity flex items-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-sm">download</span>
+                  Export Diagram
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
