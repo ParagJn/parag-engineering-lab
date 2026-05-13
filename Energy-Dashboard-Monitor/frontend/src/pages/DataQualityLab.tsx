@@ -1227,6 +1227,22 @@ const DataQualityLab = () => {
                   Close
                 </button>
                 <button
+                  onClick={() => {
+                    // Create a blob from the SVG content
+                    const blob = new Blob([lineageSvg], { type: 'image/svg+xml' });
+                    const url = URL.createObjectURL(blob);
+                    
+                    // Create a temporary link and trigger download
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `lineage_${selectedRecord?.id || 'diagram'}_${new Date().getTime()}.svg`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    // Clean up the URL
+                    URL.revokeObjectURL(url);
+                  }}
                   className="px-6 py-2 bg-primary text-on-primary rounded-lg font-label-md hover:opacity-90 transition-opacity flex items-center gap-2"
                 >
                   <span className="material-symbols-outlined text-sm">download</span>
