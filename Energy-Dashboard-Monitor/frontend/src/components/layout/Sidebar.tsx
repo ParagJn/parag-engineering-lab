@@ -7,6 +7,8 @@ const Sidebar = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [scanResults, setScanResults] = useState<any>(null);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [showAboutModal, setShowAboutModal] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   const toggleCategory = (category: string) => {
     const newExpanded = new Set(expandedCategories);
@@ -16,6 +18,89 @@ const Sidebar = () => {
       newExpanded.add(category);
     }
     setExpandedCategories(newExpanded);
+  };
+
+  const slides = [
+    {
+      title: "VoltStream Energy Dashboard",
+      subtitle: "AI-Powered Data Platform for Energy & Utilities",
+      type: "cover"
+    },
+    {
+      title: "System Architecture",
+      subtitle: "Real-Time Data Pipeline",
+      type: "architecture",
+      stages: [
+        { name: "Acquisition", time: "120ms", icon: "download", color: "blue", description: "Ingest data from multiple sources" },
+        { name: "Validation", time: "215ms", icon: "verified", color: "purple", description: "Schema & type validation" },
+        { name: "Cleansing", time: "450ms", icon: "cleaning_services", color: "emerald", description: "AI-powered data quality fixes" },
+        { name: "Transformation", time: "280ms", icon: "transform", color: "amber", description: "Business logic & enrichment" },
+        { name: "Lakehouse", time: "Idle", icon: "database", color: "indigo", description: "AI-ready data storage" }
+      ]
+    },
+    {
+      title: "The Problem",
+      subtitle: "Legacy Data Systems Blocking AI Adoption",
+      type: "problem",
+      bullets: [
+        { icon: "broken_image", text: "Fragmented Data Silos", detail: "Customer, meter, grid, and billing systems operate independently" },
+        { icon: "warning", text: "Poor Data Quality", detail: "20-30% of data contains errors (nulls, outliers, schema violations)" },
+        { icon: "schedule", text: "Manual Processes", detail: "60-80% of time spent on manual data quality checks instead of innovation" },
+        { icon: "visibility_off", text: "No Lineage Visibility", detail: "Days wasted tracing problems through complex ETL pipelines" },
+        { icon: "apps", text: "Tool Sprawl", detail: "5-10 different tools increasing costs and complexity" }
+      ],
+      impact: "Result: Delayed AI initiatives, missed revenue, millions in operational inefficiencies"
+    },
+    {
+      title: "The Solution",
+      subtitle: "AI-Native Data Platform with Intelligent Automation",
+      type: "solution",
+      bullets: [
+        { icon: "auto_awesome", text: "Generative AI for Data Quality", detail: "95% automation rate, reducing management from days to minutes" },
+        { icon: "account_tree", text: "AI-Generated Data Lineage", detail: "Root cause analysis reduced from hours to seconds" },
+        { icon: "psychology", text: "Intelligent Anomaly Detection", detail: "98% accuracy in identifying true data quality issues" },
+        { icon: "trending_up", text: "Predictive Quality Scoring", detail: "Proactive prevention of data quality incidents" },
+        { icon: "integration_instructions", text: "Unified Platform", detail: "Single pane of glass replacing 3+ legacy tools" }
+      ]
+    },
+    {
+      title: "Expected Benefits",
+      subtitle: "Measurable Business Outcomes & KPIs",
+      type: "benefits",
+      metrics: [
+        { label: "Data Quality Management Time", before: "40 hrs/week", after: "2 hrs/week", improvement: "95% reduction", icon: "schedule" },
+        { label: "Root Cause Analysis", before: "4-8 hours", after: "30 seconds", improvement: "99% faster", icon: "speed" },
+        { label: "Data Quality Score", before: "65-70%", after: "95%+", improvement: "35% improvement", icon: "grade" },
+        { label: "Tool Costs", before: "$50K+/year", after: "$10K/year", improvement: "80% savings", icon: "savings" },
+        { label: "Time to AI Readiness", before: "6-12 months", after: "2-4 weeks", improvement: "90% faster", icon: "rocket_launch" },
+        { label: "Manual Interventions", before: "500+/month", after: "25/month", improvement: "95% reduction", icon: "automation" }
+      ]
+    },
+    {
+      title: "Key Performance Indicators",
+      subtitle: "Real-Time Platform Metrics",
+      type: "kpis",
+      kpis: [
+        { metric: "Data Quality", value: "95%+", description: "Automated issue detection & resolution", icon: "verified", color: "emerald" },
+        { metric: "API Performance", value: "<2s", description: "Response time for all endpoints", icon: "speed", color: "blue" },
+        { metric: "Records Processed", value: "35,000+", description: "Across 7 production datasets", icon: "database", color: "purple" },
+        { metric: "AI Integration", value: "100%", description: "All workflows AI-enhanced", icon: "psychology", color: "indigo" },
+        { metric: "Platform Consolidation", value: "3→1", description: "Tools replaced by single platform", icon: "integration_instructions", color: "amber" },
+        { metric: "Automation Rate", value: "95%", description: "Manual effort reduction", icon: "automation", color: "teal" }
+      ]
+    }
+  ];
+
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % slides.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+  };
+
+  const goToSlide = (index: number) => {
+    setCurrentSlide(index);
   };
 
   const runVulnerabilityAssessment = async () => {
@@ -397,10 +482,16 @@ const Sidebar = () => {
             <span className="material-symbols-outlined">settings</span>
             Settings
           </a> */}
-          <a href="#" className="flex items-center gap-3 px-4 py-3 font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors duration-150">
-            <span className="material-symbols-outlined">help</span>
-            Support
-          </a>
+          <button
+            onClick={() => {
+              setShowAboutModal(true);
+              setCurrentSlide(0);
+            }}
+            className="w-full flex items-center gap-3 px-4 py-3 font-label-md text-label-md text-on-surface-variant hover:text-primary hover:bg-surface-container rounded-lg transition-colors duration-150"
+          >
+            <span className="material-symbols-outlined">info</span>
+            About
+          </button>
         </div>
       </div>
 
@@ -730,6 +821,284 @@ const Sidebar = () => {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* About Modal with Slide View */}
+      {showAboutModal && (
+        <div
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[100] p-8"
+          onClick={() => setShowAboutModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-[80vw] h-[80vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Slide Content */}
+            <div className="flex-1 overflow-y-auto p-12">
+              {slides[currentSlide].type === 'cover' && (
+                <div className="h-full flex flex-col items-center justify-center text-center">
+                  <div className="mb-8">
+                    <div className="w-24 h-24 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                      <span className="material-symbols-outlined text-white text-5xl">energy_savings_leaf</span>
+                    </div>
+                  </div>
+                  <h1 className="text-6xl font-bold text-gray-900 mb-4">{slides[currentSlide].title}</h1>
+                  <p className="text-2xl text-gray-600 mb-12">{slides[currentSlide].subtitle}</p>
+                  <div className="flex gap-4 text-sm text-gray-500">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-emerald-600">check_circle</span>
+                      <span>AI-Powered Platform</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-blue-600">speed</span>
+                      <span>Real-Time Processing</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-purple-600">analytics</span>
+                      <span>Enterprise-Grade</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {slides[currentSlide].type === 'architecture' && (
+                <div className="h-full flex flex-col">
+                  <div className="mb-8">
+                    <h2 className="text-4xl font-bold text-gray-900 mb-2">{slides[currentSlide].title}</h2>
+                    <p className="text-xl text-gray-600">{slides[currentSlide].subtitle}</p>
+                  </div>
+                  <div className="flex-1 flex flex-col justify-center">
+                    {/* Visual Pipeline Flow */}
+                    <div className="relative mb-12">
+                      <div className="flex items-center justify-between gap-4">
+                        {slides[currentSlide].stages.map((stage: any, idx: number) => (
+                          <div key={stage.name} className="flex items-center flex-1">
+                            {/* Stage Box */}
+                            <div className={`relative bg-gradient-to-br from-${stage.color}-50 to-${stage.color}-100 border-2 border-${stage.color}-300 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all hover:scale-105 w-full`}>
+                              <div className="text-center">
+                                <span className={`material-symbols-outlined text-${stage.color}-600 text-4xl mb-3 block`}>
+                                  {stage.icon}
+                                </span>
+                                <div className={`text-2xl font-bold text-${stage.color}-700 mb-1`}>
+                                  {idx + 1}
+                                </div>
+                                <h3 className="text-lg font-bold text-gray-900 mb-2">
+                                  {stage.name}
+                                </h3>
+                                <div className={`inline-block px-3 py-1 bg-${stage.color}-200 text-${stage.color}-800 text-sm font-bold rounded-full mb-2`}>
+                                  {stage.time}
+                                </div>
+                                <p className="text-xs text-gray-600 mt-2">
+                                  {stage.description}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            {/* Arrow */}
+                            {idx < slides[currentSlide].stages.length - 1 && (
+                              <div className="flex items-center justify-center px-2">
+                                <span className="material-symbols-outlined text-gray-400 text-3xl">
+                                  arrow_forward
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Summary Stats */}
+                    <div className="grid grid-cols-3 gap-6">
+                      <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 border border-blue-200 text-center">
+                        <div className="text-3xl font-bold text-blue-600 mb-2">5</div>
+                        <div className="text-sm font-semibold text-gray-900">Pipeline Stages</div>
+                        <div className="text-xs text-gray-600 mt-1">End-to-end processing</div>
+                      </div>
+                      <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-lg p-6 border border-emerald-200 text-center">
+                        <div className="text-3xl font-bold text-emerald-600 mb-2">{'<2s'}</div>
+                        <div className="text-sm font-semibold text-gray-900">Total Latency</div>
+                        <div className="text-xs text-gray-600 mt-1">Real-time processing</div>
+                      </div>
+                      <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-6 border border-purple-200 text-center">
+                        <div className="text-3xl font-bold text-purple-600 mb-2">100%</div>
+                        <div className="text-sm font-semibold text-gray-900">AI-Powered</div>
+                        <div className="text-xs text-gray-600 mt-1">Automated quality checks</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {slides[currentSlide].type === 'problem' && (
+                <div className="h-full flex flex-col">
+                  <div className="mb-8">
+                    <h2 className="text-4xl font-bold text-gray-900 mb-2">{slides[currentSlide].title}</h2>
+                    <p className="text-xl text-gray-600">{slides[currentSlide].subtitle}</p>
+                  </div>
+                  <div className="flex-1 space-y-4">
+                    {slides[currentSlide].bullets.map((bullet: any, idx: number) => (
+                      <div key={idx} className="bg-red-50 border-l-4 border-red-500 rounded-lg p-6 hover:shadow-md transition-shadow">
+                        <div className="flex items-start gap-4">
+                          <span className="material-symbols-outlined text-red-600 text-3xl flex-shrink-0">{bullet.icon}</span>
+                          <div className="flex-1">
+                            <h3 className="text-xl font-bold text-gray-900 mb-2">{bullet.text}</h3>
+                            <p className="text-gray-700">{bullet.detail}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-6 bg-red-100 border border-red-300 rounded-lg p-4">
+                    <p className="text-lg font-semibold text-red-900 flex items-center gap-2">
+                      <span className="material-symbols-outlined">error</span>
+                      {slides[currentSlide].impact}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {slides[currentSlide].type === 'solution' && (
+                <div className="h-full flex flex-col">
+                  <div className="mb-8">
+                    <h2 className="text-4xl font-bold text-gray-900 mb-2">{slides[currentSlide].title}</h2>
+                    <p className="text-xl text-gray-600">{slides[currentSlide].subtitle}</p>
+                  </div>
+                  <div className="flex-1 space-y-4">
+                    {slides[currentSlide].bullets.map((bullet: any, idx: number) => (
+                      <div key={idx} className="bg-gradient-to-r from-emerald-50 to-teal-50 border-l-4 border-emerald-500 rounded-lg p-6 hover:shadow-md transition-shadow">
+                        <div className="flex items-start gap-4">
+                          <span className="material-symbols-outlined text-emerald-600 text-3xl flex-shrink-0">{bullet.icon}</span>
+                          <div className="flex-1">
+                            <h3 className="text-xl font-bold text-gray-900 mb-2">{bullet.text}</h3>
+                            <p className="text-gray-700">{bullet.detail}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {slides[currentSlide].type === 'benefits' && (
+                <div className="h-full flex flex-col">
+                  <div className="mb-8">
+                    <h2 className="text-4xl font-bold text-gray-900 mb-2">{slides[currentSlide].title}</h2>
+                    <p className="text-xl text-gray-600">{slides[currentSlide].subtitle}</p>
+                  </div>
+                  <div className="flex-1 grid grid-cols-2 gap-6">
+                    {slides[currentSlide].metrics.map((metric: any, idx: number) => (
+                      <div key={idx} className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200 hover:shadow-lg transition-shadow">
+                        <div className="flex items-start gap-4">
+                          <span className="material-symbols-outlined text-blue-600 text-3xl flex-shrink-0">{metric.icon}</span>
+                          <div className="flex-1">
+                            <h3 className="text-lg font-bold text-gray-900 mb-3">{metric.label}</h3>
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-600">Before:</span>
+                                <span className="text-sm font-semibold text-red-600">{metric.before}</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-600">After:</span>
+                                <span className="text-sm font-semibold text-emerald-600">{metric.after}</span>
+                              </div>
+                              <div className="pt-2 border-t border-blue-200">
+                                <span className="inline-block px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-full">
+                                  {metric.improvement}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {slides[currentSlide].type === 'kpis' && (
+                <div className="h-full flex flex-col">
+                  <div className="mb-8">
+                    <h2 className="text-4xl font-bold text-gray-900 mb-2">{slides[currentSlide].title}</h2>
+                    <p className="text-xl text-gray-600">{slides[currentSlide].subtitle}</p>
+                  </div>
+                  <div className="flex-1 grid grid-cols-3 gap-6">
+                    {slides[currentSlide].kpis.map((kpi: any, idx: number) => (
+                      <div key={idx} className={`bg-gradient-to-br from-${kpi.color}-50 to-${kpi.color}-100 rounded-xl p-6 border-2 border-${kpi.color}-300 hover:shadow-xl transition-all hover:scale-105`}>
+                        <div className="text-center">
+                          <span className={`material-symbols-outlined text-${kpi.color}-600 text-5xl mb-4 block`}>{kpi.icon}</span>
+                          <div className={`text-4xl font-bold text-${kpi.color}-700 mb-2`}>{kpi.value}</div>
+                          <h3 className="text-lg font-bold text-gray-900 mb-2">{kpi.metric}</h3>
+                          <p className="text-sm text-gray-700">{kpi.description}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Navigation Footer */}
+            <div className="border-t border-gray-200 bg-gray-50 p-6">
+              <div className="flex items-center justify-between">
+                {/* Previous Button */}
+                <button
+                  onClick={prevSlide}
+                  className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  disabled={currentSlide === 0}
+                >
+                  <span className="material-symbols-outlined">arrow_back</span>
+                  Previous
+                </button>
+
+                {/* Slide Indicators */}
+                <div className="flex items-center gap-2">
+                  {slides.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => goToSlide(idx)}
+                      className={`w-3 h-3 rounded-full transition-all ${
+                        idx === currentSlide
+                          ? 'bg-blue-600 w-8'
+                          : 'bg-gray-300 hover:bg-gray-400'
+                      }`}
+                      aria-label={`Go to slide ${idx + 1}`}
+                    />
+                  ))}
+                  <span className="ml-4 text-sm text-gray-600 font-medium">
+                    {currentSlide + 1} / {slides.length}
+                  </span>
+                </div>
+
+                {/* Next/Close Button */}
+                {currentSlide < slides.length - 1 ? (
+                  <button
+                    onClick={nextSlide}
+                    className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    Next
+                    <span className="material-symbols-outlined">arrow_forward</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setShowAboutModal(false)}
+                    className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors"
+                  >
+                    <span className="material-symbols-outlined">check_circle</span>
+                    Close
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Close Button (Top Right) */}
+            <button
+              onClick={() => setShowAboutModal(false)}
+              className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full p-2 transition-colors"
+            >
+              <span className="material-symbols-outlined text-2xl">close</span>
+            </button>
           </div>
         </div>
       )}
