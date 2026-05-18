@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>GridData OS - Load History</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Inter:wght@400;500;600&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-highest": "#e4e2e3",
+                        "on-tertiary-fixed": "#271902",
+                        "on-surface-variant": "#45474c",
+                        "surface-tint": "#545f73",
+                        "on-secondary-fixed": "#0b1c30",
+                        "secondary-fixed": "#d3e4fe",
+                        "secondary": "#505f76",
+                        "primary": "#091426",
+                        "primary-fixed": "#d8e3fb",
+                        "surface-container-high": "#eae7e9",
+                        "surface-container": "#f0edef",
+                        "tertiary-fixed": "#fadfb8",
+                        "on-tertiary": "#ffffff",
+                        "surface-bright": "#fbf8fa",
+                        "surface-container-low": "#f5f3f4",
+                        "outline": "#75777d",
+                        "inverse-primary": "#bcc7de",
+                        "inverse-surface": "#303032",
+                        "surface-dim": "#dcd9db",
+                        "primary-container": "#1e293b",
+                        "on-primary-fixed": "#111c2d",
+                        "inverse-on-surface": "#f3f0f2",
+                        "tertiary-container": "#35260c",
+                        "secondary-container": "#d0e1fb",
+                        "on-tertiary-fixed-variant": "#564427",
+                        "on-primary": "#ffffff",
+                        "surface": "#fbf8fa",
+                        "tertiary": "#1e1200",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-variant": "#e4e2e3",
+                        "on-background": "#1b1b1d",
+                        "tertiary-fixed-dim": "#ddc39d",
+                        "error-container": "#ffdad6",
+                        "background": "#fbf8fa",
+                        "error": "#ba1a1a",
+                        "on-error": "#ffffff",
+                        "secondary-fixed-dim": "#b7c8e1",
+                        "on-secondary": "#ffffff",
+                        "on-surface": "#1b1b1d",
+                        "on-secondary-fixed-variant": "#38485d",
+                        "on-error-container": "#93000a",
+                        "primary-fixed-dim": "#bcc7de",
+                        "on-secondary-container": "#54647a",
+                        "outline-variant": "#c5c6cd",
+                        "on-tertiary-container": "#a38c6a",
+                        "on-primary-container": "#8590a6",
+                        "on-primary-fixed-variant": "#3c475a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "container-margin": "32px",
+                        "section-gap": "40px",
+                        "input-padding": "12px",
+                        "card-padding": "24px",
+                        "gutter": "24px",
+                        "unit": "4px"
+                    },
+                    "fontFamily": {
+                        "body-sm": ["Inter"],
+                        "label-sm": ["Geist"],
+                        "display-lg": ["Geist"],
+                        "body-md": ["Inter"],
+                        "headline-sm": ["Geist"],
+                        "headline-md": ["Geist"],
+                        "label-md": ["Geist"],
+                        "mono-data": ["Geist"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                        "display-lg": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                        "mono-data": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .pipeline-gradient-primary {
+            background: linear-gradient(135deg, #091426 0%, #1e293b 100%);
+        }
+        .custom-shadow {
+            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- SideNavBar Shell -->
+<aside class="w-[280px] h-screen fixed left-0 top-0 flex flex-col bg-surface border-r border-outline-variant shadow-sm z-50">
+<div class="px-6 py-8 flex flex-col gap-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-primary flex items-center justify-center">
+<img alt="Energy Grid Logo" class="w-8 h-8 brightness-0 invert" data-alt="A minimalist vector logo for an energy grid company, featuring a stylized shield integrated with a lightning bolt and a wave icon, symbolizing power and fluid data transfer. The design uses clean, sharp lines in a monochromatic white on a deep slate background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAQ2CEOaGyrWHu-IR_AOQdKfDnCXdLAVvmnV01yMlVTk9rq7fOVpyV8E8JxR4Asi6563Rv18vI8gTTUU-VhTJwDUbpkqjxPPXDn7wBMAHCkEQqEdv7TXQYHdxBehklf96qyWkoYU_VHCNSo5ZvJ9DaAHw1W-iBlLHfrJ0fnZN0W_fUGFpvb26hTD3OVzTxy4CxBIUEu9ekTcfjHZiovscOKX7ADfmPwdi4b-SV_yUAWrceL9VxXJoEFU_h6aJkvEno7-jQySUxLXD0"/>
+</div>
+<div>
+<h1 class="font-headline-md text-headline-md font-bold tracking-tight text-primary">GridData OS</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Enterprise Pipeline Control</p>
+</div>
+</div>
+<div class="mt-6">
+<span class="inline-flex items-center px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium border border-emerald-100">
+<span class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span>
+                    System Status: Healthy
+                </span>
+</div>
+</div>
+<nav class="flex-1 px-4 py-2 space-y-1">
+<a class="flex items-center gap-3 px-3 py-3 rounded text-on-surface-variant hover:bg-surface-container transition-colors duration-150" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-md text-label-md">Pipeline Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 rounded text-on-surface-variant hover:bg-surface-container transition-colors duration-150" href="#">
+<span class="material-symbols-outlined">monitoring</span>
+<span class="font-label-md text-label-md">Real-Time Monitor</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 rounded text-on-surface-variant hover:bg-surface-container transition-colors duration-150" href="#">
+<span class="material-symbols-outlined">fact_check</span>
+<span class="font-label-md text-label-md">Data Quality Lab</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 rounded text-primary font-bold border-r-2 border-primary bg-surface-container-low transition-colors duration-150" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">history_edu</span>
+<span class="font-label-md text-label-md">Load History</span>
+</a>
+</nav>
+<div class="p-4 border-t border-outline-variant space-y-1">
+<a class="flex items-center gap-3 px-3 py-3 rounded text-on-surface-variant hover:bg-surface-container transition-colors duration-150" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 rounded text-on-surface-variant hover:bg-surface-container transition-colors duration-150" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="font-label-md text-label-md">Support</span>
+</a>
+</div>
+</aside>
+<!-- TopAppBar Shell -->
+<header class="fixed top-0 left-[280px] right-0 z-40 flex items-center justify-between h-16 px-container-margin bg-surface/80 backdrop-blur-md border-b border-outline-variant">
+<div class="flex items-center gap-4">
+<h2 class="font-headline-sm text-headline-sm font-semibold text-primary">Load History</h2>
+<div class="flex items-center gap-2 px-3 py-1 bg-surface-container rounded-full">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+<span class="text-xs font-medium text-on-surface-variant">Lakehouse Status: Ready</span>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline text-sm">search</span>
+<input class="bg-surface-container-low border border-outline-variant rounded-lg pl-9 pr-4 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-64" placeholder="Search load logs..." type="text"/>
+</div>
+<div class="flex items-center gap-3 border-l border-outline-variant pl-6">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">notifications_active</span>
+</button>
+<div class="flex items-center gap-2 cursor-pointer hover:bg-surface-container p-1 rounded transition-colors">
+<img alt="Administrator Profile" class="w-8 h-8 rounded-full border border-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDZM7J5lKe9NUpIqrEAQ66JCsvrqB9QvYlG0-Qo4YK-CNAGm3ZhbFKD-v8c1Fqzugj_qDrt5g42yqU3BqNG6VzR1pGTry3IqMDwufk6cfsek4wEEx4Afx10qBgIH4hEUSyhsSSFZgo0KFaEwcs10U2XfxDUwaYgL3JXTA_GENpLozWzRuRNaGsJ5UhEfXVWBPtIU7mtoBkQVC6EpxuP-MhnA0_NewAOtS0tWq_yUYY7-D_UHIN3MSBV1IIu9JnfmUY16d45emoPHWE"/>
+<span class="material-symbols-outlined text-outline">expand_more</span>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-[280px] pt-16 min-h-screen p-container-margin space-y-gutter">
+<!-- Action Header -->
+<div class="flex justify-between items-end">
+<div>
+<p class="font-body-md text-on-surface-variant">Historical performance for the Lakehouse database loads.</p>
+</div>
+<div class="flex gap-3">
+<button class="px-4 py-2 border border-outline-variant text-primary rounded-lg text-sm font-medium hover:bg-surface-container transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">file_download</span>
+                    Export Logs
+                </button>
+<button class="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-container transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">refresh</span>
+                    Refresh Data
+                </button>
+</div>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-12 gap-gutter">
+<!-- Time-Series Chart Area -->
+<div class="col-span-12 lg:col-span-8 bg-white border border-outline-variant rounded-xl p-card-padding custom-shadow">
+<div class="flex justify-between items-center mb-8">
+<div>
+<h3 class="font-headline-sm text-headline-sm text-primary">Volume Trends</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Total Volume Loaded (Last 30 Days)</p>
+</div>
+<div class="flex gap-2">
+<button class="px-3 py-1 rounded bg-surface-container-low border border-outline-variant text-xs font-medium text-primary">Daily</button>
+<button class="px-3 py-1 rounded text-xs font-medium text-on-surface-variant hover:bg-surface-container">Weekly</button>
+</div>
+</div>
+<!-- Simulated Line Chart -->
+<div class="relative h-64 w-full bg-surface-container-lowest rounded-lg border border-outline-variant/30 flex items-end p-4">
+<div class="absolute inset-0 flex flex-col justify-between py-4 px-2">
+<div class="w-full border-t border-outline-variant/10 text-[10px] text-outline">5.0 TB</div>
+<div class="w-full border-t border-outline-variant/10 text-[10px] text-outline">2.5 TB</div>
+<div class="w-full border-t border-outline-variant/10 text-[10px] text-outline">1.0 TB</div>
+<div class="w-full border-t border-outline-variant/10 text-[10px] text-outline">0 TB</div>
+</div>
+<div class="relative w-full h-full flex items-end justify-between px-8">
+<!-- Chart Logic: Dynamic shapes -->
+<svg class="absolute bottom-0 left-0 w-full h-4/5 text-primary/10 fill-current overflow-visible" viewbox="0 0 1000 200">
+<path d="M0 200 L0 150 C 100 120, 200 180, 300 140 C 400 100, 500 160, 600 80 C 700 40, 800 120, 900 60 C 950 40, 1000 20, 1000 20 L1000 200 Z"></path>
+<path class="text-primary" d="M0 150 C 100 120, 200 180, 300 140 C 400 100, 500 160, 600 80 C 700 40, 800 120, 900 60 C 950 40, 1000 20, 1000 20" fill="none" stroke="currentColor" stroke-width="3"></path>
+</svg>
+<div class="absolute right-10 top-10 flex items-center gap-2 bg-white px-3 py-2 border border-outline-variant rounded shadow-lg">
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+<span class="text-xs font-bold">Aug 24: 4.82 TB</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Orchestration Pie Chart -->
+<div class="col-span-12 lg:col-span-4 bg-white border border-outline-variant rounded-xl p-card-padding custom-shadow flex flex-col">
+<h3 class="font-headline-sm text-headline-sm text-primary mb-1">Orchestration Health</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant mb-6">Overall Run Success vs Failure</p>
+<div class="flex-1 flex flex-col items-center justify-center relative">
+<div class="w-40 h-40 rounded-full border-[16px] border-emerald-500 relative flex items-center justify-center">
+<div class="absolute inset-[-16px] rounded-full border-[16px] border-error border-l-transparent border-t-transparent border-b-transparent transform rotate-[45deg]"></div>
+<div class="text-center">
+<span class="block font-display-lg text-display-lg text-primary">94.2%</span>
+<span class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Uptime</span>
+</div>
+</div>
+<div class="mt-8 w-full space-y-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-sm bg-emerald-500"></span>
+<span class="text-sm font-medium">Successful Runs</span>
+</div>
+<span class="font-mono-data text-mono-data font-bold">1,420</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-sm bg-error"></span>
+<span class="text-sm font-medium">Critical Failures</span>
+</div>
+<span class="font-mono-data text-mono-data font-bold text-error">18</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-sm bg-tertiary-fixed"></span>
+<span class="text-sm font-medium">Warnings/Retries</span>
+</div>
+<span class="font-mono-data text-mono-data font-bold">64</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Historical Log Table -->
+<div class="col-span-12 bg-white border border-outline-variant rounded-xl overflow-hidden custom-shadow">
+<div class="px-card-padding py-5 border-b border-outline-variant flex justify-between items-center bg-surface-container-lowest">
+<h3 class="font-headline-sm text-headline-sm text-primary">Detailed Historical Log</h3>
+<div class="flex items-center gap-4">
+<div class="flex items-center border border-outline-variant rounded overflow-hidden">
+<button class="p-1.5 hover:bg-surface-container"><span class="material-symbols-outlined text-sm">filter_list</span></button>
+<button class="p-1.5 border-l border-outline-variant hover:bg-surface-container"><span class="material-symbols-outlined text-sm">sort</span></button>
+</div>
+</div>
+</div>
+<table class="w-full text-left">
+<thead class="bg-surface-container-low">
+<tr>
+<th class="px-6 py-4 font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Date &amp; Time</th>
+<th class="px-6 py-4 font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Source Engine</th>
+<th class="px-6 py-4 font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Records Loaded</th>
+<th class="px-6 py-4 font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Quality Score</th>
+<th class="px-6 py-4 font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Duration</th>
+<th class="px-6 py-4 font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/30">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="px-6 py-4">
+<div class="font-mono-data text-primary font-medium">2023-08-25 09:12:04</div>
+<div class="text-[10px] text-on-surface-variant">UTC-05:00</div>
+</td>
+<td class="px-6 py-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-lg">database</span>
+<span class="text-sm">Mainframe_S3_Sync</span>
+</td>
+<td class="px-6 py-4 font-mono-data text-sm font-bold">12,482,091</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-16 h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-emerald-500 w-[98%]"></div>
+</div>
+<span class="text-xs font-bold text-emerald-600">98%</span>
+</div>
+</td>
+<td class="px-6 py-4 font-mono-data text-sm">12m 44s</td>
+<td class="px-6 py-4">
+<button class="text-primary hover:underline text-xs font-bold">View Details</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="px-6 py-4">
+<div class="font-mono-data text-primary font-medium">2023-08-25 08:45:12</div>
+<div class="text-[10px] text-on-surface-variant">UTC-05:00</div>
+</td>
+<td class="px-6 py-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-lg">cloud</span>
+<span class="text-sm">API_Gateway_RealTime</span>
+</td>
+<td class="px-6 py-4 font-mono-data text-sm font-bold">842,500</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-16 h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-emerald-500 w-[95%]"></div>
+</div>
+<span class="text-xs font-bold text-emerald-600">95%</span>
+</div>
+</td>
+<td class="px-6 py-4 font-mono-data text-sm">3m 12s</td>
+<td class="px-6 py-4">
+<button class="text-primary hover:underline text-xs font-bold">View Details</button>
+</td>
+</tr>
+<!-- Row 3 - Warning State -->
+<tr class="bg-tertiary-fixed/5 hover:bg-tertiary-fixed/10 transition-colors">
+<td class="px-6 py-4 border-l-4 border-tertiary-fixed">
+<div class="font-mono-data text-primary font-medium">2023-08-25 08:00:00</div>
+<div class="text-[10px] text-on-surface-variant">UTC-05:00</div>
+</td>
+<td class="px-6 py-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-lg">sensors</span>
+<span class="text-sm">IoT_Collector_Alpha</span>
+</td>
+<td class="px-6 py-4 font-mono-data text-sm font-bold">5,200,112</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-16 h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-tertiary-fixed-dim w-[72%]"></div>
+</div>
+<span class="text-xs font-bold text-on-tertiary-fixed-variant">72%</span>
+</div>
+</td>
+<td class="px-6 py-4 font-mono-data text-sm">45m 08s</td>
+<td class="px-6 py-4">
+<button class="text-primary hover:underline text-xs font-bold">Review Warning</button>
+</td>
+</tr>
+<!-- Row 4 - Error State -->
+<tr class="bg-error-container/5 hover:bg-error-container/10 transition-colors">
+<td class="px-6 py-4 border-l-4 border-error">
+<div class="font-mono-data text-error font-medium">2023-08-25 07:30:15</div>
+<div class="text-[10px] text-on-error-container">UTC-05:00</div>
+</td>
+<td class="px-6 py-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-error text-lg">warning</span>
+<span class="text-sm font-bold text-error">Legacy_DB_Legacy</span>
+</td>
+<td class="px-6 py-4 font-mono-data text-sm font-bold">0</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-16 h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-error w-[0%]"></div>
+</div>
+<span class="text-xs font-bold text-error">0%</span>
+</div>
+</td>
+<td class="px-6 py-4 font-mono-data text-sm text-error">Failed</td>
+<td class="px-6 py-4">
+<button class="bg-error text-white px-3 py-1 rounded text-[10px] font-bold uppercase tracking-wider">Debug Log</button>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="px-6 py-4 bg-surface-container-lowest border-t border-outline-variant flex justify-between items-center">
+<span class="text-sm text-on-surface-variant">Showing 4 of 3,248 historical entries</span>
+<div class="flex gap-1">
+<button class="p-1 rounded hover:bg-surface-container disabled:opacity-30" disabled=""><span class="material-symbols-outlined">chevron_left</span></button>
+<button class="px-3 py-1 bg-primary text-white rounded text-xs font-bold">1</button>
+<button class="px-3 py-1 rounded hover:bg-surface-container text-xs font-medium">2</button>
+<button class="px-3 py-1 rounded hover:bg-surface-container text-xs font-medium">3</button>
+<button class="p-1 rounded hover:bg-surface-container"><span class="material-symbols-outlined">chevron_right</span></button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Contextual FAB - Restricted to Top Level but allowed here for Quick Load Trigger -->
+<button class="fixed bottom-8 right-8 w-14 h-14 bg-primary text-white rounded-full flex items-center justify-center shadow-xl hover:scale-105 active:scale-95 transition-all z-50">
+<span class="material-symbols-outlined text-2xl">add_chart</span>
+</button>
+</body></html>
