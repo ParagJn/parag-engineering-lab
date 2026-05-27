@@ -11,6 +11,11 @@ const PLATFORM_OPTIONS = [
   { id: "x", label: "X" },
 ]
 
+const CONTENT_MODE_OPTIONS = [
+  { id: "factual", label: "Research-based factual" },
+  { id: "fictional", label: "Fictional" },
+]
+
 function parseUrls(input) {
   return input
     .split(/\n|,/) 
@@ -156,6 +161,7 @@ async function consumeStream({ endpoint, body, addLog, setReviews, setResult, se
 export default function App() {
   const [urlsInput, setUrlsInput] = useState('')
   const [selectedPlatform, setSelectedPlatform] = useState("blog")
+  const [selectedContentMode, setSelectedContentMode] = useState("factual")
   const [isGenerating, setIsGenerating] = useState(false)
   const [isApplyingSuggestions, setIsApplyingSuggestions] = useState(false)
   const [isManualRegenerating, setIsManualRegenerating] = useState(false)
@@ -278,7 +284,12 @@ export default function App() {
     try {
       await consumeStream({
         endpoint: '/api/generate-stream',
-        body: { urls, article_id: result?.article_id || null, platform: selectedPlatform },
+        body: {
+          urls,
+          article_id: result?.article_id || null,
+          platform: selectedPlatform,
+          content_mode: selectedContentMode,
+        },
         addLog,
         setReviews,
         setResult,
@@ -323,6 +334,7 @@ export default function App() {
           review_summary: result.review_summary,
           article_id: result.article_id || null,
           platform: selectedPlatform,
+          content_mode: selectedContentMode,
         },
         addLog,
         setReviews,
@@ -428,6 +440,7 @@ export default function App() {
           change_request: changeRequest,
           article_id: result.article_id || null,
           platform: selectedPlatform,
+          content_mode: selectedContentMode,
         },
         addLog,
         setReviews,
@@ -526,6 +539,28 @@ export default function App() {
                   {platform.label}
                 </button>
               ))}
+            </div>
+
+
+
+            <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3">
+              <p className="mb-2 text-sm font-semibold text-slate-700">Content Mode</p>
+              <div className="flex flex-wrap gap-4">
+                {CONTENT_MODE_OPTIONS.map((mode) => (
+                  <label key={mode.id} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                    <input
+                      type="radio"
+                      name="content_mode"
+                      value={mode.id}
+                      checked={selectedContentMode === mode.id}
+                      onChange={() => setSelectedContentMode(mode.id)}
+                      disabled={isBusy}
+                      className="h-4 w-4 border-slate-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span>{mode.label}</span>
+                  </label>
+                ))}
+              </div>
             </div>
 
             <section className="mt-8 rounded-2xl border-2 border-blue-400 bg-white p-5 shadow-md shadow-blue-100">

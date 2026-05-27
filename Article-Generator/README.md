@@ -1,4 +1,4 @@
-# AI Article Generator
+# Article Generator
 
 Production-style full-stack app that generates a high-quality article from user-provided source URLs using **Google Gemini**, then reviews quality with **Anthropic Claude**.
 

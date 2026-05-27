@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TalentFlow — Recruiting Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./base.css">
+  <link rel="stylesheet" href="./style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
+</head>
+<body>
+  <div class="dashboard">
+    <!-- ============================================
+         SIDEBAR
+         ============================================ -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <!-- TF Monogram — Paul Rand-inspired geometric -->
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="36" height="36" rx="8" fill="var(--color-primary)"/>
+          <path d="M8 11h20v3.5H20.5V26H15.5V14.5H8V11Z" fill="var(--color-text-inverse)"/>
+          <path d="M20.5 17h7.5v3H24v6h-3.5V17Z" fill="var(--color-text-inverse)" opacity="0.7"/>
+        </svg>
+        <div>
+          <div class="logo-text">TalentFlow</div>
+          <div class="logo-subtext">Recruiting Intelligence</div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section-label">Workspace</div>
+        <button class="nav-item active" data-view="search">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          Search
+        </button>
+        <button class="nav-item" data-view="pipeline">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="6" height="14" x="4" y="5" rx="2"/><rect width="6" height="10" x="14" y="7" rx="2"/></svg>
+          Pipeline
+          <span class="nav-badge" id="pipeline-badge">0</span>
+        </button>
+        <button class="nav-item" data-view="outreach">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+          Outreach
+        </button>
+        <button class="nav-item" data-view="analytics">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+          Analytics
+        </button>
+
+        <div class="nav-section-label" style="margin-top:auto">Account</div>
+        <button class="nav-item" onclick="return false">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Settings
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="sidebar-user-avatar">PJ</div>
+          <div class="sidebar-user-info">
+            <div class="sidebar-user-name">Paul Jung</div>
+            <div class="sidebar-user-role">Talent Sourcer</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ============================================
+         HEADER
+         ============================================ -->
+    <header class="header">
+      <div class="header-left">
+        <button class="header-btn mobile-menu-btn" id="mobile-menu-btn" aria-label="Toggle menu">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+        </button>
+        <h1 class="header-title" id="header-title">Candidate Search</h1>
+      </div>
+      <div class="header-right">
+        <button class="header-btn" id="theme-toggle" aria-label="Toggle dark mode">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- ============================================
+         MAIN CONTENT
+         ============================================ -->
+    <main class="main">
+
+      <!-- SEARCH VIEW -->
+      <div class="view active" id="view-search">
+        <div class="search-input-area">
+          <label for="jd-textarea">Job Description</label>
+          <textarea class="jd-textarea" id="jd-textarea" placeholder="Paste a job description here. We'll parse it to extract skills, experience level, location, and role type, then find matching candidates..."></textarea>
+          <div class="search-actions">
+            <button class="btn btn-primary" id="search-btn">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              Search Candidates
+            </button>
+          </div>
+        </div>
+
+        <div id="parsed-jd" class="parsed-jd"></div>
+
+        <!-- Filter Bar -->
+        <div id="filter-bar" class="filter-bar">
+          <div class="filter-group">
+            <label class="filter-label">Location</label>
+            <select class="filter-select" id="filter-location">
+              <option value="all">All Locations</option>
+              <option value="san francisco">San Francisco</option>
+              <option value="new york">New York</option>
+              <option value="seattle">Seattle</option>
+              <option value="austin">Austin</option>
+              <option value="remote">Remote</option>
+              <option value="boston">Boston</option>
+              <option value="london">London</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">Min YoE</label>
+            <input class="filter-input" type="number" id="filter-yoe-min" min="0" max="30" placeholder="0" style="width:70px">
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">Max YoE</label>
+            <input class="filter-input" type="number" id="filter-yoe-max" min="0" max="30" placeholder="30" style="width:70px">
+          </div>
+          <label class="filter-checkbox">
+            <input type="checkbox" id="filter-open">
+            Open to Work only
+          </label>
+        </div>
+
+        <!-- Results Header -->
+        <div id="results-header" class="results-header">
+          <span class="results-count" id="results-count">0 candidates found</span>
+          <div class="results-sort">
+            <label>Sort by:</label>
+            <select class="filter-select" style="min-width:140px">
+              <option value="relevance">Relevance Score</option>
+              <option value="yoe">Years of Experience</option>
+              <option value="company">Company Tier</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Candidates Grid -->
+        <div class="candidates-grid" id="candidates-grid">
+          <div class="empty-state" style="grid-column:1/-1">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <h3>Start by searching</h3>
+            <p>Paste a job description above and click "Search Candidates" to find matching talent.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- PIPELINE VIEW -->
+      <div class="view" id="view-pipeline">
+        <div class="pipeline-board" id="pipeline-board">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+
+      <!-- OUTREACH VIEW -->
+      <div class="view" id="view-outreach">
+        <div class="outreach-layout">
+          <div class="outreach-sidebar">
+            <h3>Compose Outreach</h3>
+
+            <div class="outreach-field">
+              <label>Candidate</label>
+              <select class="outreach-select" id="outreach-candidate-select">
+                <option value="">Select a candidate...</option>
+              </select>
+            </div>
+
+            <div class="outreach-field">
+              <label>Message Type</label>
+              <div class="toggle-group type-group">
+                <button class="toggle-btn active" data-value="email">Email</button>
+                <button class="toggle-btn" data-value="inmail">LinkedIn InMail</button>
+              </div>
+            </div>
+
+            <div class="outreach-field">
+              <label>Tone</label>
+              <div class="tone-slider-container">
+                <input type="range" class="tone-slider" id="tone-slider" min="0" max="100" value="50">
+                <div class="tone-labels">
+                  <span>Casual</span>
+                  <span>Formal</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="outreach-field">
+              <label>Length</label>
+              <div class="toggle-group length-group">
+                <button class="toggle-btn" data-value="short">Short</button>
+                <button class="toggle-btn active" data-value="medium">Medium</button>
+                <button class="toggle-btn" data-value="long">Long</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="outreach-main" id="outreach-main">
+            <div class="outreach-empty">
+              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+              <h3>No candidate selected</h3>
+              <p>Select a candidate from Search or Pipeline to draft outreach.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ANALYTICS VIEW -->
+      <div class="view" id="view-analytics">
+        <div class="analytics-kpis">
+          <div class="kpi-card">
+            <div class="kpi-label">Messages Drafted</div>
+            <div class="kpi-value" id="kpi-drafted">47</div>
+            <div class="kpi-delta positive">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+              +12% vs last week
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Messages Sent</div>
+            <div class="kpi-value" id="kpi-sent">32</div>
+            <div class="kpi-delta positive">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+              +8% vs last week
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Response Rate</div>
+            <div class="kpi-value" id="kpi-response">28%</div>
+            <div class="kpi-delta positive">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+              +3% vs last week
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Avg Response Time</div>
+            <div class="kpi-value" id="kpi-time">2.4d</div>
+            <div class="kpi-delta negative">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m19 12-7 7-7-7"/><path d="M12 5v14"/></svg>
+              +0.3d vs last week
+            </div>
+          </div>
+        </div>
+
+        <div class="analytics-charts">
+          <div class="chart-card">
+            <div class="chart-title">Outreach Funnel</div>
+            <div class="chart-container">
+              <canvas id="chart-funnel"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Pipeline Distribution</div>
+            <div class="chart-container">
+              <canvas id="chart-pipeline"></canvas>
+            </div>
+          </div>
+          <div class="chart-card chart-card-full">
+            <div class="chart-title">Activity Over Time</div>
+            <div class="chart-container">
+              <canvas id="chart-activity"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="activity-table-wrapper">
+          <div class="activity-table-header">
+            <h3>Recent Activity</h3>
+          </div>
+          <table class="activity-table">
+            <thead>
+              <tr>
+                <th>Candidate</th>
+                <th>Action</th>
+                <th>Status</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Alex Chen</td>
+                <td>Initial outreach email</td>
+                <td><span class="status-badge replied">Replied</span></td>
+                <td>Mar 1, 2026</td>
+              </tr>
+              <tr>
+                <td>Jordan Williams</td>
+                <td>Follow-up #1</td>
+                <td><span class="status-badge opened">Opened</span></td>
+                <td>Feb 28, 2026</td>
+              </tr>
+              <tr>
+                <td>Priya Patel</td>
+                <td>Initial outreach email</td>
+                <td><span class="status-badge sent">Sent</span></td>
+                <td>Feb 28, 2026</td>
+              </tr>
+              <tr>
+                <td>Morgan Lee</td>
+                <td>LinkedIn InMail</td>
+                <td><span class="status-badge sent">Sent</span></td>
+                <td>Feb 27, 2026</td>
+              </tr>
+              <tr>
+                <td>Wei Martinez</td>
+                <td>Follow-up #2</td>
+                <td><span class="status-badge opened">Opened</span></td>
+                <td>Feb 27, 2026</td>
+              </tr>
+              <tr>
+                <td>Casey Thompson</td>
+                <td>Initial outreach email</td>
+                <td><span class="status-badge drafted">Drafted</span></td>
+                <td>Feb 26, 2026</td>
+              </tr>
+              <tr>
+                <td>Riley Nakamura</td>
+                <td>Initial outreach email</td>
+                <td><span class="status-badge replied">Replied</span></td>
+                <td>Feb 25, 2026</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ============================================
+       CANDIDATE DETAIL MODAL
+       ============================================ -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal" id="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Candidate Details</h2>
+        <button class="modal-close" id="modal-close" aria-label="Close modal">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-section">
+          <label class="modal-section-label">Stage</label>
+          <select class="modal-stage-select" id="modal-stage-select">
+            <option value="sourced">Sourced</option>
+            <option value="contacted">Contacted</option>
+            <option value="responded">Responded</option>
+            <option value="interview">Interview</option>
+            <option value="offer">Offer</option>
+            <option value="hired">Hired</option>
+          </select>
+        </div>
+        <div class="modal-section">
+          <label class="modal-section-label">Notes</label>
+          <textarea class="modal-notes-textarea" id="modal-notes" placeholder="Add notes about this candidate..."></textarea>
+        </div>
+        <div class="modal-section">
+          <label class="modal-section-label">Tags</label>
+          <div class="modal-tags-input" id="modal-tags-container"></div>
+        </div>
+        <div class="modal-section">
+          <label class="modal-section-label">Outreach History</label>
+          <div id="modal-outreach-history"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('modal-overlay').classList.remove('visible')">Cancel</button>
+        <button class="btn btn-primary" id="modal-save">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container"></div>
+
+  <script src="./app.js"></script>
+</body>
+</html>

@@ -95,6 +95,67 @@ class SapCompletionAgent:
             response.raise_for_status()
         return response.json()
 
+    async def describe_image(self, image_data: str, media_type: str, location: str) -> str:
+        """Call Anthropic vision via SAP AI Core to describe an image as markdown."""
+        if not self.configured:
+            return ""
+        token = await self._token()
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "AI-Resource-Group": self.settings.sap_resource_group,
+            "Content-Type": "application/json",
+        }
+        system_text = (
+            "You are an expert document analyst with strong visual interpretation skills. "
+            "Analyse the provided image and describe its content comprehensively, focusing on "
+            "all text, charts, graphs, tables, diagrams, data visualisations, and any strategic "
+            "or business-relevant information visible in the image. Be precise and structured."
+        )
+        user_content = [
+            {
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": media_type,
+                    "data": image_data,
+                },
+            },
+            {
+                "type": "text",
+                "text": (
+                    f"This image is from {location} of the uploaded document. "
+                    "Provide a comprehensive markdown description of everything visible: "
+                    "all text, data from charts/graphs/tables, descriptions of diagrams, "
+                    "and any strategic or business insights."
+                ),
+            },
+        ]
+        payload: dict[str, Any] = {
+            "config": {
+                "modules": {
+                    "prompt_templating": {
+                        "prompt": {
+                            "template": [
+                                {"role": "system", "content": system_text},
+                                {"role": "user", "content": user_content},
+                            ]
+                        },
+                        "model": {
+                            "name": self.model,
+                            "params": {"max_tokens": 1500, "temperature": 0.1},
+                        },
+                    }
+                }
+            },
+            "placeholder_values": {},
+        }
+        async with httpx.AsyncClient(timeout=120) as client:
+            response = await client.post(self.settings.sap_api_url, headers=headers, json=payload)
+            if response.status_code >= 400:
+                return ""
+        data = response.json()
+        return _extract_content(data).strip()
+
     async def complete(self, system: str, user: str, max_tokens: int = 4000) -> AgentResult:
         if not self.configured:
             raise ProviderError("SAP AI Core completion endpoint is not configured")

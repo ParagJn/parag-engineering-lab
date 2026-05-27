@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+.env
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Runtime artifacts
+uploads/*
+!uploads/.gitkeep
+output/*
+!output/.gitkeep
+
+# IDE/OS
+.DS_Store
+.vscode/
+.idea/

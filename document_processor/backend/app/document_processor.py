@@ -75,13 +75,17 @@ class DocxProcessor:
                     
                     logger.info(f"Extracting image: {filename} ({content_type}, {len(data)} bytes)")
                     
-                    # Extract markdown content from image using Azure AI
-                    markdown = self.image_processor.extract_as_markdown(base64_data, content_type)
-                    
-                    if markdown:
-                        logger.info(f"✓ Markdown extracted from {filename} ({len(markdown)} chars)")
+                    # Extract markdown content from image using Azure AI (only if enabled)
+                    markdown = None
+                    if self.image_processor.client.is_enabled():
+                        markdown = self.image_processor.extract_as_markdown(base64_data, content_type)
+                        
+                        if markdown:
+                            logger.info(f"✓ Markdown extracted from {filename} ({len(markdown)} chars)")
+                        else:
+                            logger.warning(f"✗ No markdown extracted from {filename}")
                     else:
-                        logger.warning(f"✗ No markdown extracted from {filename}")
+                        logger.info(f"AI enrichment disabled - skipping markdown extraction for {filename}")
                     
                     images.append({
                         "id": f"img_{len(images)+1}",
@@ -327,11 +331,16 @@ class DocxProcessor:
 
         # Process images with captions and markdown
         for img in images:
-            logger.info(f"Generating caption for {img['filename']}...")
-            caption = self.image_processor.generate_caption(
-                img["_data_base64"],  # Use internal field for processing
-                img["content_type"]
-            )
+            # Generate caption only if AI enrichment is enabled
+            caption = None
+            if self.image_processor.client.is_enabled():
+                logger.info(f"Generating caption for {img['filename']}...")
+                caption = self.image_processor.generate_caption(
+                    img["_data_base64"],  # Use internal field for processing
+                    img["content_type"]
+                )
+            else:
+                logger.info(f"AI enrichment disabled - skipping caption for {img['filename']}")
             
             markdown_content = img.get("markdown")
             

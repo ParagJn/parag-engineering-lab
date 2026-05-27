@@ -71,6 +71,7 @@ class GenerateRequest(BaseModel):
     urls: List[HttpUrl]
     article_id: Optional[str] = None
     platform: Literal["blog", "linkedin", "instagram", "x"] = "blog"
+    content_mode: Literal["factual", "fictional"] = "factual"
 
 
 class ApplySuggestionsRequest(BaseModel):
@@ -90,6 +91,7 @@ class ApplySuggestionsRequest(BaseModel):
     review_summary: Optional[str] = None
     article_id: Optional[str] = None
     platform: Literal["blog", "linkedin", "instagram", "x"] = "blog"
+    content_mode: Literal["factual", "fictional"] = "factual"
 
 
 class ManualRegenerateRequest(BaseModel):
@@ -107,6 +109,7 @@ class ManualRegenerateRequest(BaseModel):
     change_request: str
     article_id: Optional[str] = None
     platform: Literal["blog", "linkedin", "instagram", "x"] = "blog"
+    content_mode: Literal["factual", "fictional"] = "factual"
 
 
 class ReviewResult(BaseModel):
@@ -395,6 +398,20 @@ def read_saved_article(article_id: str) -> Dict[str, str]:
     }
 
 
+
+
+def has_speculative_disclaimer(article: str) -> bool:
+    lowered = (article or "").lower()
+    markers = [
+        "work of speculative fiction",
+        "scenario planning",
+        "hypothetical constructions",
+        "have not taken place",
+        "intended for analytical and educational purposes",
+        "events described as occurring",
+    ]
+    return any(marker in lowered for marker in markers)
+
 def parse_json_object(text: str) -> Dict[str, Any]:
     """Extract and parse JSON object from text (handles markdown code blocks).
     
@@ -547,6 +564,7 @@ async def review_with_claude(
     temperature: float,
     max_tokens: int,
     article: str,
+    content_mode: str,
 ) -> ReviewResult:
     """Review article quality using Anthropic Claude API.
     
@@ -573,9 +591,19 @@ async def review_with_claude(
         "improvements (array of strings)."
     )
 
+    mode = normalize_content_mode(content_mode)
+    mode_rule = (
+        "For factual mode: if article contains speculative/hypothetical/disclaimer framing or invented facts, "
+        "score must be <= 3 and improvements must demand removal of those sections and replacement with verifiable facts."
+        if mode == "factual"
+        else "For fictional mode: creative framing is acceptable if coherent and well-written."
+    )
+
     user_prompt = (
         "Evaluate this article quality for clarity, originality, structure, factual grounding, "
-        "and readability. Give score 1-10 where 10 is excellent.\n\n"
+        "and readability. Give score 1-10 where 10 is excellent.\n"
+        f"Content mode: {mode}.\n"
+        f"Validator rule: {mode_rule}\n\n"
         f"Article:\n{article}"
     )
 
@@ -606,6 +634,22 @@ async def review_with_claude(
     score = int(parsed.get("score", 0))
     if score < 1 or score > 10:
         raise ValueError("Claude returned invalid score range.")
+
+    if normalize_content_mode(content_mode) == "factual" and has_speculative_disclaimer(article):
+        score = min(score, 3)
+        parsed["summary"] = (
+            "Speculative-fiction style disclaimer detected in factual mode. "
+            "Article must use verifiable facts and avoid hypothetical framing."
+        )
+        parsed_improvements = parsed.get("improvements", [])
+        if not isinstance(parsed_improvements, list):
+            parsed_improvements = [str(parsed_improvements)]
+        parsed_improvements = [
+            "Remove all speculative or hypothetical disclaimers and framing.",
+            "Replace non-verifiable claims with evidence-grounded facts from sources.",
+            "State uncertainty explicitly instead of inventing future events.",
+        ] + parsed_improvements
+        parsed["improvements"] = parsed_improvements
 
     improvements = parsed.get("improvements", [])
     if not isinstance(improvements, list):
@@ -668,7 +712,28 @@ def platform_instruction(platform: str) -> str:
     )
 
 
-def build_initial_prompt(urls: List[str], current_date: str, platform: str) -> str:
+def normalize_content_mode(content_mode: str) -> str:
+    value = (content_mode or "factual").strip().lower()
+    if value in {"factual", "fictional"}:
+        return value
+    return "factual"
+
+
+def content_mode_instruction(content_mode: str) -> str:
+    mode = normalize_content_mode(content_mode)
+    if mode == "fictional":
+        return (
+            "This is a fictional/creative article. You may invent scenarios and narrative details, "
+            "but keep internal consistency and clearly avoid presenting fiction as verified real-world fact."
+        )
+    return (
+        "This must be research-based and factual. Prioritize verifiable information from the provided URLs "
+        "and relevant current public web information. Do not invent events, statistics, quotes, or sources. "
+        "If uncertain, explicitly state uncertainty rather than guessing."
+    )
+
+
+def build_initial_prompt(urls: List[str], current_date: str, platform: str, content_mode: str) -> str:
     """Build initial article generation prompt for Gemini.
     
     Args:
@@ -681,20 +746,23 @@ def build_initial_prompt(urls: List[str], current_date: str, platform: str) -> s
     """
     sources = "\n".join(f"- {url}" for url in urls)
     style_instruction = platform_instruction(platform)
+    mode_instruction = content_mode_instruction(content_mode)
     return f"""
 You are an expert editor and analyst.
 Today is {current_date}.
 
 Target platform: {normalize_platform(platform)}
 Platform style instruction: {style_instruction}
+Content mode: {normalize_content_mode(content_mode)}
+Content mode instruction: {mode_instruction}
 
 Task:
-1) Research the provided source URLs.
+1) Research the provided source URLs and any relevant current public web information.
 2) Decide one best article angle that is most relevant and useful for today.
 3) Write one full high-quality article in Markdown.
 
 Constraints:
-- Use factual claims grounded in source URLs.
+- Follow content mode instruction strictly for factual vs fictional output.
 - Add an engaging title.
 - Include sections with clear subheadings.
 - Include a short conclusion.
@@ -712,6 +780,7 @@ def build_regen_prompt(
     review: ReviewResult,
     attempt: int,
     platform: str,
+    content_mode: str,
 ) -> str:
     """Build regeneration prompt incorporating Claude's feedback.
     
@@ -729,6 +798,7 @@ def build_regen_prompt(
     sources = "\n".join(f"- {url}" for url in urls)
     improvement_points = "\n".join(f"- {p}" for p in review.improvements)
     style_instruction = platform_instruction(platform)
+    mode_instruction = content_mode_instruction(content_mode)
 
     return f"""
 You previously generated an article that scored {review.score}/10 from a quality reviewer.
@@ -737,6 +807,8 @@ This is regeneration attempt #{attempt}.
 
 Target platform: {normalize_platform(platform)}
 Platform style instruction: {style_instruction}
+Content mode: {normalize_content_mode(content_mode)}
+Content mode instruction: {mode_instruction}
 
 Improve the article by addressing all feedback below and rewrite it fully.
 
@@ -767,6 +839,7 @@ def build_apply_suggestions_prompt(
     review_summary: str,
     improvements: List[str],
     platform: str,
+    content_mode: str,
 ) -> str:
     """Build prompt for applying Claude's improvement suggestions.
     
@@ -784,6 +857,7 @@ def build_apply_suggestions_prompt(
     sources = "\n".join(f"- {url}" for url in urls)
     improvements_text = "\n".join(f"- {item}" for item in improvements)
     style_instruction = platform_instruction(platform)
+    mode_instruction = content_mode_instruction(content_mode)
 
     return f"""
 Today is {current_date}.
@@ -791,6 +865,8 @@ You are revising an existing article using reviewer feedback.
 
 Target platform: {normalize_platform(platform)}
 Platform style instruction: {style_instruction}
+Content mode: {normalize_content_mode(content_mode)}
+Content mode instruction: {mode_instruction}
 
 Task:
 - Apply all reviewer suggestions below.
@@ -817,6 +893,7 @@ def build_manual_regen_prompt(
     article: str,
     change_request: str,
     platform: str,
+    content_mode: str,
 ) -> str:
     """Build prompt for manual article regeneration.
     
@@ -832,12 +909,15 @@ def build_manual_regen_prompt(
     """
     sources = "\n".join(f"- {url}" for url in urls)
     style_instruction = platform_instruction(platform)
+    mode_instruction = content_mode_instruction(content_mode)
     return f"""
 Today is {current_date}.
 You are revising an existing article based on explicit user requests.
 
 Target platform: {normalize_platform(platform)}
 Platform style instruction: {style_instruction}
+Content mode: {normalize_content_mode(content_mode)}
+Content mode instruction: {mode_instruction}
 
 User-requested changes:
 {change_request}
@@ -1039,7 +1119,7 @@ async def generate_stream(request: GenerateRequest) -> StreamingResponse:
                                 "message": "Gemini is researching URLs and drafting the first article.",
                             },
                         )
-                        prompt = build_initial_prompt(urls, current_date, request.platform)
+                        prompt = build_initial_prompt(urls, current_date, request.platform, request.content_mode)
                     else:
                         yield sse_event(
                             "status",
@@ -1056,6 +1136,7 @@ async def generate_stream(request: GenerateRequest) -> StreamingResponse:
                             last_review or ReviewResult(score=0, summary="", improvements=[]),
                             attempt,
                             request.platform,
+                            request.content_mode,
                         )
 
                     try:
@@ -1098,6 +1179,7 @@ async def generate_stream(request: GenerateRequest) -> StreamingResponse:
                             temperature=settings["claude_temperature"],
                             max_tokens=settings["claude_max_tokens"],
                             article=article_text,
+                            content_mode=request.content_mode,
                         )
                     except Exception as exc:  # noqa: BLE001
                         yield sse_event(
@@ -1251,6 +1333,7 @@ async def apply_suggestions_stream(request: ApplySuggestionsRequest) -> Streamin
                 review_summary=request.review_summary or "No summary provided.",
                 improvements=request.improvements,
                 platform=request.platform,
+                content_mode=request.content_mode,
             )
 
             timeout = httpx.Timeout(settings["request_timeout_seconds"])
@@ -1411,6 +1494,7 @@ async def manual_regenerate_stream(request: ManualRegenerateRequest) -> Streamin
                 article=request.article,
                 change_request=request.change_request,
                 platform=request.platform,
+                content_mode=request.content_mode,
             )
 
             timeout = httpx.Timeout(settings["request_timeout_seconds"])

@@ -1,21 +1,129 @@
 """
-AI Service — two-stage pipeline:
-  Stage 1: Gemini 1.5 Pro extracts a structured profile JSON from raw document text.
-  Stage 2: Claude generates the final HTML outputs (CV + LinkedIn) from the structured data.
+AI Service — two-stage pipeline via SAP AI Core Generative AI Hub:
+  Stage 1: gemini-2.5-pro  — extracts a structured profile JSON from raw document text.
+  Stage 2: anthropic--claude-4.6-opus — generates the final HTML outputs (CV + LinkedIn).
+  Stage 3: anthropic--claude-4.6-opus — refines existing outputs based on user feedback.
+
+Authentication: OAuth 2.0 client-credentials flow → bearer token cached in-process.
 """
 import json
 import logging
 import os
 import re
+import time
 import httpx
+import requests as _requests_lib   # sync, only for token fetch
 from typing import Optional
 
 logger = logging.getLogger(__name__)
 
 
 # ─────────────────────────────────────────────
-# STAGE 1 — Gemini: structured extraction
+# SAP AI Core — OAuth token + chat helper
 # ─────────────────────────────────────────────
+
+_SAP_MODEL_GEMINI  = "gemini-2.5-pro"
+_SAP_MODEL_CLAUDE  = "anthropic--claude-4.6-opus"
+
+_sap_token_cache: dict = {"token": None, "expires_at": 0.0}
+
+
+def _get_sap_access_token() -> str:
+    """Return a cached (or freshly generated) SAP AI Core OAuth bearer token."""
+    now = time.time()
+    if _sap_token_cache["token"] and now < _sap_token_cache["expires_at"] - 60:
+        return _sap_token_cache["token"]
+
+    client_id     = os.getenv("SAP_CLIENT_ID", "").strip().strip('"')
+    client_secret = os.getenv("SAP_CLIENT_SECRET", "").strip().strip('"')
+    token_url     = os.getenv("SAP_TOKEN_URL", "").strip().strip('"')
+
+    if not all([client_id, client_secret, token_url]):
+        raise EnvironmentError(
+            "SAP_CLIENT_ID, SAP_CLIENT_SECRET, and SAP_TOKEN_URL must be set in .env"
+        )
+
+    resp = _requests_lib.post(
+        token_url,
+        data={
+            "grant_type":    "client_credentials",
+            "client_id":     client_id,
+            "client_secret": client_secret,
+        },
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        timeout=30,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+
+    token      = data["access_token"]
+    expires_in = int(data.get("expires_in", 3600))
+    _sap_token_cache["token"]      = token
+    _sap_token_cache["expires_at"] = now + expires_in
+    logger.info(f"SAP AI Core token refreshed — expires in {expires_in}s")
+    return token
+
+
+def _sap_chat_url() -> str:
+    """Return the SAP AI Core orchestration completion URL directly from env."""
+    api_url = os.getenv("SAP_API_URL", "").strip().strip('"')
+    if not api_url:
+        raise ValueError("SAP_API_URL not set in .env")
+    return api_url
+
+
+async def _sap_chat(
+    model: str,
+    system: str,
+    user: str,
+    max_tokens: int = 16000,
+    temperature: float = 0.3,
+) -> str:
+    """Send a chat request via SAP AI Core Orchestration and return the reply text."""
+    token          = _get_sap_access_token()
+    url            = _sap_chat_url()
+    resource_group = os.getenv("SAP_RESOURCE_GROUP", "default").strip().strip('"')
+
+    payload = {
+        "config": {
+            "modules": {
+                "prompt_templating": {
+                    "prompt": {
+                        "template": [
+                            {"role": "system", "content": system},
+                            {"role": "user",   "content": user},
+                        ]
+                    },
+                    "model": {
+                        "name":    model,
+                        "version": "latest",
+                        "params": {
+                            "temperature": temperature,
+                            # max_tokens not supported in SAP AI Core orchestration params
+                        },
+                    },
+                }
+            }
+        }
+    }
+    headers = {
+        "Authorization":    f"Bearer {token}",
+        "Content-Type":     "application/json",
+        "ai-resource-group": resource_group,
+    }
+
+    async with httpx.AsyncClient(timeout=180) as client:
+        r = await client.post(url, json=payload, headers=headers)
+        r.raise_for_status()
+        data = r.json()
+        return data["final_result"]["choices"][0]["message"]["content"]
+
+
+# ─────────────────────────────────────────────
+# STAGE 1 — Gemini (via SAP AI Core): structured extraction
+# ─────────────────────────────────────────────
+
+EXTRACTION_SYSTEM = "You are an expert resume analyst. Return ONLY valid JSON — no markdown, no code fences, no explanation."
 
 EXTRACTION_PROMPT = """
 You are an expert resume analyst. Analyze ALL the text below (from one or more uploaded documents 
@@ -97,42 +205,27 @@ Remember: return ONLY the JSON object. No markdown fences. No extra text.
 
 
 async def extract_profile_with_gemini(combined_text: str) -> dict:
-    """Use Gemini 1.5 Pro to extract structured profile data from raw text."""
-    import google.generativeai as genai
-
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise ValueError("GEMINI_API_KEY not set in environment")
-
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-2.5-pro")
-
+    """Use gemini-2.5-pro (via SAP AI Core) to extract structured profile data from raw text."""
     prompt = EXTRACTION_PROMPT.format(content=combined_text[:50000])  # safety cap
-
-    response = model.generate_content(
-        prompt,
-        generation_config=genai.types.GenerationConfig(
-            temperature=0.2,
-            max_output_tokens=8192,
-        ),
+    raw = await _sap_chat(
+        model=_SAP_MODEL_GEMINI,
+        system=EXTRACTION_SYSTEM,
+        user=prompt,
+        max_tokens=8192,
+        temperature=0.2,
     )
-
-    raw = response.text.strip()
-
-    # Strip markdown code fences if model adds them
+    raw = raw.strip()
     raw = re.sub(r"^```(?:json)?\s*", "", raw, flags=re.MULTILINE)
     raw = re.sub(r"\s*```$", "", raw, flags=re.MULTILINE)
-
     try:
         return json.loads(raw)
     except json.JSONDecodeError as e:
-        logger.error(f"Gemini returned invalid JSON: {e}\nRaw: {raw[:500]}")
-        # Return minimal fallback
+        logger.error(f"Gemini (SAP) returned invalid JSON: {e}\nRaw: {raw[:500]}")
         return {"name": "Professional", "title": "", "summary": combined_text[:500]}
 
 
 # ─────────────────────────────────────────────
-# STAGE 2 — Claude: HTML generation
+# STAGE 2 — Claude (via SAP AI Core): HTML generation
 # ─────────────────────────────────────────────
 
 CV_HTML_SYSTEM = """You are an expert front-end developer and technical resume writer. 
@@ -239,45 +332,28 @@ Output the complete HTML file starting with <!DOCTYPE html>. No code fences. No 
 
 
 async def generate_cv_outputs_with_claude(profile_data: dict) -> dict:
-    """Use Claude to generate the HTML CV and LinkedIn HTML."""
-    import anthropic
-
-    api_key = os.getenv("ANTHROPIC_API_KEY")
-    if not api_key:
-        raise ValueError("ANTHROPIC_API_KEY not set in environment")
-
-    client = anthropic.Anthropic(api_key=api_key)
+    """Use anthropic--claude-4.6-opus (via SAP AI Core) to generate CV and LinkedIn HTML."""
     profile_json = json.dumps(profile_data, indent=2)
 
     # Generate CV HTML
-    cv_response = client.messages.create(
-        model="claude-opus-4-5",
-        max_tokens=16000,
+    cv_html = await _sap_chat(
+        model=_SAP_MODEL_CLAUDE,
         system=CV_HTML_SYSTEM,
-        messages=[
-            {
-                "role": "user",
-                "content": CV_HTML_PROMPT.format(profile_json=profile_json),
-            }
-        ],
+        user=CV_HTML_PROMPT.format(profile_json=profile_json),
+        max_tokens=16000,
     )
-    cv_html = cv_response.content[0].text.strip()
+    cv_html = cv_html.strip()
     cv_html = re.sub(r"^```(?:html)?\s*", "", cv_html, flags=re.MULTILINE)
     cv_html = re.sub(r"\s*```$", "", cv_html, flags=re.MULTILINE)
 
     # Generate LinkedIn HTML
-    li_response = client.messages.create(
-        model="claude-opus-4-5",
-        max_tokens=12000,
+    linkedin_html = await _sap_chat(
+        model=_SAP_MODEL_CLAUDE,
         system=LINKEDIN_HTML_SYSTEM,
-        messages=[
-            {
-                "role": "user",
-                "content": LINKEDIN_HTML_PROMPT.format(profile_json=profile_json),
-            }
-        ],
+        user=LINKEDIN_HTML_PROMPT.format(profile_json=profile_json),
+        max_tokens=12000,
     )
-    linkedin_html = li_response.content[0].text.strip()
+    linkedin_html = linkedin_html.strip()
     linkedin_html = re.sub(r"^```(?:html)?\s*", "", linkedin_html, flags=re.MULTILINE)
     linkedin_html = re.sub(r"\s*```$", "", linkedin_html, flags=re.MULTILINE)
 
@@ -378,49 +454,36 @@ Output ONLY the complete updated HTML file starting with <!DOCTYPE html>. No cod
 async def refine_outputs_with_claude(
     profile_data: dict, cv_html: str, linkedin_html: str, instructions: str
 ) -> dict:
-    """Use Claude to refine existing CV and LinkedIn HTML based on user instructions."""
-    import anthropic
-
-    api_key = os.getenv("ANTHROPIC_API_KEY")
-    if not api_key:
-        raise ValueError("ANTHROPIC_API_KEY not set in environment")
-
-    client = anthropic.Anthropic(api_key=api_key)
+    """Use anthropic--claude-4.6-opus (via SAP AI Core) to refine CV and LinkedIn HTML."""
     profile_json = json.dumps(profile_data, indent=2)
 
     # Refine CV HTML
-    cv_response = client.messages.create(
-        model="claude-opus-4-5",
-        max_tokens=16000,
+    new_cv = await _sap_chat(
+        model=_SAP_MODEL_CLAUDE,
         system="You are an expert front-end developer and resume writer. You refine existing HTML resumes based on user feedback. Output ONLY the complete updated HTML file — no explanation, no markdown, no code fences.",
-        messages=[{
-            "role": "user",
-            "content": REFINE_CV_PROMPT.format(
-                instructions=instructions,
-                profile_json=profile_json,
-                cv_html=cv_html[:40000],
-            ),
-        }],
+        user=REFINE_CV_PROMPT.format(
+            instructions=instructions,
+            profile_json=profile_json,
+            cv_html=cv_html[:40000],
+        ),
+        max_tokens=16000,
     )
-    new_cv = cv_response.content[0].text.strip()
+    new_cv = new_cv.strip()
     new_cv = re.sub(r"^```(?:html)?\s*", "", new_cv, flags=re.MULTILINE)
     new_cv = re.sub(r"\s*```$", "", new_cv, flags=re.MULTILINE)
 
     # Refine LinkedIn HTML
-    li_response = client.messages.create(
-        model="claude-opus-4-5",
-        max_tokens=12000,
+    new_li = await _sap_chat(
+        model=_SAP_MODEL_CLAUDE,
         system="You are a LinkedIn profile optimization expert and front-end developer. You refine existing LinkedIn helper pages based on user feedback. Output ONLY the complete updated HTML file — no explanation, no markdown, no code fences.",
-        messages=[{
-            "role": "user",
-            "content": REFINE_LINKEDIN_PROMPT.format(
-                instructions=instructions,
-                profile_json=profile_json,
-                linkedin_html=linkedin_html[:30000],
-            ),
-        }],
+        user=REFINE_LINKEDIN_PROMPT.format(
+            instructions=instructions,
+            profile_json=profile_json,
+            linkedin_html=linkedin_html[:30000],
+        ),
+        max_tokens=12000,
     )
-    new_li = li_response.content[0].text.strip()
+    new_li = new_li.strip()
     new_li = re.sub(r"^```(?:html)?\s*", "", new_li, flags=re.MULTILINE)
     new_li = re.sub(r"\s*```$", "", new_li, flags=re.MULTILINE)
 

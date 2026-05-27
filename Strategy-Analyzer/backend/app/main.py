@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import shutil
 import uuid
 from pathlib import Path
@@ -11,7 +12,7 @@ from pydantic import BaseModel
 
 from .analyzer import analyze_document, chat_about_analysis
 from .config import get_settings
-from .document_parser import parse_document
+from .document_parser import extract_images, parse_document
 from .llm_clients import SapCompletionAgent
 from .visuals import create_visual_summary
 
@@ -57,6 +58,42 @@ async def sap_models() -> dict:
     return await agent.list_models()
 
 
+async def _enrich_with_images(parsed: dict, path: Path) -> None:
+    """Extract images from the document, describe each via Anthropic vision, and
+    append the markdown descriptions to parsed["text"] in-place."""
+    images = extract_images(path)
+    if not images:
+        return
+    vision_agent = SapCompletionAgent(
+        settings,
+        name="Anthropic Image Analyst",
+        model=settings.sap_anthropic_model,
+        thinking=False,
+    )
+    if not vision_agent.configured:
+        return
+
+    async def _safe_describe(img: dict) -> str:
+        try:
+            return await vision_agent.describe_image(
+                img["data"], img["media_type"], img["location"]
+            )
+        except Exception:
+            return ""
+
+    descriptions = await asyncio.gather(*[_safe_describe(img) for img in images])
+
+    image_sections: list[str] = []
+    for img, desc in zip(images, descriptions):
+        if desc:
+            image_sections.append(
+                f"\n\n---\n**[IMAGE: {img['location']}]**\n\n{desc}\n\n---"
+            )
+
+    if image_sections:
+        parsed["text"] = parsed["text"] + "\n" + "".join(image_sections)
+
+
 @app.post("/api/upload")
 async def upload(file: UploadFile = File(...)) -> dict:
     suffix = Path(file.filename or "").suffix.lower()
@@ -72,6 +109,10 @@ async def upload(file: UploadFile = File(...)) -> dict:
     except Exception as exc:
         target.unlink(missing_ok=True)
         raise HTTPException(status_code=400, detail=f"Could not parse document: {exc}") from exc
+
+    # Enrich document text with Anthropic-generated image descriptions
+    await _enrich_with_images(parsed, target)
+
     documents[document_id] = {
         "id": document_id,
         "filename": file.filename,

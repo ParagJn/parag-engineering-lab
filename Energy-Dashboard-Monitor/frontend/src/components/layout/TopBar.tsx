@@ -32,7 +32,7 @@ const TopBar = () => {
             {simStage !== 'idle' ? (
               <><span className="material-symbols-outlined text-[18px] animate-spin">refresh</span>Simulating...</>
             ) : (
-              <><span className="material-symbols-outlined text-[18px]">play_circle</span>Run-Simulator</>
+              <><span className="material-symbols-outlined text-[18px]">play_circle</span>Run-ETL Pipeline</>
             )}
           </button>
           
