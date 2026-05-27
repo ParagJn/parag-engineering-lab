@@ -1,19 +1,19 @@
-"""Use Anthropic Claude to curate stories into magazine editorial content."""
+"""Use SAP AI Core (Anthropic Claude) to curate stories into magazine editorial content."""
 
-import os
 import json
-import anthropic
 
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+from config import get_settings
+from llm_clients import SapCompletionAgent
 
 
 async def curate_magazine(stories: list[dict], source_name: str, edition_date: str) -> dict:
-    """Send stories to Claude and get back fully curated magazine content."""
+    """Send stories to Claude via SAP AI Core and get back fully curated magazine content."""
 
-    if not ANTHROPIC_API_KEY:
-        raise ValueError("ANTHROPIC_API_KEY not set")
+    settings = get_settings()
+    agent = SapCompletionAgent(settings, "curator", settings.sap_anthropic_model)
 
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    if not agent.configured:
+        raise ValueError("SAP AI Core is not configured — check SAP_* env vars")
 
     stories_json = json.dumps(stories, indent=2, default=str)
 
@@ -54,13 +54,8 @@ Return ONLY valid JSON: an object with:
 - "seo_keywords": comma-separated list of 8-12 relevant keywords/phrases for this edition (e.g. "artificial intelligence, cybersecurity, developer tools, cloud computing")
 - "stories": array of 10 story objects with all fields above"""
 
-    message = client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=8000,
-        messages=[{"role": "user", "content": prompt}]
-    )
-
-    response_text = message.content[0].text.strip()
+    result = await agent.complete(system="", user=prompt, max_tokens=8000)
+    response_text = result.content
 
     # Parse JSON from response
     if response_text.startswith("```"):

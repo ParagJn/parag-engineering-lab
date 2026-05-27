@@ -1,11 +1,10 @@
-"""Fetch stories from sources using RSS feeds and Gemini for enrichment."""
+"""Fetch stories from sources using RSS feeds and SAP Gemini for enrichment."""
 
-import os
 import httpx
 import feedparser
-from google import genai
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+from config import get_settings
+from llm_clients import SapCompletionAgent
 
 
 async def fetch_rss_stories(feed_url: str, limit: int = 30) -> list[dict]:
@@ -30,11 +29,12 @@ async def fetch_rss_stories(feed_url: str, limit: int = 30) -> list[dict]:
 
 
 async def enrich_stories_with_gemini(stories: list[dict], source_name: str) -> list[dict]:
-    """Use Gemini to search for additional context on each story."""
-    if not GEMINI_API_KEY:
-        return stories
+    """Use SAP Gemini to search for additional context on each story."""
+    settings = get_settings()
+    agent = SapCompletionAgent(settings, "enricher", settings.sap_gemini_model)
 
-    client = genai.Client(api_key=GEMINI_API_KEY)
+    if not agent.configured:
+        return stories
 
     titles = "\n".join([f"- {s['title']}" for s in stories])
     prompt = f"""You are a tech news researcher. Given these headlines from {source_name}, 
@@ -54,19 +54,15 @@ Return ONLY valid JSON as an array of objects with fields:
 
 Return exactly 10 stories."""
 
-    response = client.models.generate_content(
-        model="gemini-2.0-flash",
-        contents=prompt,
-    )
-
     import json
     try:
-        text = response.text.strip()
+        result = await agent.complete(system="", user=prompt, max_tokens=4000)
+        text = result.content.strip()
         if text.startswith("```"):
             text = text.split("\n", 1)[1]
             text = text.rsplit("```", 1)[0]
         enriched = json.loads(text)
-    except (json.JSONDecodeError, IndexError):
+    except Exception:
         enriched = []
 
     # Merge enrichment back into stories
