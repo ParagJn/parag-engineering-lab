@@ -20,6 +20,8 @@ from curator import curate_magazine
 from magazine import generate_magazine_html
 from pdf_generator import generate_pdf
 from emailer import send_magazine_email
+from linkedin import generate_linkedin_posts
+from linkedin_renderer import render_linkedin_html
 
 app = FastAPI(title="Morning Edition API", version="1.0.0")
 
@@ -109,6 +111,7 @@ async def generate_magazine(req: GenerateRequest):
             "time": now.strftime("%I:%M %p"),
             "story_count": len(magazine_data.get("stories", [])),
             "created_at": now.isoformat(),
+            "stories": magazine_data.get("stories", []),
         }
         meta_path = filepath.replace(".html", ".json")
         with open(meta_path, "w", encoding="utf-8") as f:
@@ -149,7 +152,8 @@ async def list_archive():
         try:
             with open(meta_path, "r", encoding="utf-8") as f:
                 meta = json.load(f)
-            entries.append(meta)
+            # Exclude full story bodies from the listing to keep the response light
+            entries.append({k: v for k, v in meta.items() if k != "stories"})
         except (json.JSONDecodeError, OSError):
             continue
     return {"archive": entries}
@@ -193,6 +197,73 @@ async def clear_archive():
             os.remove(fpath)
             count += 1
     return {"deleted_count": count}
+
+
+# ── PDF & Email Endpoints ──
+
+
+@app.get("/api/linkedin-posts/{filename}")
+async def get_linkedin_posts(filename: str):
+    """Generate LinkedIn posts for all stories in an archived magazine."""
+    safe_name = os.path.basename(filename)
+    if not safe_name.endswith(".html"):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    meta_path = os.path.join(ARCHIVE_DIR, safe_name.replace(".html", ".json"))
+    if not os.path.isfile(meta_path):
+        raise HTTPException(status_code=404, detail="Archive metadata not found")
+
+    with open(meta_path, "r", encoding="utf-8") as f:
+        meta = json.load(f)
+
+    stories = meta.get("stories")
+    if not stories:
+        raise HTTPException(
+            status_code=422,
+            detail="No story data found in archive. Re-generate this magazine to enable LinkedIn posts.",
+        )
+
+    try:
+        posts = await generate_linkedin_posts(stories)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return {"posts": posts, "magazine_title": meta.get("title", "Morning Edition")}
+
+
+class LinkedInExportRequest(BaseModel):
+    posts: list[dict]
+    magazine_title: str
+    style: str = "professional"  # professional | editorial | dark
+
+
+@app.post("/api/linkedin-posts/export-html", response_class=HTMLResponse)
+async def export_linkedin_html(req: LinkedInExportRequest):
+    """Return a styled, self-contained HTML document of LinkedIn posts."""
+    valid_styles = {"professional", "editorial", "dark"}
+    style = req.style if req.style in valid_styles else "professional"
+    html = render_linkedin_html(req.posts, req.magazine_title, style)
+    safe_title = re.sub(r"[^a-zA-Z0-9]+", "-", req.magazine_title).strip("-").lower()
+    filename = f"linkedin-posts-{safe_title}-{style}.html"
+    return HTMLResponse(
+        content=html,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@app.post("/api/linkedin-posts/export-pdf")
+async def export_linkedin_pdf(req: LinkedInExportRequest):
+    """Return a PDF of the LinkedIn posts in the chosen style."""
+    valid_styles = {"professional", "editorial", "dark"}
+    style = req.style if req.style in valid_styles else "professional"
+    html = render_linkedin_html(req.posts, req.magazine_title, style)
+    pdf_bytes = await generate_pdf(html)
+    safe_title = re.sub(r"[^a-zA-Z0-9]+", "-", req.magazine_title).strip("-").lower()
+    filename = f"linkedin-posts-{safe_title}-{style}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 # ── PDF & Email Endpoints ──

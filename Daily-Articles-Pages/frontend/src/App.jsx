@@ -94,6 +94,22 @@ const Icons = {
       <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
     </svg>
   ),
+  linkedin: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z" />
+      <circle cx="4" cy="4" r="2" />
+    </svg>
+  ),
+  copy: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+    </svg>
+  ),
+  check: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  ),
   x: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -132,6 +148,14 @@ function App() {
   const [emailSending, setEmailSending] = useState(false)
   const [emailStatus, setEmailStatus] = useState(null)
   const [pdfDownloading, setPdfDownloading] = useState(false)
+  const [linkedinModalOpen, setLinkedinModalOpen] = useState(false)
+  const [linkedinPosts, setLinkedinPosts] = useState(null)
+  const [linkedinLoading, setLinkedinLoading] = useState(false)
+  const [linkedinError, setLinkedinError] = useState(null)
+  const [linkedinStyle, setLinkedinStyle] = useState('professional')
+  const [linkedinExporting, setLinkedinExporting] = useState(false)
+  const [linkedinTitle, setLinkedinTitle] = useState('Morning Edition')
+  const [copiedIndex, setCopiedIndex] = useState(null)
   const iframeRef = useRef(null)
 
   // Load sources + archive on mount
@@ -337,6 +361,93 @@ function App() {
       setEmailStatus({ ok: false, msg: e.message })
     } finally {
       setEmailSending(false)
+    }
+  }
+
+  const openLinkedinModal = async () => {
+    if (!currentArchiveEntry?.filename) return
+    setLinkedinModalOpen(true)
+    setLinkedinPosts(null)
+    setLinkedinError(null)
+    setLinkedinLoading(true)
+    try {
+      const resp = await fetch(`/api/linkedin-posts/${currentArchiveEntry.filename}`)
+      if (!resp.ok) {
+        const err = await resp.json()
+        throw new Error(err.detail || 'Failed to generate LinkedIn posts')
+      }
+      const data = await resp.json()
+      setLinkedinPosts(data.posts || [])
+      setLinkedinTitle(data.magazine_title || 'Morning Edition')
+    } catch (e) {
+      setLinkedinError(e.message)
+    } finally {
+      setLinkedinLoading(false)
+    }
+  }
+
+  const copyToClipboard = (text, index) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedIndex(index)
+      setTimeout(() => setCopiedIndex(null), 2000)
+    })
+  }
+
+  const _linkedinExportPayload = () => ({
+    posts: linkedinPosts,
+    magazine_title: linkedinTitle,
+    style: linkedinStyle,
+  })
+
+  const exportLinkedinHtml = async () => {
+    if (!linkedinPosts) return
+    setLinkedinExporting(true)
+    try {
+      const resp = await fetch('/api/linkedin-posts/export-html', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(_linkedinExportPayload()),
+      })
+      if (!resp.ok) throw new Error('HTML export failed')
+      const blob = await resp.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const cd = resp.headers.get('Content-Disposition') || ''
+      const match = cd.match(/filename="([^"]+)"/)
+      a.download = match ? match[1] : 'linkedin-posts.html'
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      setLinkedinError(e.message)
+    } finally {
+      setLinkedinExporting(false)
+    }
+  }
+
+  const exportLinkedinPdf = async () => {
+    if (!linkedinPosts) return
+    setLinkedinExporting(true)
+    try {
+      const resp = await fetch('/api/linkedin-posts/export-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(_linkedinExportPayload()),
+      })
+      if (!resp.ok) throw new Error('PDF export failed')
+      const blob = await resp.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const cd = resp.headers.get('Content-Disposition') || ''
+      const match = cd.match(/filename="([^"]+)"/)
+      a.download = match ? match[1] : 'linkedin-posts.pdf'
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      setLinkedinError(e.message)
+    } finally {
+      setLinkedinExporting(false)
     }
   }
 
@@ -612,6 +723,13 @@ function App() {
                       {Icons.mail}
                       Email
                     </button>
+                    <button
+                      onClick={openLinkedinModal}
+                      className="flex items-center gap-2 bg-white border border-sky-200 hover:border-sky-300 text-sky-600 hover:text-sky-700 font-medium px-5 py-2.5 rounded-xl transition-all text-sm shadow-sm"
+                    >
+                      {Icons.linkedin}
+                      LinkedIn Posts
+                    </button>
                     <div className="w-px h-6 bg-stone-200" />
                     <button
                       onClick={handleRegenerateCurrent}
@@ -700,6 +818,173 @@ function App() {
           <span className="ml-auto">Morning Edition v1.0</span>
         </footer>
       </main>
+
+      {/* ── LinkedIn Posts Modal ── */}
+      {linkedinModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setLinkedinModalOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden flex flex-col" style={{ maxHeight: '90vh' }} onClick={e => e.stopPropagation()}>
+
+            {/* Modal Header */}
+            <div className="px-6 py-5 border-b border-stone-100 flex items-center gap-3 shrink-0">
+              <span className="text-sky-500">{Icons.linkedin}</span>
+              <div>
+                <h3 className="font-semibold text-stone-800 text-lg">LinkedIn Posts</h3>
+                <p className="text-stone-400 text-xs mt-0.5">One post per story — pick a style, copy or export</p>
+              </div>
+              <button onClick={() => setLinkedinModalOpen(false)} className="ml-auto text-stone-400 hover:text-stone-600 p-1 rounded-lg hover:bg-stone-100 transition-colors">
+                {Icons.x}
+              </button>
+            </div>
+
+            {/* Style Picker + Export Bar — only shown when posts are ready */}
+            {linkedinPosts && (
+              <div className="px-6 py-3.5 border-b border-stone-100 bg-stone-50 flex flex-wrap items-center gap-3 shrink-0">
+                {/* Style pills */}
+                <span className="text-xs font-semibold text-stone-500 uppercase tracking-wider shrink-0">Style</span>
+                {[
+                  { id: 'professional', label: 'Professional', icon: '◼' },
+                  { id: 'editorial',    label: 'Editorial',    icon: '◆' },
+                  { id: 'dark',         label: 'Dark',         icon: '◉' },
+                ].map(s => (
+                  <button
+                    key={s.id}
+                    onClick={() => setLinkedinStyle(s.id)}
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                      linkedinStyle === s.id
+                        ? 'bg-sky-600 text-white border-sky-600 shadow-sm'
+                        : 'bg-white text-stone-600 border-stone-200 hover:border-sky-300 hover:text-sky-600'
+                    }`}
+                  >
+                    <span className={linkedinStyle === s.id ? 'opacity-100' : 'opacity-40'}>{s.icon}</span>
+                    {s.label}
+                  </button>
+                ))}
+
+                {/* Spacer */}
+                <div className="flex-1" />
+
+                {/* Export buttons */}
+                <button
+                  onClick={exportLinkedinHtml}
+                  disabled={linkedinExporting}
+                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold bg-white border border-stone-200 text-stone-600 hover:border-sky-300 hover:text-sky-700 transition-all disabled:opacity-50"
+                >
+                  {Icons.download}
+                  HTML
+                </button>
+                <button
+                  onClick={exportLinkedinPdf}
+                  disabled={linkedinExporting}
+                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold bg-sky-600 hover:bg-sky-700 text-white border border-sky-600 transition-all shadow-sm disabled:opacity-50"
+                >
+                  {linkedinExporting ? (
+                    <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                  ) : Icons.pdf}
+                  PDF
+                </button>
+              </div>
+            )}
+
+            {/* Modal Body */}
+            <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
+              {linkedinLoading && (
+                <div className="flex flex-col items-center justify-center py-16">
+                  <svg className="animate-spin h-8 w-8 text-sky-500 mb-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  <p className="text-stone-500 text-sm font-medium">Claude is writing 10 LinkedIn posts…</p>
+                  <p className="text-stone-400 text-xs mt-1">This takes about 20–30 seconds</p>
+                </div>
+              )}
+
+              {linkedinError && (
+                <div className="bg-red-50 border border-red-200 rounded-xl px-5 py-4 text-red-600 text-sm flex items-start gap-3">
+                  <span className="text-red-400 mt-0.5">⚠</span>
+                  <span>{linkedinError}</span>
+                </div>
+              )}
+
+              {linkedinPosts && linkedinPosts.map((item, idx) => (
+                <div key={idx} className={`rounded-xl overflow-hidden border transition-all ${
+                  linkedinStyle === 'dark'
+                    ? 'border-slate-600 bg-slate-900'
+                    : linkedinStyle === 'editorial'
+                    ? 'border-amber-200 bg-amber-50/30'
+                    : 'border-stone-200 bg-white'
+                }`}>
+                  {/* Card Header */}
+                  <div className={`flex items-center justify-between px-4 py-3 border-b ${
+                    linkedinStyle === 'dark'
+                      ? 'bg-slate-800 border-slate-600'
+                      : linkedinStyle === 'editorial'
+                      ? 'bg-amber-50 border-amber-200'
+                      : 'bg-stone-50 border-stone-100'
+                  }`}>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                        linkedinStyle === 'dark'
+                          ? 'text-teal-400 bg-teal-400/10 border border-teal-500/30'
+                          : linkedinStyle === 'editorial'
+                          ? 'text-amber-700 bg-amber-100 border border-amber-300'
+                          : 'text-sky-600 bg-sky-50 border border-sky-200'
+                      }`}>
+                        {linkedinStyle === 'editorial'
+                          ? ['I','II','III','IV','V','VI','VII','VIII','IX','X'][idx] || String(idx+1)
+                          : linkedinStyle === 'dark'
+                          ? `[${String(idx+1).padStart(2,'0')}]`
+                          : String(idx+1).padStart(2,'0')
+                        }
+                      </span>
+                      <span className={`text-sm font-semibold truncate ${
+                        linkedinStyle === 'dark' ? 'text-slate-200' : 'text-stone-700'
+                      }`}>
+                        {item.headline}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => copyToClipboard(item.post, idx)}
+                      className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all shrink-0 ml-3 ${
+                        copiedIndex === idx
+                          ? 'bg-emerald-500 text-white'
+                          : 'bg-sky-600 hover:bg-sky-700 text-white'
+                      }`}
+                    >
+                      {copiedIndex === idx ? Icons.check : Icons.copy}
+                      {copiedIndex === idx ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
+                  {/* Post Text */}
+                  <div className="px-4 py-4">
+                    <pre className={`text-sm whitespace-pre-wrap leading-relaxed ${
+                      linkedinStyle === 'dark'
+                        ? 'font-mono text-slate-300 text-xs'
+                        : linkedinStyle === 'editorial'
+                        ? 'font-serif text-stone-700'
+                        : 'font-sans text-stone-700'
+                    }`}>
+                      {item.post}
+                    </pre>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Modal Footer */}
+            {linkedinPosts && (
+              <div className="px-6 py-4 border-t border-stone-100 flex items-center justify-between shrink-0">
+                <p className="text-xs text-stone-400">{linkedinPosts.length} posts · <span className="capitalize">{linkedinStyle}</span> style</p>
+                <button
+                  onClick={() => setLinkedinModalOpen(false)}
+                  className="px-5 py-2.5 rounded-xl text-sm font-medium text-stone-500 hover:text-stone-700 hover:bg-stone-100 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Email Modal ── */}
       {emailModalOpen && (
