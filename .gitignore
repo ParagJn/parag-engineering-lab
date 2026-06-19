@@ -32,6 +32,10 @@ dist/
 *.swp
 *.swo
 
+# Interview Coach — sensitive runtime data
+sessions/*.json
+**/config.json
+
 # Logs
 *.log
 npm-debug.log*
