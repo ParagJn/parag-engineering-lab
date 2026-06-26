@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BarChart2, CheckCircle, Clock, PlusCircle, TrendingUp } from 'lucide-react'
 import Header from '../components/common/Header'
-import SessionCard from '../components/dashboard/SessionCard'
+import SessionAttemptGroup from '../components/dashboard/SessionAttemptGroup'
 import StatsCard from '../components/dashboard/StatsCard'
 import ScoreChart from '../components/dashboard/ScoreChart'
 import LoadingSpinner from '../components/common/LoadingSpinner'
@@ -26,7 +26,23 @@ export default function DashboardPage() {
     try {
       const [statsRes, sessionsRes] = await Promise.all([getDashboardStats(), getDashboardSessions()])
       setStats(statsRes.data)
-      setSessions(sessionsRes.data)
+      // Group sessions by root_session_id into attempt chains
+      const raw = sessionsRes.data
+      const chains = {}
+      raw.forEach((s) => {
+        const rootId = s.root_session_id || s.session_id
+        if (!chains[rootId]) chains[rootId] = []
+        chains[rootId].push(s)
+      })
+      // Sort each chain by attempt_number; sort groups by latest created_at
+      const grouped = Object.values(chains)
+        .map((g) => g.sort((a, b) => (a.attempt_number || 1) - (b.attempt_number || 1)))
+        .sort((a, b) => {
+          const aLatest = a[a.length - 1].created_at || ''
+          const bLatest = b[b.length - 1].created_at || ''
+          return bLatest.localeCompare(aLatest)
+        })
+      setSessions(grouped)
     } catch (err) {
       setError('Could not load dashboard data. Is the backend running?')
     } finally {
@@ -39,8 +55,12 @@ export default function DashboardPage() {
   }, [])
 
   const handleDeleted = (id) => {
-    setSessions((prev) => prev.filter((s) => s.session_id !== id))
-    fetchData() // refresh stats
+    setSessions((prev) =>
+      prev
+        .map((group) => group.filter((s) => s.session_id !== id))
+        .filter((group) => group.length > 0)
+    )
+    fetchData()
   }
 
   return (
@@ -155,7 +175,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Session list */}
+            {/* Session list — grouped by attempt chain */}
             <div>
               <h3 className="font-semibold text-slate-700 mb-4">Interview Sessions</h3>
               {sessions.length === 0 ? (
@@ -171,8 +191,13 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {sessions.map((s) => (
-                    <SessionCard key={s.session_id} session={s} onDeleted={handleDeleted} />
+                  {sessions.map((group) => (
+                    <SessionAttemptGroup
+                      key={group[0].root_session_id || group[0].session_id}
+                      attempts={group}
+                      onDeleted={handleDeleted}
+                      onReattempted={fetchData}
+                    />
                   ))}
                 </div>
               )}

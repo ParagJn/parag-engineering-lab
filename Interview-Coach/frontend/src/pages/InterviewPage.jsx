@@ -20,16 +20,20 @@ const POLL_INTERVAL = 2500 // ms
 // ──────────────────────────────────────────────────────────────────
 // Generation Loading Screen
 // ──────────────────────────────────────────────────────────────────
-function GeneratingScreen({ setup }) {
+function GeneratingScreen({ setup, sessionStatus }) {
   const [step, setStep] = useState(0)
   const STEPS = [
     { agent: 'gpt', label: 'Analysing company profile…' },
-    { agent: 'gpt', label: 'GPT drafting initial questions…' },
-    { agent: 'claude', label: 'Claude refining for relevance…' },
-    { agent: 'gemini', label: 'Gemini finalising the question set…' },
+    { agent: 'gpt', label: 'GPT drafting 6 initial questions…' },
+    { agent: 'claude', label: 'Claude refining both batches (parallel)…' },
+    { agent: 'gemini', label: 'Gemini finalising both batches (parallel)…' },
   ]
 
+  // Jump to step 2 immediately if GPT drafts are already saved (questions exist)
   useEffect(() => {
+    if (sessionStatus === 'generating' && step < 2) {
+      // advance animation naturally
+    }
     const id = setInterval(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)), 4500)
     return () => clearInterval(id)
   }, [])
@@ -122,14 +126,18 @@ export default function InterviewPage() {
     return () => clearInterval(pollRef.current)
   }, [loadSession])
 
-  // ── Resume: jump to first unanswered question on first load ──────
+  // ── Resume: jump to first answerable question on first load ─────
+  // Works for both 'ready' and 'partial_ready' (Q1-3 pending, Q4-6 still generating)
   useEffect(() => {
     if (!session || sessionInitialized) return
     const questions = session.questions || []
     if (questions.length === 0) return // still generating
-    const firstPending = questions.findIndex((q) => q.status === 'pending')
-    setCurrentIdx(firstPending !== -1 ? firstPending : questions.length - 1)
-    setSessionInitialized(true)
+    // 'partial_ready' or 'ready': find first pending question
+    if (session.status === 'partial_ready' || session.status === 'ready') {
+      const firstPending = questions.findIndex((q) => q.status === 'pending')
+      setCurrentIdx(firstPending !== -1 ? firstPending : questions.length - 1)
+      setSessionInitialized(true)
+    }
   }, [session, sessionInitialized])
 
   // ── Reset per-question feedback when navigating to a new Q ───────
@@ -215,13 +223,15 @@ export default function InterviewPage() {
   }
 
   const isGenerating = session.status === 'generating' || session.status === 'setup'
+  // partial_ready means Q1-3 are refined; user can start while Q4-6 finish
+  const isPartialReady = session.status === 'partial_ready'
 
   if (isGenerating) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
         <div className="max-w-2xl mx-auto px-4 py-8">
-          <GeneratingScreen setup={session.setup} />
+          <GeneratingScreen setup={session.setup} sessionStatus={session.status} />
         </div>
       </div>
     )
@@ -247,7 +257,8 @@ export default function InterviewPage() {
   const isLastQuestion = currentIdx === questions.length - 1
 
   // Derive all UI flags directly from question status — no separate state
-  const qStatus = currentQ?.status // 'pending' | 'answered' | 'evaluated' | 'not_attended'
+  // 'generating' means this question's refinement is still in flight (parallel batch)
+  const qStatus = currentQ?.status // 'generating' | 'pending' | 'answered' | 'evaluated' | 'not_attended'
   const isEvaluating = qStatus === 'answered'
   const isEvaluated = qStatus === 'evaluated'
 
@@ -291,13 +302,26 @@ export default function InterviewPage() {
         {/* Progress */}
         <ProgressBar current={answeredCount} total={questions.length} />
 
-        {/* Question */}
-        {currentQ && qStatus !== 'not_attended' && (
+        {/* Question card — hidden while this specific question is still being refined */}
+        {currentQ && qStatus !== 'not_attended' && qStatus !== 'generating' && (
           <QuestionCard
             question={currentQ}
             questionNumber={currentIdx + 1}
             totalQuestions={questions.length}
           />
+        )}
+
+        {/* Waiting for parallel batch B to finish refining this question */}
+        {qStatus === 'generating' && (
+          <div className="card p-6 text-center space-y-3">
+            <LoadingSpinner size="md" />
+            <p className="text-slate-600 text-sm font-medium">
+              AI panel is finalising question {currentIdx + 1}…
+            </p>
+            <p className="text-xs text-slate-400">
+              Claude &amp; Gemini are refining it in the background. This should only take a moment.
+            </p>
+          </div>
         )}
 
         {/* Answer input — only for pending questions */}
@@ -326,9 +350,9 @@ export default function InterviewPage() {
         {isEvaluated && (
           <div className="flex justify-end gap-3 pt-1">
             {!isLastQuestion ? (
-              <button onClick={handleNext} className="btn-primary flex items-center gap-2">
+              <button onClick={handleNext} className="btn-primary flex items-center gap-2" disabled={completing}>
                 Next Question <ChevronRight size={16} />
-              </button>
+              </button>        
             ) : (
               <button
                 onClick={handleComplete}
@@ -351,13 +375,15 @@ export default function InterviewPage() {
                 className={`h-2 rounded-full transition-all ${
                   i === currentIdx
                     ? 'bg-primary-700 w-4'
-                    : ['evaluated'].includes(q.status)
+                    : q.status === 'evaluated'
                       ? 'w-2 bg-green-400'
-                      : q.status === 'not_attended'
-                        ? 'w-2 bg-gray-200'
-                        : q.status === 'answered'
-                          ? 'w-2 bg-amber-400'
-                          : 'w-2 bg-gray-200'
+                      : q.status === 'answered'
+                        ? 'w-2 bg-amber-400'
+                        : q.status === 'generating'
+                          ? 'w-2 bg-primary-200 animate-pulse'
+                          : q.status === 'not_attended'
+                            ? 'w-2 bg-gray-200'
+                            : 'w-2 bg-gray-300'
                 }`}
               />
             ))}

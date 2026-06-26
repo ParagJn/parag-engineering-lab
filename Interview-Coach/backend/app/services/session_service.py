@@ -34,6 +34,8 @@ class SessionService:
         now = datetime.now().isoformat()
         session = {
             "session_id": session_id,
+            "root_session_id": session_id,   # original is its own root
+            "attempt_number": 1,
             "created_at": now,
             "updated_at": now,
             "status": "setup",
@@ -65,6 +67,87 @@ class SessionService:
             session["updated_at"] = datetime.now().isoformat()
             await self._write(session)
         return session
+
+    async def create_reattempt(self, source_session_id: str) -> Optional[dict]:
+        """
+        Create a fresh re-attempt using the same questions as an existing session.
+        The new session:
+          - reuses all questions (answers/evaluations reset to pending)
+          - links to the original via root_session_id
+          - gets attempt_number = (max in chain) + 1
+          - starts at status 'ready' (no generation needed)
+        """
+        source = await self.get_session(source_session_id)
+        if not source:
+            return None
+
+        root_id = source.get("root_session_id", source_session_id)
+
+        # Find the highest attempt number already in this chain
+        all_sessions = await self.list_sessions()
+        chain = [
+            s for s in all_sessions
+            if s.get("root_session_id", s["session_id"]) == root_id
+        ]
+        max_attempt = max((s.get("attempt_number", 1) for s in chain), default=1)
+
+        session_id = str(uuid.uuid4())
+        now = datetime.now().isoformat()
+
+        # Copy questions with all progress wiped
+        reset_questions = [
+            {
+                "question_id": q["question_id"],
+                "question": q["question"],
+                "difficulty": q.get("difficulty", "medium"),
+                "rationale": q.get("rationale", ""),
+                "assigned_agent": q.get("assigned_agent", "gpt"),
+                "answer": None,
+                "evaluations": {},
+                "consolidated_feedback": None,
+                "avg_score": None,
+                "status": "pending",
+            }
+            for q in source.get("questions", [])
+            if q.get("status") not in ("generating",)  # skip unfinished placeholders
+        ]
+
+        session = {
+            "session_id": session_id,
+            "root_session_id": root_id,
+            "attempt_number": max_attempt + 1,
+            "created_at": now,
+            "updated_at": now,
+            "status": "ready",
+            "setup": source["setup"],
+            "company_analysis": source.get("company_analysis"),
+            "questions": reset_questions,
+            "overall_score": None,
+            "session_summary": None,
+            "error_message": None,
+        }
+        await self._write(session)
+        logger.info(
+            "Re-attempt #%d created: %s (root: %s)",
+            session["attempt_number"], session_id, root_id,
+        )
+        return session
+
+    async def get_attempt_chain(self, session_id: str) -> List[dict]:
+        """
+        Return all sessions in the same attempt chain, sorted by attempt_number.
+        Backward-compatible: sessions without root_session_id are treated as their own root.
+        """
+        session = await self.get_session(session_id)
+        if not session:
+            return []
+        root_id = session.get("root_session_id", session_id)
+        all_sessions = await self.list_sessions()
+        chain = [
+            s for s in all_sessions
+            if s.get("root_session_id", s["session_id"]) == root_id
+        ]
+        return sorted(chain, key=lambda x: x.get("attempt_number", 1))
 
     async def delete_session(self, session_id: str) -> bool:
         path = self._path(session_id)
@@ -144,6 +227,45 @@ class SessionService:
                 if q["question_id"] == question_id:
                     q["consolidated_feedback"] = feedback
                     break
+            session["updated_at"] = datetime.now().isoformat()
+            await self._write(session)
+        return session
+
+    async def update_question_batch(
+        self, session_id: str, indices: list, refined_questions: list
+    ) -> Optional[dict]:
+        """
+        Update a batch of questions (by 0-based list index) with their refined versions
+        and set their status to 'pending'.  Thread-safe via the session lock.
+
+        Also advances the session status:
+          - First batch done  → 'partial_ready'  (user can start answering Q1-3)
+          - Both batches done → 'ready'
+        """
+        async with self._lock:
+            session = await self.get_session(session_id)
+            if not session:
+                return None
+            questions = session.get("questions", [])
+            for list_idx, q_data in zip(indices, refined_questions):
+                if list_idx < len(questions):
+                    questions[list_idx].update(
+                        {
+                            "question": q_data.get(
+                                "question", questions[list_idx].get("question", "")
+                            ),
+                            "difficulty": q_data.get("difficulty", "medium"),
+                            "rationale": q_data.get("rationale", ""),
+                            "status": "pending",
+                        }
+                    )
+            # Advance overall session status
+            pending_count = sum(1 for q in questions if q["status"] == "pending")
+            total = len(questions)
+            if pending_count >= total:
+                session["status"] = "ready"
+            elif pending_count >= 3:
+                session["status"] = "partial_ready"
             session["updated_at"] = datetime.now().isoformat()
             await self._write(session)
         return session

@@ -1,4 +1,6 @@
+import asyncio
 import logging
+import random
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 
@@ -51,7 +53,20 @@ async def _run_question_generation(
     agent_svc: AgentService,
     session_svc: SessionService,
 ):
-    """Background task: analyse company → generate questions (3-stage pipeline)."""
+    """
+    Background task — parallel question generation pipeline:
+
+      Stage 0  : Company analysis (GPT)
+      Stage 1  : GPT generates all 6 initial questions
+                 → saved immediately as 'generating' placeholders
+      Stage 2-3: TWO parallel pipelines (Claude→Gemini) each refining 3 questions
+                 → as each half completes its questions become 'pending'
+                 → session becomes 'partial_ready' once first 3 are ready
+                 → session becomes 'ready' once all 6 are ready
+
+    The frontend starts showing Q1-3 as soon as 'partial_ready' is set,
+    while Q4-6 are still being refined in the background.
+    """
     try:
         await session_svc.update_session(session_id, {"status": "generating"})
 
@@ -62,28 +77,87 @@ async def _run_question_generation(
         )
         await session_svc.update_session(session_id, {"company_analysis": company_analysis})
 
-        # Stages 1–3: GPT → Claude → Gemini question pipeline
-        logger.info("[%s] Running question generation pipeline", session_id)
-        questions = await agent_svc.generate_questions(
-            company_name=setup["company_name"],
-            job_title=setup["job_title"],
-            job_description=setup["job_description"],
-            years_experience=setup["years_experience"],
-            interview_type=setup["interview_type"],
-            company_analysis=company_analysis,
+        # Stage 1: GPT generates all 6 questions quickly (~10-20s)
+        logger.info("[%s] Stage 1: GPT generating initial questions", session_id)
+        initial_6 = await agent_svc._gpt_generate(
+            setup["company_name"], setup["job_title"], setup["job_description"],
+            setup["years_experience"], setup["interview_type"], company_analysis
         )
 
-        await session_svc.update_session(
-            session_id, {"questions": questions, "status": "ready"}
+        # Pre-assign agents and save GPT drafts as placeholders immediately.
+        # Frontend stays on the generating screen but sees progress.
+        agents = ["gpt", "gpt", "claude", "claude", "gemini", "gemini"]
+        random.shuffle(agents)
+        placeholders = [
+            {
+                "question_id": idx + 1,
+                "question": q.get("question", ""),
+                "difficulty": q.get("difficulty", "medium"),
+                "rationale": q.get("rationale", ""),
+                "assigned_agent": agents[idx],
+                "answer": None, "evaluations": {}, "consolidated_feedback": None,
+                "avg_score": None,
+                "status": "generating",  # will become 'pending' after refinement
+            }
+            for idx, q in enumerate(initial_6[:6])
+        ]
+        await session_svc.update_session(session_id, {"questions": placeholders})
+        logger.info("[%s] GPT drafts saved; starting parallel refinement", session_id)
+
+        # Stages 2-3: Refine each half concurrently; save as each completes
+        async def refine_and_save(batch: list, indices: list, label: str):
+            refined_half = await agent_svc._refine_half(
+                batch,
+                setup["company_name"], setup["job_title"], setup["job_description"],
+                setup["interview_type"], company_analysis,
+            )
+            await session_svc.update_question_batch(session_id, indices, refined_half)
+            logger.info("[%s] %s complete — questions now pending", session_id, label)
+
+        await asyncio.gather(
+            refine_and_save(initial_6[:3], [0, 1, 2], "Batch A (Q1-3)"),
+            refine_and_save(initial_6[3:], [3, 4, 5], "Batch B (Q4-6)"),
         )
-        logger.info("[%s] Questions ready (%d questions)", session_id, len(questions))
+
+        await session_svc.update_session(session_id, {"status": "ready"})
+        logger.info("[%s] All 6 questions ready", session_id)
 
     except Exception as exc:
         logger.error("[%s] Question generation failed: %s", session_id, exc, exc_info=True)
         await session_svc.update_session(
-            session_id,
-            {"status": "error", "error_message": str(exc)},
+            session_id, {"status": "error", "error_message": str(exc)}
         )
+
+
+
+# ------------------------------------------------------------------
+# Re-attempt
+# ------------------------------------------------------------------
+
+
+@router.post("/{session_id}/reattempt", summary="Re-appear for the same interview with identical questions")
+async def create_reattempt(
+    session_id: str,
+    session_svc: SessionService = Depends(get_session_service),
+):
+    """
+    Creates a new attempt using the exact same questions as the source session.
+    All answers and evaluations are cleared. The session starts at 'ready' status —
+    no AI generation needed.
+    """
+    new_session = await session_svc.create_reattempt(session_id)
+    if not new_session:
+        raise HTTPException(status_code=404, detail="Source session not found")
+    return {
+        "session_id": new_session["session_id"],
+        "attempt_number": new_session["attempt_number"],
+        "root_session_id": new_session["root_session_id"],
+        "status": new_session["status"],
+        "message": (
+            f"Attempt #{new_session['attempt_number']} created. "
+            "Same questions, fresh evaluation. Good luck!"
+        ),
+    }
 
 
 # ------------------------------------------------------------------

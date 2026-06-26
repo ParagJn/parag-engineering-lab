@@ -10,6 +10,7 @@ const api = axios.create({
 export const listSessions = () => api.get('/sessions/')
 export const getSession = (id) => api.get(`/sessions/${id}`)
 export const deleteSession = (id) => api.delete(`/sessions/${id}`)
+export const getSessionChain = (id) => api.get(`/sessions/${id}/chain`)
 
 // ── Interview ─────────────────────────────────────────────────────
 export const setupInterview = (data) => api.post('/interview/setup', data)
@@ -22,6 +23,8 @@ export const getFeedback = (sessionId, questionId) =>
 export const completeSession = (sessionId) =>
   api.post(`/interview/${sessionId}/complete`)
 export const getReport = (sessionId) => api.get(`/interview/${sessionId}/report`)
+export const reattemptSession = (sessionId) =>
+  api.post(`/interview/${sessionId}/reattempt`)
 
 // ── Dashboard ─────────────────────────────────────────────────────
 export const getDashboardStats = () => api.get('/dashboard/stats')

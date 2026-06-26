@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Award, CheckCircle, PlusCircle, TrendingUp } from 'lucide-react'
+import { ArrowLeft, Award, CheckCircle, PlusCircle, TrendingUp, RefreshCw, ChevronRight } from 'lucide-react'
 import Header from '../components/common/Header'
 import AgentAvatar from '../components/common/AgentAvatar'
 import LoadingSpinner from '../components/common/LoadingSpinner'
-import { getReport } from '../api/client'
+import { getReport, getSessionChain, reattemptSession } from '../api/client'
 
 // Lightweight markdown renderer — handles ## headings, **bold**, and paragraphs
 function MarkdownSummary({ text }) {
@@ -83,16 +83,22 @@ export default function ReportPage() {
   const { sessionId } = useParams()
   const navigate = useNavigate()
   const [session, setSession] = useState(null)
+  const [chain, setChain] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [summaryReady, setSummaryReady] = useState(false)
+  const [reattempting, setReattempting] = useState(false)
 
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await getReport(sessionId)
-        setSession(res.data)
-        setSummaryReady(!!res.data.session_summary)
+        const [reportRes, chainRes] = await Promise.all([
+          getReport(sessionId),
+          getSessionChain(sessionId).catch(() => ({ data: [] })),
+        ])
+        setSession(reportRes.data)
+        setChain(chainRes.data || [])
+        setSummaryReady(!!reportRes.data.session_summary)
       } catch (err) {
         setError(err.response?.data?.detail || 'Could not load report.')
       } finally {
@@ -133,8 +139,23 @@ export default function ReportPage() {
     )
   }
 
-  const setup = session.setup || {}
-  const questions = session.questions || []
+  const handleReattempt = async () => {
+    setReattempting(true)
+    try {
+      const res = await reattemptSession(sessionId)
+      navigate(`/interview/${res.data.session_id}`)
+    } catch {
+      setReattempting(false)
+    }
+  }
+
+  const attemptNum = session?.attempt_number || 1
+  const chainScores = chain
+    .filter((s) => s.status === 'completed' && s.overall_score != null)
+    .sort((a, b) => (a.attempt_number || 1) - (b.attempt_number || 1))
+
+  const setup = session?.setup || {}
+  const questions = session?.questions || []
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -154,7 +175,10 @@ export default function ReportPage() {
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <Award size={18} className="text-blue-200" />
-                <span className="text-blue-200 text-sm font-medium">Interview Complete</span>
+                <span className="text-blue-200 text-sm font-medium">
+                  Interview Complete · Attempt {attemptNum}
+                  {chain.length > 1 && ` of ${chain.length}`}
+                </span>
               </div>
               <h1 className="text-xl font-bold">{setup.company_name}</h1>
               <p className="text-blue-200 text-sm mt-0.5">
@@ -179,6 +203,48 @@ export default function ReportPage() {
             </div>
           </div>
         </div>
+
+        {/* Attempt Progress — shown only when there are multiple attempts */}
+        {chainScores.length >= 2 && (
+          <div className="card p-5">
+            <h3 className="font-semibold text-slate-700 text-sm mb-4 flex items-center gap-2">
+              <TrendingUp size={15} className="text-primary-700" />
+              Your Progress Across {chainScores.length} Attempts
+            </h3>
+            <div className="flex items-end gap-2 flex-wrap">
+              {chainScores.map((s, i) => {
+                const isCurrent = s.session_id === sessionId
+                const barH = Math.max(12, Math.round((s.overall_score / 10) * 80))
+                const col =
+                  s.overall_score >= 8 ? 'bg-green-500' :
+                  s.overall_score >= 6 ? 'bg-blue-500' :
+                  s.overall_score >= 4 ? 'bg-amber-500' : 'bg-red-400'
+                return (
+                  <div key={s.session_id} className="flex flex-col items-center gap-1">
+                    <span className={`text-xs font-semibold ${isCurrent ? 'text-primary-700' : 'text-slate-500'}`}>
+                      {s.overall_score.toFixed(1)}
+                    </span>
+                    <div
+                      className={`w-8 rounded-t-md ${col} ${isCurrent ? 'ring-2 ring-primary-400' : 'opacity-70'} transition-all`}
+                      style={{ height: barH }}
+                    />
+                    <span className="text-xs text-slate-400">#{s.attempt_number || i + 1}</span>
+                  </div>
+                )
+              })}
+              {/* Trend label */}
+              {chainScores.length >= 2 && (() => {
+                const diff = +(chainScores[chainScores.length - 1].overall_score - chainScores[chainScores.length - 2].overall_score).toFixed(1)
+                if (diff === 0) return null
+                return (
+                  <div className={`ml-2 text-sm font-semibold flex items-center gap-1 ${diff > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                    {diff > 0 ? '▲' : '▼'} {Math.abs(diff)} pts from last attempt
+                  </div>
+                )
+              })()}
+            </div>
+          </div>
+        )}
 
         {/* Overall Summary */}
         <div className="card p-5">
@@ -260,13 +326,21 @@ export default function ReportPage() {
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-3 pb-4">
           <button
-            onClick={() => navigate('/setup')}
-            className="btn-primary flex items-center justify-center gap-2"
+            onClick={handleReattempt}
+            disabled={reattempting}
+            className="btn-primary flex items-center justify-center gap-2 bg-indigo-700 hover:bg-indigo-600"
           >
-            <PlusCircle size={16} />
-            Start New Interview
+            {reattempting ? <LoadingSpinner size="sm" /> : <RefreshCw size={15} />}
+            Re-appear (Attempt {attemptNum + 1})
           </button>
-          <button onClick={() => navigate('/')} className="btn-secondary">
+          <button
+            onClick={() => navigate('/setup')}
+            className="btn-secondary flex items-center justify-center gap-2"
+          >
+            <PlusCircle size={15} />
+            New Interview
+          </button>
+          <button onClick={() => navigate('/')} className="btn-ghost text-slate-500">
             Back to Dashboard
           </button>
         </div>

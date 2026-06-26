@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Calendar, Building2, Trophy, ArrowRight, Trash2, Clock } from 'lucide-react'
-import { deleteSession } from '../../api/client'
+import { Calendar, ArrowRight, Trash2, Clock, RefreshCw } from 'lucide-react'
+import { deleteSession, reattemptSession } from '../../api/client'
+import LoadingSpinner from '../common/LoadingSpinner'
 
 const TYPE_LABELS = {
   technical: 'Technical',
@@ -14,6 +16,7 @@ const STATUS_STYLES = {
   in_progress: 'bg-blue-50 text-blue-700 border-blue-200',
   ready: 'bg-amber-50 text-amber-700 border-amber-200',
   generating: 'bg-purple-50 text-purple-700 border-purple-200',
+  partial_ready: 'bg-amber-50 text-amber-700 border-amber-200',
   error: 'bg-red-50 text-red-700 border-red-200',
 }
 
@@ -21,6 +24,7 @@ const STATUS_LABELS = {
   completed: 'Completed',
   in_progress: 'In Progress',
   ready: 'Ready',
+  partial_ready: 'Ready',
   generating: 'Generating',
   setup: 'Setup',
   error: 'Error',
@@ -43,9 +47,11 @@ function scoreColor(score) {
   return 'text-red-600'
 }
 
-export default function SessionCard({ session, onDeleted }) {
+export default function SessionCard({ session, onDeleted, onReattempted, compact = false }) {
   const navigate = useNavigate()
+  const [reattempting, setReattempting] = useState(false)
   const statusStyle = STATUS_STYLES[session.status] || 'bg-gray-50 text-gray-600 border-gray-200'
+  const attemptNum = session.attempt_number || 1
 
   const handleContinue = () => {
     if (session.status === 'completed') {
@@ -61,31 +67,46 @@ export default function SessionCard({ session, onDeleted }) {
     try {
       await deleteSession(session.session_id)
       onDeleted?.(session.session_id)
+    } catch { /* ignore */ }
+  }
+
+  const handleReattempt = async (e) => {
+    e.stopPropagation()
+    setReattempting(true)
+    try {
+      const res = await reattemptSession(session.session_id)
+      onReattempted?.()
+      navigate(`/interview/${res.data.session_id}`)
     } catch {
-      // ignore
+      setReattempting(false)
     }
   }
 
   return (
     <div
-      className="card p-4 hover:border-gray-300 hover:shadow-md transition-all cursor-pointer group"
+      className={`card ${compact ? 'p-3' : 'p-4'} hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer group`}
       onClick={handleContinue}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className="font-semibold text-slate-800 truncate">{session.company_name}</span>
+            {!compact && (
+              <span className="font-semibold text-slate-800 truncate">{session.company_name}</span>
+            )}
             {session.interview_type && (
               <span className="badge bg-slate-100 text-slate-600 border border-slate-200">
                 {TYPE_LABELS[session.interview_type] || session.interview_type}
               </span>
             )}
+            <span className={`badge border ${attemptNum > 1 ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-gray-50 text-gray-500 border-gray-200'}`}>
+              Attempt {attemptNum}
+            </span>
             <span className={`badge border ${statusStyle}`}>
               {STATUS_LABELS[session.status] || session.status}
             </span>
           </div>
-          <p className="text-sm text-slate-500 truncate">{session.job_title}</p>
-          <div className="flex items-center gap-3 mt-2 text-xs text-slate-400">
+          {!compact && <p className="text-sm text-slate-500 truncate">{session.job_title}</p>}
+          <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-400">
             <span className="flex items-center gap-1">
               <Calendar size={11} />
               {formatDate(session.created_at)}
@@ -101,12 +122,23 @@ export default function SessionCard({ session, onDeleted }) {
 
         <div className="flex items-center gap-2 flex-shrink-0">
           {session.overall_score != null && (
-            <div className="text-right">
-              <p className={`text-lg font-bold ${scoreColor(session.overall_score)}`}>
+            <div className="text-right mr-1">
+              <p className={`text-lg font-bold leading-none ${scoreColor(session.overall_score)}`}>
                 {session.overall_score.toFixed(1)}
               </p>
               <p className="text-xs text-slate-400">/ 10</p>
             </div>
+          )}
+          {session.status === 'completed' && (
+            <button
+              onClick={handleReattempt}
+              disabled={reattempting}
+              title="Re-appear with the same questions"
+              className="opacity-0 group-hover:opacity-100 flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-all"
+            >
+              {reattempting ? <LoadingSpinner size="sm" /> : <RefreshCw size={12} />}
+              Re-appear
+            </button>
           )}
           <button
             onClick={handleDelete}

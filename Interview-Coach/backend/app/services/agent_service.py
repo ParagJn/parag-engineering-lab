@@ -84,31 +84,32 @@ class AgentService:
         company_analysis: str,
     ) -> List[Dict]:
         """
-        Three-stage sequential question generation:
-          Stage 1 – GPT creates initial 6 questions
-          Stage 2 – Claude reviews and improves them
-          Stage 3 – Gemini performs final review and approves
+        Parallel question generation:
+          Stage 1  – GPT generates all 6 questions (single call preserves coherence)
+          Stage 2-3 – Split into two halves; Claude→Gemini runs on both concurrently
 
-        Each question is then randomly assigned to one of the 3 agents for asking.
+        Halving the payload for each refinement call AND running them in parallel
+        reduces total wall-clock time by ~50% vs the old sequential approach.
         """
-        logger.info("Stage 1: GPT generating initial questions for %s", company_name)
+        logger.info("Stage 1: GPT generating initial 6 questions for %s", company_name)
         initial = await self._gpt_generate(
             company_name, job_title, job_description, years_experience, interview_type, company_analysis
         )
 
-        logger.info("Stage 2: Claude refining questions")
-        refined = await self._claude_refine(
-            initial, company_name, job_title, job_description, interview_type, company_analysis
-        )
-
-        logger.info("Stage 3: Gemini finalising questions")
-        final = await self._gemini_finalise(
-            refined, company_name, job_title, interview_type
-        )
-
-        # Assign agents randomly (2 questions each)
+        # Pre-assign agents so callers can use them immediately (partial-ready support)
         agents = ["gpt", "gpt", "claude", "claude", "gemini", "gemini"]
         random.shuffle(agents)
+
+        logger.info("Stages 2-3: Parallel Claude→Gemini refinement on both halves")
+        half_a, half_b = await asyncio.gather(
+            self._refine_half(
+                initial[:3], company_name, job_title, job_description, interview_type, company_analysis
+            ),
+            self._refine_half(
+                initial[3:], company_name, job_title, job_description, interview_type, company_analysis
+            ),
+        )
+        final = half_a + half_b
 
         result = []
         for idx, q in enumerate(final[:6]):
@@ -127,6 +128,21 @@ class AgentService:
                 }
             )
         return result
+
+    async def _refine_half(
+        self,
+        questions: List[Dict],
+        company_name: str,
+        job_title: str,
+        job_description: str,
+        interview_type: str,
+        company_analysis: str,
+    ) -> List[Dict]:
+        """Run Claude refinement then Gemini finalization on a batch of ~3 questions."""
+        refined = await self._claude_refine(
+            questions, company_name, job_title, job_description, interview_type, company_analysis
+        )
+        return await self._gemini_finalise(refined, company_name, job_title, interview_type)
 
     async def _gpt_generate(
         self, company_name, job_title, job_description, years_experience, interview_type, company_analysis
