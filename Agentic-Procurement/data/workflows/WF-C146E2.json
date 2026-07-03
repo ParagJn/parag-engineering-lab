@@ -1,0 +1,580 @@
+{
+    "workflow_id": "WF-C146E2",
+    "status": "COMPLETED",
+    "current_step": 6,
+    "documents": [
+        {
+            "id": "DOC-529B02",
+            "type": "MRQ",
+            "created_at": "2026-07-03T23:07:39.113732",
+            "created_by": "Buyer",
+            "content": {
+                "workflow_id": "WF-C146E2",
+                "quote_id": "DOC-529B02",
+                "created_at": "2026-07-03T23:07:39.113590",
+                "buyer": "MegaMart Online",
+                "supplier": "FreshFizz Consumer Products",
+                "items": [
+                    {
+                        "sku": "COOK-002",
+                        "requested_quantity": 1000,
+                        "quoted_quantity": 1000,
+                        "requested_price": 2.8,
+                        "quoted_price": 0.0,
+                        "discount": 0.0,
+                        "final_price": 0.0,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "CRAC-001",
+                        "requested_quantity": 345,
+                        "quoted_quantity": 345,
+                        "requested_price": 1.8,
+                        "quoted_price": 0.0,
+                        "discount": 0.0,
+                        "final_price": 0.0,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "ENER-001",
+                        "requested_quantity": 342,
+                        "quoted_quantity": 342,
+                        "requested_price": 2.9,
+                        "quoted_price": 0.0,
+                        "discount": 0.0,
+                        "final_price": 0.0,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "JUIC-002",
+                        "requested_quantity": 973,
+                        "quoted_quantity": 973,
+                        "requested_price": 4.5,
+                        "quoted_price": 0.0,
+                        "discount": 0.0,
+                        "final_price": 0.0,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "SNAK-001",
+                        "requested_quantity": 300,
+                        "quoted_quantity": 0,
+                        "requested_price": 2.8,
+                        "quoted_price": 0.0,
+                        "discount": 0.0,
+                        "final_price": 0.0,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "SNAK-002",
+                        "requested_quantity": 350,
+                        "quoted_quantity": 0,
+                        "requested_price": 3.0,
+                        "quoted_price": 0.0,
+                        "discount": 0.0,
+                        "final_price": 0.0,
+                        "accepted": true
+                    }
+                ],
+                "status": "SENT",
+                "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nMegaMart Online is looking to restock our retail distribution centers with your high-demand beverage and snack lines for the upcoming sales quarter. We have reviewed your catalog and would like to request a formal Material Request Quote (MRQ) for the following items:\n- COOK-002: 1000 units\n- CRAC-001: 345 units\n- ENER-001: 342 units\n- JUIC-002: 973 units\n- SNAK-001: 300 units\n- SNAK-002: 350 units\n\nPlease review your stock levels and let us know your standard lead times, minimum order requirements, and any bulk purchase terms that might apply to this order. We look forward to establishing a mutually beneficial supply relationship.\n\nBest regards,\n\nProcurement Director\nMegaMart Online"
+            },
+            "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nMegaMart Online is looking to restock our retail distribution centers with your high-demand beverage and snack lines for the upcoming sales quarter. We have reviewed your catalog and would like to request a formal Material Request Quote (MRQ) for the following items:\n- COOK-002: 1000 units\n- CRAC-001: 345 units\n- ENER-001: 342 units\n- JUIC-002: 973 units\n- SNAK-001: 300 units\n- SNAK-002: 350 units\n\nPlease review your stock levels and let us know your standard lead times, minimum order requirements, and any bulk purchase terms that might apply to this order. We look forward to establishing a mutually beneficial supply relationship.\n\nBest regards,\n\nProcurement Director\nMegaMart Online"
+        },
+        {
+            "id": "DOC-281EED",
+            "type": "Proposal",
+            "created_at": "2026-07-03T23:08:04.393821",
+            "created_by": "Supplier",
+            "content": {
+                "workflow_id": "WF-C146E2",
+                "quote_id": "DOC-281EED",
+                "created_at": "2026-07-03T23:08:04.393702",
+                "buyer": "MegaMart Online",
+                "supplier": "FreshFizz Consumer Products",
+                "items": [
+                    {
+                        "sku": "COOK-002",
+                        "requested_quantity": 1000,
+                        "quoted_quantity": 900,
+                        "requested_price": 2.8,
+                        "quoted_price": 2.8,
+                        "discount": 0.0,
+                        "final_price": 2.8,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "CRAC-001",
+                        "requested_quantity": 345,
+                        "quoted_quantity": 345,
+                        "requested_price": 1.8,
+                        "quoted_price": 1.8,
+                        "discount": 0.0,
+                        "final_price": 1.8,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "ENER-001",
+                        "requested_quantity": 342,
+                        "quoted_quantity": 342,
+                        "requested_price": 2.9,
+                        "quoted_price": 2.9,
+                        "discount": 0.0,
+                        "final_price": 2.9,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "JUIC-002",
+                        "requested_quantity": 973,
+                        "quoted_quantity": 450,
+                        "requested_price": 4.5,
+                        "quoted_price": 4.5,
+                        "discount": 0.0,
+                        "final_price": 4.5,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "SNAK-001",
+                        "requested_quantity": 300,
+                        "quoted_quantity": 300,
+                        "requested_price": 2.8,
+                        "quoted_price": 2.8,
+                        "discount": 0.0,
+                        "final_price": 2.8,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "SNAK-002",
+                        "requested_quantity": 350,
+                        "quoted_quantity": 350,
+                        "requested_price": 3.0,
+                        "quoted_price": 3.0,
+                        "discount": 0.0,
+                        "final_price": 3.0,
+                        "accepted": true
+                    }
+                ],
+                "status": "SENT",
+                "letter_text": "Dear MegaMart Online Procurement Team,\n\nThank you for your Material Request Quote. We appreciate the opportunity to partner with MegaMart Online for your seasonal retail inventory replenishment.\n\nWe have verified our stock levels at our FreshFizz main distribution center. I am pleased to confirm that we have quoted availability based on current inventory, detailed below:\n- OatsNHoney Biscuits (COOK-002): 900 units quoted @ $2.80/unit (90% fulfilled)\n- SeaSalt Crackers (CRAC-001): 345 units quoted @ $1.80/unit (100% fulfilled)\n- BoltEnergy Original (ENER-001): 342 units quoted @ $2.90/unit (100% fulfilled)\n- RubyGrapefruit Juice (JUIC-002): 450 units quoted @ $4.50/unit (46% fulfilled)\n- ProteinPower Bar (SNAK-001): 300 units quoted @ $2.80/unit (100% fulfilled)\n- VeggieStraws Original (SNAK-002): 350 units quoted @ $3.00/unit (100% fulfilled)\n\nOur estimated lead time for packing and shipping is 3 business days from receiving your official Purchase Order. Please let us know if this proposal meets your timeline, so we can lock in the shipment slots.\n\nSincerely yours,\n\nCommercial Sales Director\nFreshFizz Consumer Products"
+            },
+            "letter_text": "Dear MegaMart Online Procurement Team,\n\nThank you for your Material Request Quote. We appreciate the opportunity to partner with MegaMart Online for your seasonal retail inventory replenishment.\n\nWe have verified our stock levels at our FreshFizz main distribution center. I am pleased to confirm that we have quoted availability based on current inventory, detailed below:\n- OatsNHoney Biscuits (COOK-002): 900 units quoted @ $2.80/unit (90% fulfilled)\n- SeaSalt Crackers (CRAC-001): 345 units quoted @ $1.80/unit (100% fulfilled)\n- BoltEnergy Original (ENER-001): 342 units quoted @ $2.90/unit (100% fulfilled)\n- RubyGrapefruit Juice (JUIC-002): 450 units quoted @ $4.50/unit (46% fulfilled)\n- ProteinPower Bar (SNAK-001): 300 units quoted @ $2.80/unit (100% fulfilled)\n- VeggieStraws Original (SNAK-002): 350 units quoted @ $3.00/unit (100% fulfilled)\n\nOur estimated lead time for packing and shipping is 3 business days from receiving your official Purchase Order. Please let us know if this proposal meets your timeline, so we can lock in the shipment slots.\n\nSincerely yours,\n\nCommercial Sales Director\nFreshFizz Consumer Products"
+        },
+        {
+            "id": "DOC-2FF4EB",
+            "type": "CounterOffer",
+            "created_at": "2026-07-03T23:08:36.797095",
+            "created_by": "Buyer",
+            "content": {
+                "workflow_id": "WF-C146E2",
+                "quote_id": "DOC-2FF4EB",
+                "created_at": "2026-07-03T23:08:36.796922",
+                "buyer": "MegaMart Online",
+                "supplier": "FreshFizz Consumer Products",
+                "items": [
+                    {
+                        "sku": "COOK-002",
+                        "requested_quantity": 1000,
+                        "quoted_quantity": 900,
+                        "requested_price": 2.8,
+                        "quoted_price": 2.8,
+                        "discount": 0.04,
+                        "final_price": 2.69,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "CRAC-001",
+                        "requested_quantity": 345,
+                        "quoted_quantity": 345,
+                        "requested_price": 1.8,
+                        "quoted_price": 1.8,
+                        "discount": 0.04,
+                        "final_price": 1.73,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "ENER-001",
+                        "requested_quantity": 273,
+                        "quoted_quantity": 273,
+                        "requested_price": 2.9,
+                        "quoted_price": 2.9,
+                        "discount": 0.0,
+                        "final_price": 2.9,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "JUIC-002",
+                        "requested_quantity": 973,
+                        "quoted_quantity": 450,
+                        "requested_price": 4.5,
+                        "quoted_price": 4.5,
+                        "discount": 0.0,
+                        "final_price": 4.5,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "SNAK-001",
+                        "requested_quantity": 300,
+                        "quoted_quantity": 300,
+                        "requested_price": 2.8,
+                        "quoted_price": 2.8,
+                        "discount": 0.0,
+                        "final_price": 2.8,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "SNAK-002",
+                        "requested_quantity": 350,
+                        "quoted_quantity": 350,
+                        "requested_price": 3.0,
+                        "quoted_price": 3.0,
+                        "discount": 0.0,
+                        "final_price": 3.0,
+                        "accepted": true
+                    }
+                ],
+                "status": "SENT",
+                "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nThank you for providing the initial fulfillment proposal and confirming inventory availability. We are pleased to see that you can fulfill our requested quantities for most items.\n\nUpon reviewing the quoted prices, our finance team has requested that we seek a discount on our highest-volume lines to align with our seasonal budget caps. Specifically, we are proposing a 4% discount on: COOK-002, CRAC-001.\n\nAdditionally, we have adjusted the requested quantity for SKU ENER-001 down to 273 units to better balance our stock levels.\n\nWe believe this counter-offer is fair and aligns with standard volume discount agreements in the industry. If these terms are acceptable, we are prepared to issue a formal Purchase Order immediately.\n\nSincerely,\n\nProcurement Director\nMegaMart Online"
+            },
+            "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nThank you for providing the initial fulfillment proposal and confirming inventory availability. We are pleased to see that you can fulfill our requested quantities for most items.\n\nUpon reviewing the quoted prices, our finance team has requested that we seek a discount on our highest-volume lines to align with our seasonal budget caps. Specifically, we are proposing a 4% discount on: COOK-002, CRAC-001.\n\nAdditionally, we have adjusted the requested quantity for SKU ENER-001 down to 273 units to better balance our stock levels.\n\nWe believe this counter-offer is fair and aligns with standard volume discount agreements in the industry. If these terms are acceptable, we are prepared to issue a formal Purchase Order immediately.\n\nSincerely,\n\nProcurement Director\nMegaMart Online"
+        },
+        {
+            "id": "DOC-F07CF2",
+            "type": "FinalLetter",
+            "created_at": "2026-07-03T23:08:55.794808",
+            "created_by": "Supplier",
+            "content": {
+                "workflow_id": "WF-C146E2",
+                "quote_id": "DOC-F07CF2",
+                "created_at": "2026-07-03T23:08:55.794676",
+                "buyer": "MegaMart Online",
+                "supplier": "FreshFizz Consumer Products",
+                "items": [
+                    {
+                        "sku": "COOK-002",
+                        "requested_quantity": 1000,
+                        "quoted_quantity": 900,
+                        "requested_price": 2.8,
+                        "quoted_price": 2.8,
+                        "discount": 0.0,
+                        "final_price": 2.8,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "CRAC-001",
+                        "requested_quantity": 345,
+                        "quoted_quantity": 345,
+                        "requested_price": 1.8,
+                        "quoted_price": 1.8,
+                        "discount": 0.04,
+                        "final_price": 1.73,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "ENER-001",
+                        "requested_quantity": 273,
+                        "quoted_quantity": 273,
+                        "requested_price": 2.9,
+                        "quoted_price": 2.9,
+                        "discount": 0.0,
+                        "final_price": 2.9,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "JUIC-002",
+                        "requested_quantity": 973,
+                        "quoted_quantity": 450,
+                        "requested_price": 4.5,
+                        "quoted_price": 4.5,
+                        "discount": 0.0,
+                        "final_price": 4.5,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "SNAK-001",
+                        "requested_quantity": 300,
+                        "quoted_quantity": 300,
+                        "requested_price": 2.8,
+                        "quoted_price": 2.8,
+                        "discount": 0.0,
+                        "final_price": 2.8,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "SNAK-002",
+                        "requested_quantity": 350,
+                        "quoted_quantity": 350,
+                        "requested_price": 3.0,
+                        "quoted_price": 3.0,
+                        "discount": 0.0,
+                        "final_price": 3.0,
+                        "accepted": true
+                    }
+                ],
+                "status": "SENT",
+                "letter_text": "Dear MegaMart Online Procurement Team,\n\nThank you for your feedback and counter-proposal. We appreciate your transparency regarding your seasonal budget constraints. \n\nAfter reviewing the proposal with our commercial pricing committee, we have approved the proposed discount terms for accepted lines. However, due to tight margins and rising supply costs, we are UNABLE to approve the discount on: OatsNHoney Biscuits (COOK-002) [original price $2.80]. Their unit prices must remain at the original quoted rates.\n\nPlease review these final pricing terms. If you accept this final proposal, you may proceed with submitting your PO.\n\nWith best regards,\n\nCommercial Sales Director\nFreshFizz Consumer Products"
+            },
+            "letter_text": "Dear MegaMart Online Procurement Team,\n\nThank you for your feedback and counter-proposal. We appreciate your transparency regarding your seasonal budget constraints. \n\nAfter reviewing the proposal with our commercial pricing committee, we have approved the proposed discount terms for accepted lines. However, due to tight margins and rising supply costs, we are UNABLE to approve the discount on: OatsNHoney Biscuits (COOK-002) [original price $2.80]. Their unit prices must remain at the original quoted rates.\n\nPlease review these final pricing terms. If you accept this final proposal, you may proceed with submitting your PO.\n\nWith best regards,\n\nCommercial Sales Director\nFreshFizz Consumer Products"
+        },
+        {
+            "id": "DOC-E29BE0",
+            "type": "FinalQuote",
+            "created_at": "2026-07-03T23:09:12.402330",
+            "created_by": "Buyer",
+            "content": {
+                "workflow_id": "WF-C146E2",
+                "quote_id": "DOC-E29BE0",
+                "created_at": "2026-07-03T23:09:12.402230",
+                "buyer": "MegaMart Online",
+                "supplier": "FreshFizz Consumer Products",
+                "items": [
+                    {
+                        "sku": "COOK-002",
+                        "requested_quantity": 1000,
+                        "quoted_quantity": 900,
+                        "requested_price": 2.8,
+                        "quoted_price": 2.8,
+                        "discount": 0.0,
+                        "final_price": 2.8,
+                        "accepted": false
+                    },
+                    {
+                        "sku": "CRAC-001",
+                        "requested_quantity": 345,
+                        "quoted_quantity": 345,
+                        "requested_price": 1.8,
+                        "quoted_price": 1.8,
+                        "discount": 0.04,
+                        "final_price": 1.73,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "ENER-001",
+                        "requested_quantity": 273,
+                        "quoted_quantity": 273,
+                        "requested_price": 2.9,
+                        "quoted_price": 2.9,
+                        "discount": 0.0,
+                        "final_price": 2.9,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "JUIC-002",
+                        "requested_quantity": 973,
+                        "quoted_quantity": 450,
+                        "requested_price": 4.5,
+                        "quoted_price": 4.5,
+                        "discount": 0.0,
+                        "final_price": 4.5,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "SNAK-001",
+                        "requested_quantity": 300,
+                        "quoted_quantity": 300,
+                        "requested_price": 2.8,
+                        "quoted_price": 2.8,
+                        "discount": 0.0,
+                        "final_price": 2.8,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "SNAK-002",
+                        "requested_quantity": 350,
+                        "quoted_quantity": 350,
+                        "requested_price": 3.0,
+                        "quoted_price": 3.0,
+                        "discount": 0.0,
+                        "final_price": 3.0,
+                        "accepted": true
+                    }
+                ],
+                "status": "SENT",
+                "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nWe have received your final pricing counter-proposal (Ref: FinalLetter). We have conducted our final review and are proceeding with the following SKU resolutions:\n- Accepted SKUs for final order: COOK-002, CRAC-900, ENER-001, JUIC-273, SNAK-001, SNAK-300\n\nBased on these terms, we are sending this final quote approval. Please proceed with generating the official Purchase Order, Commercial Invoice, and Delivery Orders for our logistics teams.\n\nSincerely,\n\nProcurement Director\nMegaMart Online"
+            },
+            "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nWe have received your final pricing counter-proposal (Ref: FinalLetter). We have conducted our final review and are proceeding with the following SKU resolutions:\n- Accepted SKUs for final order: COOK-002, CRAC-900, ENER-001, JUIC-273, SNAK-001, SNAK-300\n\nBased on these terms, we are sending this final quote approval. Please proceed with generating the official Purchase Order, Commercial Invoice, and Delivery Orders for our logistics teams.\n\nSincerely,\n\nProcurement Director\nMegaMart Online"
+        },
+        {
+            "id": "PO-2D6FA3",
+            "type": "PO",
+            "created_at": "2026-07-03T23:09:43.226359",
+            "created_by": "Buyer",
+            "content": {
+                "po_id": "PO-2D6FA3",
+                "items": [
+                    {
+                        "sku": "CRAC-001",
+                        "requested_quantity": 345,
+                        "quoted_quantity": 345,
+                        "requested_price": 1.8,
+                        "quoted_price": 1.8,
+                        "discount": 0.04,
+                        "final_price": 1.73,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "ENER-001",
+                        "requested_quantity": 273,
+                        "quoted_quantity": 273,
+                        "requested_price": 2.9,
+                        "quoted_price": 2.9,
+                        "discount": 0.0,
+                        "final_price": 2.9,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "JUIC-002",
+                        "requested_quantity": 973,
+                        "quoted_quantity": 450,
+                        "requested_price": 4.5,
+                        "quoted_price": 4.5,
+                        "discount": 0.0,
+                        "final_price": 4.5,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "SNAK-001",
+                        "requested_quantity": 300,
+                        "quoted_quantity": 300,
+                        "requested_price": 2.8,
+                        "quoted_price": 2.8,
+                        "discount": 0.0,
+                        "final_price": 2.8,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "SNAK-002",
+                        "requested_quantity": 350,
+                        "quoted_quantity": 350,
+                        "requested_price": 3.0,
+                        "quoted_price": 3.0,
+                        "discount": 0.0,
+                        "final_price": 3.0,
+                        "accepted": true
+                    }
+                ],
+                "total_value": 5303.55
+            },
+            "letter_text": "PURCHASE ORDER\n\nOrder Reference: PO-2D6FA3\nWorkflow Reference: WF-C146E2\nDate: 2026-07-03\nBuyer: MegaMart Online\nSupplier: FreshFizz Consumer Products\n\nItems:\n1. SKU: CRAC-001 - Qty: 345 @ $1.73/unit (Subtotal: $596.85)\n2. SKU: ENER-001 - Qty: 273 @ $2.90/unit (Subtotal: $791.70)\n3. SKU: JUIC-002 - Qty: 450 @ $4.50/unit (Subtotal: $2025.00)\n4. SKU: SNAK-001 - Qty: 300 @ $2.80/unit (Subtotal: $840.00)\n5. SKU: SNAK-002 - Qty: 350 @ $3.00/unit (Subtotal: $1050.00)\n\nTotal PO Value: $5303.55\n\nPayment Terms: Net 30 days.\nShipping Terms: FOB Origin."
+        },
+        {
+            "id": "INV-95031E",
+            "type": "Invoice",
+            "created_at": "2026-07-03T23:09:43.226427",
+            "created_by": "Supplier",
+            "content": {
+                "invoice_id": "INV-95031E",
+                "total_value": 5303.55
+            },
+            "letter_text": "COMMERCIAL INVOICE\n\nInvoice Reference: INV-95031E\nPurchase Order Reference: PO-2D6FA3\nDate: 2026-07-03\nRemit To: FreshFizz Consumer Products\nBill To: MegaMart Online\n\nItems Invoiced:\n1. SKU: CRAC-001 - Qty: 345 @ $1.73/unit (Subtotal: $596.85)\n2. SKU: ENER-001 - Qty: 273 @ $2.90/unit (Subtotal: $791.70)\n3. SKU: JUIC-002 - Qty: 450 @ $4.50/unit (Subtotal: $2025.00)\n4. SKU: SNAK-001 - Qty: 300 @ $2.80/unit (Subtotal: $840.00)\n5. SKU: SNAK-002 - Qty: 350 @ $3.00/unit (Subtotal: $1050.00)\n\nTotal Amount Due: $5303.55\n\nPlease remit payment via ACH transfer within 30 days."
+        },
+        {
+            "id": "DO-B70DC4",
+            "type": "DO",
+            "created_at": "2026-07-03T23:09:43.229475",
+            "created_by": "Supplier",
+            "content": {
+                "delivery_id": "DO-B70DC4"
+            },
+            "letter_text": "DELIVERY ORDER / PACKING SLIP\n\nDelivery Reference: DO-B70DC4\nAssociated PO: PO-2D6FA3\nCarrier: Standard CPG Carrier\nShip To: MegaMart Fulfillment Center\nShip From: FreshFizz Distribution Hub\n\nItems Scheduled for Dispatch:\n1. SKU: CRAC-001 - Dispatch Qty: 345 units (Estimated Lead Time: 3 days)\n2. SKU: ENER-001 - Dispatch Qty: 273 units (Estimated Lead Time: 3 days)\n3. SKU: JUIC-002 - Dispatch Qty: 450 units (Estimated Lead Time: 2 days)\n4. SKU: SNAK-001 - Dispatch Qty: 300 units (Estimated Lead Time: 4 days)\n5. SKU: SNAK-002 - Dispatch Qty: 350 units (Estimated Lead Time: 4 days)\n\nGoods received in good condition signature required."
+        }
+    ],
+    "timeline": [
+        {
+            "timestamp": "2026-07-03T23:07:37.243753",
+            "event": "Workflow Initialized",
+            "description": "Procurement workflow started. Initializing Material Request Quote.",
+            "actor": "Human"
+        },
+        {
+            "timestamp": "2026-07-03T23:07:39.113905",
+            "event": "Buyer Drafted MRQ",
+            "description": "Buyer (Gemini) generated Material Request Quote draft. Pending human approval.",
+            "actor": "Buyer"
+        },
+        {
+            "timestamp": "2026-07-03T23:08:02.411445",
+            "event": "Draft Modified",
+            "description": "Human operator updated the draft contents.",
+            "actor": "Human"
+        },
+        {
+            "timestamp": "2026-07-03T23:08:03.819676",
+            "event": "MRQ Approved & Sent",
+            "description": "Human approved and sent MRQ to the recipient.",
+            "actor": "Human"
+        },
+        {
+            "timestamp": "2026-07-03T23:08:04.393965",
+            "event": "Supplier Proposed Fulfillment",
+            "description": "Supplier (Claude) generated Fulfillment Proposal draft. Pending human approval.",
+            "actor": "Supplier"
+        },
+        {
+            "timestamp": "2026-07-03T23:08:34.940904",
+            "event": "Proposal Approved & Sent",
+            "description": "Human approved and sent Proposal to the recipient.",
+            "actor": "Human"
+        },
+        {
+            "timestamp": "2026-07-03T23:08:36.797218",
+            "event": "Buyer Proposed Counter-Offer",
+            "description": "Buyer (Gemini) generated Counter-Offer draft (discounts & qty modifications). Pending human approval.",
+            "actor": "Buyer"
+        },
+        {
+            "timestamp": "2026-07-03T23:08:55.254591",
+            "event": "CounterOffer Approved & Sent",
+            "description": "Human approved and sent CounterOffer to the recipient.",
+            "actor": "Human"
+        },
+        {
+            "timestamp": "2026-07-03T23:08:55.794966",
+            "event": "Supplier Drafted Final Letter",
+            "description": "Supplier (Claude) generated Final Acceptance Letter draft. Pending human approval.",
+            "actor": "Supplier"
+        },
+        {
+            "timestamp": "2026-07-03T23:09:10.941535",
+            "event": "FinalLetter Approved & Sent",
+            "description": "Human approved and sent FinalLetter to the recipient.",
+            "actor": "Human"
+        },
+        {
+            "timestamp": "2026-07-03T23:09:12.402436",
+            "event": "Buyer Drafted Final Acceptance",
+            "description": "Buyer (Gemini) drafted the final acceptance terms. Pending human review and approval.",
+            "actor": "Buyer"
+        },
+        {
+            "timestamp": "2026-07-03T23:09:32.411203",
+            "event": "Draft Modified",
+            "description": "Human operator updated the draft contents.",
+            "actor": "Human"
+        },
+        {
+            "timestamp": "2026-07-03T23:09:34.220220",
+            "event": "Draft Modified",
+            "description": "Human operator updated the draft contents.",
+            "actor": "Human"
+        },
+        {
+            "timestamp": "2026-07-03T23:09:36.253566",
+            "event": "Draft Modified",
+            "description": "Human operator updated the draft contents.",
+            "actor": "Human"
+        },
+        {
+            "timestamp": "2026-07-03T23:09:43.225279",
+            "event": "FinalQuote Approved & Sent",
+            "description": "Human approved and sent FinalQuote to the recipient.",
+            "actor": "Human"
+        },
+        {
+            "timestamp": "2026-07-03T23:09:44.819003",
+            "event": "Workflow Completed",
+            "description": "Final PO, Commercial Invoice, and Delivery Orders generated. Inventory levels decremented.",
+            "actor": "Human"
+        }
+    ],
+    "current_draft": null
+}

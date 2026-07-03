@@ -145,5 +145,25 @@ export const api = {
     const res = await fetch(`${API_BASE}/workflow/${workflowId}/report`);
     if (!res.ok) throw new Error("Failed to fetch workflow report");
     return res.json();
+  },
+
+  async chatAboutWorkflow(workflowId: string, userMessage: string, chatHistory: any[]): Promise<{ reply: string }> {
+    const res = await fetch(`${API_BASE}/workflow/${workflowId}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_message: userMessage, chat_history: chatHistory }),
+    });
+    if (!res.ok) throw new Error("Failed to chat about workflow");
+    return res.json();
+  },
+
+  async startReplenishmentWorkflow(skus: string[]): Promise<WorkflowState> {
+    const res = await fetch(`${API_BASE}/workflow/start-replenishment`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ skus }),
+    });
+    if (!res.ok) throw new Error("Failed to start replenishment workflow");
+    return res.json();
   }
 };

@@ -1,0 +1,255 @@
+{
+    "workflow_id": "WF-90CD4A",
+    "status": "ACTIVE",
+    "current_step": 4,
+    "documents": [
+        {
+            "id": "DOC-822089",
+            "type": "MRQ",
+            "created_at": "2026-07-03T23:02:25.113119",
+            "created_by": "Buyer",
+            "content": {
+                "workflow_id": "WF-90CD4A",
+                "quote_id": "DOC-822089",
+                "created_at": "2026-07-03T23:02:25.112952",
+                "buyer": "MegaMart Online",
+                "supplier": "FreshFizz Consumer Products",
+                "items": [
+                    {
+                        "sku": "SNAK-002",
+                        "requested_quantity": 1000,
+                        "quoted_quantity": 1000,
+                        "requested_price": 3.0,
+                        "quoted_price": 0.0,
+                        "discount": 0.0,
+                        "final_price": 0.0,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "SNAK-003",
+                        "requested_quantity": 800,
+                        "quoted_quantity": 800,
+                        "requested_price": 4.8,
+                        "quoted_price": 0.0,
+                        "discount": 0.0,
+                        "final_price": 0.0,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "SODA-002",
+                        "requested_quantity": 500,
+                        "quoted_quantity": 0,
+                        "requested_price": 1.6,
+                        "quoted_price": 0.0,
+                        "discount": 0.0,
+                        "final_price": 0.0,
+                        "accepted": true
+                    }
+                ],
+                "status": "SENT",
+                "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nMegaMart Online is looking to restock our retail distribution centers with your high-demand beverage and snack lines for the upcoming sales quarter. We have reviewed your catalog and would like to request a formal Material Request Quote (MRQ) for the following items:\n- SNAK-002: 1000 units\n- SNAK-003: 800 units\n- SODA-002: 500 units\n\nPlease review your stock levels and let us know your standard lead times, minimum order requirements, and any bulk purchase terms that might apply to this order. We look forward to establishing a mutually beneficial supply relationship.\n\nBest regards,\n\nProcurement Director\nMegaMart Online"
+            },
+            "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nMegaMart Online is looking to restock our retail distribution centers with your high-demand beverage and snack lines for the upcoming sales quarter. We have reviewed your catalog and would like to request a formal Material Request Quote (MRQ) for the following items:\n- SNAK-002: 1000 units\n- SNAK-003: 800 units\n- SODA-002: 500 units\n\nPlease review your stock levels and let us know your standard lead times, minimum order requirements, and any bulk purchase terms that might apply to this order. We look forward to establishing a mutually beneficial supply relationship.\n\nBest regards,\n\nProcurement Director\nMegaMart Online"
+        },
+        {
+            "id": "DOC-428138",
+            "type": "Proposal",
+            "created_at": "2026-07-03T23:02:50.026995",
+            "created_by": "Supplier",
+            "content": {
+                "workflow_id": "WF-90CD4A",
+                "quote_id": "DOC-428138",
+                "created_at": "2026-07-03T23:02:50.026861",
+                "buyer": "MegaMart Online",
+                "supplier": "FreshFizz Consumer Products",
+                "items": [
+                    {
+                        "sku": "SNAK-002",
+                        "requested_quantity": 1000,
+                        "quoted_quantity": 800,
+                        "requested_price": 3.0,
+                        "quoted_price": 3.0,
+                        "discount": 0.0,
+                        "final_price": 3.0,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "SNAK-003",
+                        "requested_quantity": 800,
+                        "quoted_quantity": 600,
+                        "requested_price": 4.8,
+                        "quoted_price": 4.8,
+                        "discount": 0.0,
+                        "final_price": 4.8,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "SODA-002",
+                        "requested_quantity": 500,
+                        "quoted_quantity": 500,
+                        "requested_price": 1.6,
+                        "quoted_price": 1.6,
+                        "discount": 0.0,
+                        "final_price": 1.6,
+                        "accepted": true
+                    }
+                ],
+                "status": "SENT",
+                "letter_text": "Dear MegaMart Online Procurement Team,\n\nThank you for your Material Request Quote. We appreciate the opportunity to partner with MegaMart Online for your seasonal retail inventory replenishment.\n\nWe have verified our stock levels at our FreshFizz main distribution center. I am pleased to confirm that we have quoted availability based on current inventory, detailed below:\n- VeggieStraws Original (SNAK-002): 800 units quoted @ $3.00/unit (80% fulfilled)\n- RoastedAlmonds Salted (SNAK-003): 600 units quoted @ $4.80/unit (75% fulfilled)\n- DietFizz Lemon-Lime (SODA-002): 500 units quoted @ $1.60/unit (100% fulfilled)\n\nOur estimated lead time for packing and shipping is 3 business days from receiving your official Purchase Order. Please let us know if this proposal meets your timeline, so we can lock in the shipment slots.\n\nSincerely yours,\n\nCommercial Sales Director\nFreshFizz Consumer Products"
+            },
+            "letter_text": "Dear MegaMart Online Procurement Team,\n\nThank you for your Material Request Quote. We appreciate the opportunity to partner with MegaMart Online for your seasonal retail inventory replenishment.\n\nWe have verified our stock levels at our FreshFizz main distribution center. I am pleased to confirm that we have quoted availability based on current inventory, detailed below:\n- VeggieStraws Original (SNAK-002): 800 units quoted @ $3.00/unit (80% fulfilled)\n- RoastedAlmonds Salted (SNAK-003): 600 units quoted @ $4.80/unit (75% fulfilled)\n- DietFizz Lemon-Lime (SODA-002): 500 units quoted @ $1.60/unit (100% fulfilled)\n\nOur estimated lead time for packing and shipping is 3 business days from receiving your official Purchase Order. Please let us know if this proposal meets your timeline, so we can lock in the shipment slots.\n\nSincerely yours,\n\nCommercial Sales Director\nFreshFizz Consumer Products"
+        },
+        {
+            "id": "DOC-F8C33F",
+            "type": "CounterOffer",
+            "created_at": "2026-07-03T23:03:16.591625",
+            "created_by": "Buyer",
+            "content": {
+                "workflow_id": "WF-90CD4A",
+                "quote_id": "DOC-F8C33F",
+                "created_at": "2026-07-03T23:03:16.591555",
+                "buyer": "MegaMart Online",
+                "supplier": "FreshFizz Consumer Products",
+                "items": [
+                    {
+                        "sku": "SNAK-002",
+                        "requested_quantity": 1000,
+                        "quoted_quantity": 800,
+                        "requested_price": 3.0,
+                        "quoted_price": 3.0,
+                        "discount": 0.04,
+                        "final_price": 2.88,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "SNAK-003",
+                        "requested_quantity": 800,
+                        "quoted_quantity": 600,
+                        "requested_price": 4.8,
+                        "quoted_price": 4.8,
+                        "discount": 0.04,
+                        "final_price": 4.61,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "SODA-002",
+                        "requested_quantity": 400,
+                        "quoted_quantity": 400,
+                        "requested_price": 1.6,
+                        "quoted_price": 1.6,
+                        "discount": 0.0,
+                        "final_price": 1.6,
+                        "accepted": true
+                    }
+                ],
+                "status": "SENT",
+                "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nThank you for providing the initial fulfillment proposal and confirming inventory availability. We are pleased to see that you can fulfill our requested quantities for most items.\n\nUpon reviewing the quoted prices, our finance team has requested that we seek a discount on our highest-volume lines to align with our seasonal budget caps. Specifically, we are proposing a 4% discount on: SNAK-002, SNAK-003.\n\nAdditionally, we have adjusted the requested quantity for SKU SODA-002 down to 400 units to better balance our stock levels.\n\nWe believe this counter-offer is fair and aligns with standard volume discount agreements in the industry. If these terms are acceptable, we are prepared to issue a formal Purchase Order immediately.\n\nSincerely,\n\nProcurement Director\nMegaMart Online"
+            },
+            "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nThank you for providing the initial fulfillment proposal and confirming inventory availability. We are pleased to see that you can fulfill our requested quantities for most items.\n\nUpon reviewing the quoted prices, our finance team has requested that we seek a discount on our highest-volume lines to align with our seasonal budget caps. Specifically, we are proposing a 4% discount on: SNAK-002, SNAK-003.\n\nAdditionally, we have adjusted the requested quantity for SKU SODA-002 down to 400 units to better balance our stock levels.\n\nWe believe this counter-offer is fair and aligns with standard volume discount agreements in the industry. If these terms are acceptable, we are prepared to issue a formal Purchase Order immediately.\n\nSincerely,\n\nProcurement Director\nMegaMart Online"
+        }
+    ],
+    "timeline": [
+        {
+            "timestamp": "2026-07-03T23:02:23.506611",
+            "event": "Workflow Initialized",
+            "description": "Procurement workflow started. Initializing Material Request Quote.",
+            "actor": "Human"
+        },
+        {
+            "timestamp": "2026-07-03T23:02:25.113305",
+            "event": "Buyer Drafted MRQ",
+            "description": "Buyer (Gemini) generated Material Request Quote draft. Pending human approval.",
+            "actor": "Buyer"
+        },
+        {
+            "timestamp": "2026-07-03T23:02:48.311720",
+            "event": "Draft Modified",
+            "description": "Human operator updated the draft contents.",
+            "actor": "Human"
+        },
+        {
+            "timestamp": "2026-07-03T23:02:49.353080",
+            "event": "MRQ Approved & Sent",
+            "description": "Human approved and sent MRQ to the recipient.",
+            "actor": "Human"
+        },
+        {
+            "timestamp": "2026-07-03T23:02:50.027136",
+            "event": "Supplier Proposed Fulfillment",
+            "description": "Supplier (Claude) generated Fulfillment Proposal draft. Pending human approval.",
+            "actor": "Supplier"
+        },
+        {
+            "timestamp": "2026-07-03T23:03:14.670845",
+            "event": "Proposal Approved & Sent",
+            "description": "Human approved and sent Proposal to the recipient.",
+            "actor": "Human"
+        },
+        {
+            "timestamp": "2026-07-03T23:03:16.591703",
+            "event": "Buyer Proposed Counter-Offer",
+            "description": "Buyer (Gemini) generated Counter-Offer draft (discounts & qty modifications). Pending human approval.",
+            "actor": "Buyer"
+        },
+        {
+            "timestamp": "2026-07-03T23:03:53.291561",
+            "event": "CounterOffer Approved & Sent",
+            "description": "Human approved and sent CounterOffer to the recipient.",
+            "actor": "Human"
+        },
+        {
+            "timestamp": "2026-07-03T23:03:53.879053",
+            "event": "Supplier Drafted Final Letter",
+            "description": "Supplier (Claude) generated Final Acceptance Letter draft. Pending human approval.",
+            "actor": "Supplier"
+        }
+    ],
+    "current_draft": {
+        "id": "DOC-4C345B",
+        "type": "FinalLetter",
+        "created_at": "2026-07-03T23:03:53.878932",
+        "created_by": "Supplier",
+        "content": {
+            "workflow_id": "WF-90CD4A",
+            "quote_id": "DOC-4C345B",
+            "created_at": "2026-07-03T23:03:53.878810",
+            "buyer": "MegaMart Online",
+            "supplier": "FreshFizz Consumer Products",
+            "items": [
+                {
+                    "sku": "SNAK-002",
+                    "requested_quantity": 1000,
+                    "quoted_quantity": 800,
+                    "requested_price": 3.0,
+                    "quoted_price": 3.0,
+                    "discount": 0.04,
+                    "final_price": 2.88,
+                    "accepted": true
+                },
+                {
+                    "sku": "SNAK-003",
+                    "requested_quantity": 800,
+                    "quoted_quantity": 600,
+                    "requested_price": 4.8,
+                    "quoted_price": 4.8,
+                    "discount": 0.0,
+                    "final_price": 4.8,
+                    "accepted": true
+                },
+                {
+                    "sku": "SODA-002",
+                    "requested_quantity": 400,
+                    "quoted_quantity": 400,
+                    "requested_price": 1.6,
+                    "quoted_price": 1.6,
+                    "discount": 0.0,
+                    "final_price": 1.6,
+                    "accepted": true
+                }
+            ],
+            "status": "PENDING",
+            "letter_text": "Dear MegaMart Online Procurement Team,\n\nThank you for your feedback and counter-proposal. We appreciate your transparency regarding your seasonal budget constraints. \n\nAfter reviewing the proposal with our commercial pricing committee, we have approved the proposed discount terms for accepted lines. However, due to tight margins and rising supply costs, we are UNABLE to approve the discount on RoastedAlmonds Salted (SNAK-003). Its unit price must remain at the original quoted rate of $4.80.\n\nPlease review these final pricing terms. If you accept this final proposal, you may proceed with submitting your PO.\n\nWith best regards,\n\nCommercial Sales Director\nFreshFizz Consumer Products"
+        },
+        "letter_text": "Dear MegaMart Online Procurement Team,\n\nThank you for your feedback and counter-proposal. We appreciate your transparency regarding your seasonal budget constraints. \n\nAfter reviewing the proposal with our commercial pricing committee, we have approved the proposed discount terms for accepted lines. However, due to tight margins and rising supply costs, we are UNABLE to approve the discount on RoastedAlmonds Salted (SNAK-003). Its unit price must remain at the original quoted rate of $4.80.\n\nPlease review these final pricing terms. If you accept this final proposal, you may proceed with submitting your PO.\n\nWith best regards,\n\nCommercial Sales Director\nFreshFizz Consumer Products"
+    }
+}

@@ -109,8 +109,8 @@ class AgentService:
         if step == 1:
             items = []
             
-            # Randomly select between 3 and 5 products from catalog
-            num_items = min(random.randint(3, 5), len(catalog))
+            # Randomly select between 3 and 7 products from catalog
+            num_items = min(random.randint(3, 7), len(catalog))
             selected_prods = random.sample(catalog, num_items)
             
             for prod in selected_prods:
@@ -288,20 +288,19 @@ class AgentService:
             return {"letter_text": letter_text, "items": items}
             
         elif step == 4:
-            # Decline discount for CHIP-001 (or the second discounted item), accept for others
+            import random
             items = []
             orig_items = previous_data.get("items", [])
             
             discounted_skus = [it["sku"] for it in orig_items if it.get("discount", 0) > 0]
-            rejected_sku = None
-            if len(discounted_skus) > 1:
-                rejected_sku = discounted_skus[1] # Reject the second one (e.g. CHIP-001)
-            elif len(discounted_skus) > 0:
-                rejected_sku = discounted_skus[0] # Fallback reject the first
+            rejected_skus = []
+            if discounted_skus:
+                # Reject at least 1 SKU, but at most all of them (typically 1 or 2 items)
+                rejected_skus = random.sample(discounted_skus, random.randint(1, len(discounted_skus)))
                 
             for item in orig_items:
                 item_copy = item.copy()
-                if rejected_sku and item_copy["sku"] == rejected_sku:
+                if item_copy["sku"] in rejected_skus:
                     # Reject discount: set back to quoted price
                     item_copy["discount"] = 0.0
                     item_copy["final_price"] = item_copy["quoted_price"]
@@ -315,21 +314,21 @@ class AgentService:
                 "for accepted lines. "
             )
             
-            if rejected_sku:
-                prod = next((p for p in catalog if p.sku == rejected_sku), None)
-                name = prod.name if prod else rejected_sku
-                # Find quoted price
-                q_price = 2.0
-                for it in items:
-                    if it["sku"] == rejected_sku:
-                        q_price = it["quoted_price"]
-                        break
+            if rejected_skus:
+                rejections_str_list = []
+                for r_sku in rejected_skus:
+                    prod = next((p for p in catalog if p.sku == r_sku), None)
+                    name = prod.name if prod else r_sku
+                    q_price = next((it["quoted_price"] for it in items if it["sku"] == r_sku), 2.0)
+                    rejections_str_list.append(f"{name} ({r_sku}) [original price ${q_price:.2f}]")
+                
+                rejections_joined = ", ".join(rejections_str_list)
                 letter_text += (
-                    f"However, due to tight margins and rising supply costs, we are UNABLE to approve the discount on "
-                    f"{name} ({rejected_sku}). Its unit price must remain at the original quoted rate of ${q_price:.2f}.\n\n"
+                    f"However, due to tight margins and rising supply costs, we are UNABLE to approve the discount on: "
+                    f"{rejections_joined}. Their unit prices must remain at the original quoted rates.\n\n"
                 )
             else:
-                letter_text += "\n\n"
+                letter_text += "We are pleased to confirm that all discounts have been fully approved!\n\n"
                 
             letter_text += (
                 "Please review these final pricing terms. If you accept this final proposal, you may proceed with submitting your PO."
@@ -454,3 +453,96 @@ class AgentService:
             f"FreshFizz main distribution hub to the MegaMart fulfillment center."
         )
         return report
+
+    def chat_about_workflow(self, settings: Settings, state: Dict[str, Any], chat_history: List[Dict[str, str]], user_message: str) -> str:
+        """Calls Gemini to act as a procurement analyst answering questions about a completed workflow run."""
+        if not settings.gemini_key:
+            return self._mock_chat_about_workflow(state, user_message)
+            
+        try:
+            genai.configure(api_key=settings.gemini_key)
+            model_name = settings.buyer_model or "gemini-1.5-flash"
+            
+            # Format the conversation context
+            chat_history_str = ""
+            for msg in chat_history:
+                role = "User" if msg.get("role") == "user" else "Assistant"
+                chat_history_str += f"{role}: {msg.get('content')}\n"
+                
+            prompt = (
+                "You are an expert Procurement Auditor and Financial Analyst. You are analyzing a completed "
+                "procurement negotiation session between MegaMart Online (Buyer) and FreshFizz Consumer Products (Supplier).\n\n"
+                f"Workflow State Data:\n{json.dumps(state, indent=2)}\n\n"
+                f"Chat History:\n{chat_history_str}\n"
+                f"User Question: {user_message}\n\n"
+                "Answer the user's question about the negotiation, details, savings, pricing changes, or agent decisions. "
+                "Be professional, accurate, and concise. Do not guess; base your answer on the provided workflow state data."
+            )
+            
+            model = genai.GenerativeModel(model_name=model_name)
+            response = model.generate_content(prompt)
+            return response.text
+        except Exception as e:
+            logger.error(f"Error calling Gemini for chat: {str(e)}")
+            return self._mock_chat_about_workflow(state, user_message)
+            
+    def _mock_chat_about_workflow(self, state: Dict[str, Any], user_message: str) -> str:
+        """Mock response provider for workflow chat queries."""
+        msg_lower = user_message.lower()
+        
+        # Calculate some items
+        items = []
+        for doc in state.get("documents", []):
+            if doc.get("type") == "PO":
+                items = doc.get("content", {}).get("items", [])
+                break
+        
+        if not items:
+            for doc in state.get("documents", []):
+                if doc.get("type") == "Proposal":
+                    items = doc.get("content", {}).get("items", [])
+                    break
+                    
+        num_items = len(items)
+        accepted_skus = [it["sku"] for it in items if it.get("accepted", True)]
+        declined_skus = [it["sku"] for it in items if not it.get("accepted", True)]
+        
+        if "savings" in msg_lower or "saved" in msg_lower or "cost" in msg_lower or "discount" in msg_lower:
+            total_savings = 0.0
+            for it in items:
+                qty = it.get("quoted_quantity", 0)
+                qp = it.get("quoted_price", 0.0)
+                fp = it.get("final_price", 0.0)
+                total_savings += qty * (qp - fp)
+            return (
+                f"Based on the negotiation data for run **{state.get('workflow_id')}**, the buyer achieved a total "
+                f"savings of **${total_savings:.2f}** by securing a 4% discount on selected high-volume products. "
+                f"The supplier accepted discounts on SKU {', '.join(accepted_skus[:1])} but rejected chip/other line discounts."
+            )
+        elif "decline" in msg_lower or "reject" in msg_lower or "sku" in msg_lower or "chip" in msg_lower:
+            if declined_skus:
+                return (
+                    f"During Step 5 review, the buyer decided to explicitly **decline/exclude** the following SKUs "
+                    f"from the final order: **{', '.join(declined_skus)}**. These items were completely left out from "
+                    f"the final PO, Commercial Invoice, and Delivery Orders, and their quantities reset to 0 in those documents."
+                )
+            else:
+                return (
+                    "In this specific negotiation, all items were accepted by the buyer in the final stage. However, "
+                    "in Step 4, the supplier declined to discount CrunchySalt Potato Chips (CHIP-001) due to margin constraints, "
+                    "which the buyer subsequently accepted."
+                )
+        elif "steps" in msg_lower or "timeline" in msg_lower or "stage" in msg_lower:
+            return (
+                f"The workflow run **{state.get('workflow_id')}** successfully transitioned through all **6 stages**:\n"
+                "1. MRQ Creation (Buyer)\n2. Initial Proposal (Supplier)\n3. Discount Negotiation (Buyer)\n"
+                "4. Counter-Proposal (Supplier)\n5. SKU Approval (Buyer)\n6. Document Dispatch & PO Completion."
+            )
+        else:
+            return (
+                f"Hello! I am the AI Negotiation Auditor. Regarding workflow **{state.get('workflow_id')}**:\n"
+                f"- **Items Negotiated**: {num_items} products\n"
+                f"- **Accepted items**: {', '.join(accepted_skus)}\n"
+                f"- **Declined items**: {', '.join(declined_skus) if declined_skus else 'None'}\n\n"
+                f"Please let me know if you have other questions about savings, pricing, or decisions in this run!"
+            )

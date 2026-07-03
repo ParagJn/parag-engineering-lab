@@ -55,6 +55,13 @@ class UpdateDraftPayload(BaseModel):
     letter_text: str
     items: List[Dict[str, Any]]
 
+class ChatPayload(BaseModel):
+    user_message: str
+    chat_history: List[Dict[str, str]] = []
+
+class ReplenishPayload(BaseModel):
+    skus: List[str]
+
 # --- API Endpoints ---
 
 @app.get("/products", response_model=List[Product])
@@ -138,6 +145,55 @@ def start_workflow():
         return workflow_engine.start_workflow()
     except Exception as e:
         logger.error(f"Error starting workflow: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/workflow/start-replenishment", response_model=WorkflowState)
+def start_replenishment_workflow(payload: ReplenishPayload):
+    """Initiates a new procurement workflow pre-populated with stock replenishment SKUs."""
+    try:
+        return workflow_engine.start_workflow_with_skus(payload.skus)
+    except Exception as e:
+        logger.error(f"Error starting replenishment: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/workflow/{workflow_id}/chat")
+def chat_about_workflow_endpoint(workflow_id: str, payload: ChatPayload):
+    """Answers a user's question about a specific workflow session using Gemini."""
+    try:
+        # Check active workflow first
+        state = workflow_repo.get(workflow_id)
+        if not state:
+            # Check history
+            histories = history_repo.get_all()
+            found_summary = None
+            for h in histories:
+                if h.workflow_id == workflow_id:
+                    state_dict = {
+                        "workflow_id": h.workflow_id,
+                        "status": "COMPLETED",
+                        "summary_report": h.summary
+                    }
+                    found_summary = state_dict
+                    break
+            
+            if not found_summary:
+                raise HTTPException(status_code=404, detail="Workflow session not found")
+            state_dict = found_summary
+        else:
+            state_dict = state.model_dump()
+            
+        settings = settings_repo.load_settings()
+        reply = agent_service.chat_about_workflow(
+            settings=settings,
+            state=state_dict,
+            chat_history=payload.chat_history,
+            user_message=payload.user_message
+        )
+        return {"reply": reply}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error auditing workflow: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/workflow/{workflow_id}/edit", response_model=WorkflowState)

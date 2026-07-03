@@ -5,7 +5,12 @@ import {
   Terminal, Building2, UserCheck, Loader2, FileText, ShoppingCart, Receipt, Truck 
 } from "lucide-react";
 
-export const WorkflowSimulator: React.FC = () => {
+interface WorkflowSimulatorProps {
+  initialWorkflow?: WorkflowState | null;
+  clearInitialWorkflow?: () => void;
+}
+
+export const WorkflowSimulator: React.FC<WorkflowSimulatorProps> = ({ initialWorkflow, clearInitialWorkflow }) => {
   const [activeWorkflow, setActiveWorkflow] = useState<WorkflowState | null>(null);
   const [loading, setLoading] = useState(false);
   const [agentGenerating, setAgentGenerating] = useState(false);
@@ -20,6 +25,11 @@ export const WorkflowSimulator: React.FC = () => {
 
   // Load any existing active workflow on mount
   useEffect(() => {
+    if (initialWorkflow) {
+      setActiveWorkflow(initialWorkflow);
+      if (clearInitialWorkflow) clearInitialWorkflow();
+      return;
+    }
     const fetchActive = async () => {
       try {
         const activeList = await api.getActiveWorkflows();
@@ -33,7 +43,7 @@ export const WorkflowSimulator: React.FC = () => {
       }
     };
     fetchActive();
-  }, []);
+  }, [initialWorkflow]);
 
   // Scroll activity log to bottom
   useEffect(() => {
@@ -642,29 +652,139 @@ export const WorkflowSimulator: React.FC = () => {
       </div>
 
       {/* Completion outputs (only if completed) */}
-      {activeWorkflow && activeWorkflow.status === "COMPLETED" && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 animate-slide-up border-t border-slate-200 pt-6">
-          {activeWorkflow.documents.filter(d => ["PO", "Invoice", "DO"].includes(d.type)).map((doc) => {
-            const Icon = doc.type === "PO" ? ShoppingCart : doc.type === "Invoice" ? Receipt : Truck;
-            const title = doc.type === "PO" ? "Purchase Order" : doc.type === "Invoice" ? "Commercial Invoice" : "Delivery Order";
-            const borderClr = doc.type === "PO" ? "border-blue-200 bg-blue-50/20" : doc.type === "Invoice" ? "border-orange-200 bg-orange-50/20" : "border-green-200 bg-green-50/20";
-            const textClr = doc.type === "PO" ? "text-blue-700" : doc.type === "Invoice" ? "text-orange-700" : "text-green-700";
-            
-            return (
-              <div key={doc.id} className={`border rounded-xl p-4 shadow-sm ${borderClr}`}>
-                <div className="flex items-center space-x-2 mb-2">
-                  <Icon className={`h-5 w-5 ${textClr}`} />
-                  <span className="font-bold text-slate-900 text-xs uppercase tracking-wider">{title}</span>
+      {activeWorkflow && activeWorkflow.status === "COMPLETED" && (() => {
+        const mrqDoc = activeWorkflow.documents.find(d => d.type === "MRQ");
+        const poDoc = activeWorkflow.documents.find(d => d.type === "PO");
+        const initialItems = mrqDoc?.content?.items || [];
+        const finalItems = poDoc?.content?.items || [];
+        
+        const initialValue = initialItems.reduce((sum: number, it: any) => sum + (it.requested_quantity * it.requested_price), 0);
+        const finalValue = poDoc?.content?.total_value || 0;
+        const totalSavings = Math.max(0, initialValue - finalValue);
+        const savingsPct = initialValue > 0 ? (totalSavings / initialValue * 100) : 0;
+        
+        const initialQtySum = initialItems.reduce((sum: number, it: any) => sum + it.requested_quantity, 0);
+        const finalQtySum = finalItems.reduce((sum: number, it: any) => sum + (it.quoted_quantity || 0), 0);
+        const fulfillmentSuccessRate = initialQtySum > 0 ? (finalQtySum / initialQtySum * 100) : 0;
+
+        return (
+          <div className="mt-6 border-t border-slate-200 pt-6 space-y-6 animate-slide-up">
+            {/* Scorecard KPIs */}
+            <div className="bg-white border-2 border-green-200 rounded-2xl shadow-sm overflow-hidden relative">
+              <div className="h-1 bg-gradient-to-r from-green-400 via-[#34A853] to-emerald-600 w-full absolute top-0 left-0" />
+              <div className="p-5">
+                <h3 className="font-bold text-slate-900 text-sm md:text-base flex items-center space-x-2 mb-4">
+                  <span className="text-xl">📈</span>
+                  <span>Negotiation Performance Scorecard & Cost Audit</span>
+                </h3>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-slate-50 border border-slate-150 p-4 rounded-xl">
+                    <span className="text-xxs font-bold text-slate-400 uppercase tracking-wider block">Fulfillment Rate</span>
+                    <span className="text-xl md:text-2xl font-black text-slate-800 mt-1 block">{fulfillmentSuccessRate.toFixed(0)}%</span>
+                    <span className="text-xxs text-slate-500 mt-1 block">{finalQtySum} of {initialQtySum} units secured</span>
+                  </div>
+                  
+                  <div className="bg-slate-50 border border-slate-150 p-4 rounded-xl">
+                    <span className="text-xxs font-bold text-slate-400 uppercase tracking-wider block">Contract Value Change</span>
+                    <span className="text-xl md:text-2xl font-black text-slate-800 mt-1 block">${finalValue.toFixed(2)}</span>
+                    <span className="text-xxs text-slate-500 mt-1 block">Initial request: ${initialValue.toFixed(2)}</span>
+                  </div>
+                  
+                  <div className="bg-slate-50 border border-slate-150 p-4 rounded-xl">
+                    <span className="text-xxs font-bold text-slate-400 uppercase tracking-wider block">Cost Savings Secured</span>
+                    <span className="text-xl md:text-2xl font-black text-green-600 mt-1 block">${totalSavings.toFixed(2)}</span>
+                    <span className="text-xxs bg-green-50 text-green-700 px-2 py-0.5 rounded font-bold mt-1 inline-block">{savingsPct.toFixed(1)}% total savings</span>
+                  </div>
+                  
+                  <div className="bg-slate-50 border border-slate-150 p-4 rounded-xl">
+                    <span className="text-xxs font-bold text-slate-400 uppercase tracking-wider block">Supplier Dispatch lead</span>
+                    <span className="text-xl md:text-2xl font-black text-slate-800 mt-1 block">3 business days</span>
+                    <span className="text-xxs text-slate-500 mt-1 block">FOB Origin Shipping terms</span>
+                  </div>
                 </div>
-                <div className="text-xxs font-mono text-slate-500 mb-2">Ref: {doc.id}</div>
-                <pre className="text-xxs font-mono bg-white p-3 rounded-lg border border-slate-100 text-slate-700 leading-relaxed overflow-x-auto whitespace-pre-wrap max-h-36">
-                  {doc.letter_text}
-                </pre>
+
+                {/* Scorecard Table */}
+                <div className="mt-6">
+                  <h4 className="text-xxs font-bold text-slate-400 uppercase tracking-wider mb-2">Item-by-Item Saving Breakdown</h4>
+                  <div className="border border-slate-100 rounded-xl overflow-hidden">
+                    <table className="min-w-full divide-y divide-slate-150 text-xs text-left">
+                      <thead className="bg-slate-50 text-slate-500">
+                        <tr>
+                          <th className="px-4 py-2 font-bold">SKU</th>
+                          <th className="px-4 py-2 text-right font-bold">Initial Request</th>
+                          <th className="px-4 py-2 text-right font-bold">Negotiated Qty</th>
+                          <th className="px-4 py-2 text-right font-bold">Initial Price</th>
+                          <th className="px-4 py-2 text-right font-bold">Negotiated Price</th>
+                          <th className="px-4 py-2 text-right font-bold">Negotiated Savings</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-slate-100">
+                        {initialItems.map((initIt: any) => {
+                          const finalIt: any = finalItems.find((f: any) => f.sku === initIt.sku) || {};
+                          const finalQty = finalIt.accepted !== false ? (finalIt.quoted_quantity || 0) : 0;
+                          const finalPrice = finalIt.final_price || finalIt.quoted_price || initIt.requested_price;
+                          const saving = (initIt.requested_quantity * initIt.requested_price) - (finalQty * finalPrice);
+                          
+                          return (
+                            <tr key={initIt.sku} className="hover:bg-slate-50/50">
+                              <td className="px-4 py-2.5 font-bold text-slate-900">{initIt.sku}</td>
+                              <td className="px-4 py-2.5 text-right font-semibold text-slate-500">{initIt.requested_quantity} units</td>
+                              <td className="px-4 py-2.5 text-right font-bold text-slate-800">
+                                {finalQty} units
+                                {finalQty < initIt.requested_quantity && (
+                                  <span className="text-[10px] text-red-500 block">
+                                    -{initIt.requested_quantity - finalQty} ({finalIt.accepted === false ? "Declined" : "Reduced"})
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-4 py-2.5 text-right font-semibold text-slate-500">${initIt.requested_price.toFixed(2)}</td>
+                              <td className="px-4 py-2.5 text-right font-bold text-slate-800">
+                                ${finalPrice.toFixed(2)}
+                                {finalPrice < initIt.requested_price && (
+                                  <span className="text-[10px] text-green-600 block">
+                                    -{(((initIt.requested_price - finalPrice) / initIt.requested_price) * 100).toFixed(0)}% discount
+                                  </span>
+                                )}
+                              </td>
+                              <td className={`px-4 py-2.5 text-right font-bold ${saving > 0 ? "text-green-600" : "text-slate-500"}`}>
+                                {saving > 0 ? `$${saving.toFixed(2)}` : "$0.00"}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
-            );
-          })}
-        </div>
-      )}
+            </div>
+
+            {/* Document outputs */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {activeWorkflow.documents.filter(d => ["PO", "Invoice", "DO"].includes(d.type)).map((doc) => {
+                const Icon = doc.type === "PO" ? ShoppingCart : doc.type === "Invoice" ? Receipt : Truck;
+                const title = doc.type === "PO" ? "Purchase Order" : doc.type === "Invoice" ? "Commercial Invoice" : "Delivery Order";
+                const borderClr = doc.type === "PO" ? "border-blue-200 bg-blue-50/20" : doc.type === "Invoice" ? "border-orange-200 bg-orange-50/20" : "border-green-200 bg-green-50/20";
+                const textClr = doc.type === "PO" ? "text-blue-700" : doc.type === "Invoice" ? "text-orange-700" : "text-green-700";
+                
+                return (
+                  <div key={doc.id} className={`border rounded-xl p-4 shadow-sm ${borderClr}`}>
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Icon className={`h-5 w-5 ${textClr}`} />
+                      <span className="font-bold text-slate-900 text-xs uppercase tracking-wider">{title}</span>
+                    </div>
+                    <div className="text-xxs font-mono text-slate-500 mb-2">Ref: {doc.id}</div>
+                    <pre className="text-xxs font-mono bg-white p-3 rounded-lg border border-slate-100 text-slate-700 leading-relaxed overflow-x-auto whitespace-pre-wrap max-h-36">
+                      {doc.letter_text}
+                    </pre>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Activity Log (scrolling panel at the bottom) */}
       <div className="mt-6 border border-slate-200 rounded-xl overflow-hidden bg-slate-900 shadow-sm flex flex-col h-40 max-h-40">

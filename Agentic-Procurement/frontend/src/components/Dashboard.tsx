@@ -17,6 +17,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ onStartSimulation }) => {
   const [loadingReport, setLoadingReport] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
+  // Chat states for AI Auditor
+  const [chatHistory, setChatHistory] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [sendingChat, setSendingChat] = useState(false);
+  const chatEndRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [chatHistory]);
+
   useEffect(() => {
     const loadHistory = async () => {
       try {
@@ -36,6 +48,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ onStartSimulation }) => {
     setLoadingReport(true);
     setShowModal(true);
     setReportText(null);
+    
+    // Reset Chat history
+    setChatHistory([
+      { 
+        role: "assistant", 
+        content: `Hello! I am your AI Procurement Auditor. Ask me anything about the savings, supplier decisions, or SKU outcomes for negotiation run ${workflowId}!` 
+      }
+    ]);
+    setChatInput("");
+    setSendingChat(false);
+
     try {
       const data = await api.getWorkflowReport(workflowId);
       setReportText(data.report);
@@ -43,6 +66,28 @@ export const Dashboard: React.FC<DashboardProps> = ({ onStartSimulation }) => {
       setReportText("### Error\nFailed to generate report. Details: " + err.message);
     } finally {
       setLoadingReport(false);
+    }
+  };
+
+  const handleSendChat = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim() || !selectedWorkflowId || sendingChat) return;
+    
+    const userMsg = chatInput.trim();
+    setChatInput("");
+    
+    // Optimistically add user message
+    const updatedHistory = [...chatHistory, { role: "user" as const, content: userMsg }];
+    setChatHistory(updatedHistory);
+    setSendingChat(true);
+    
+    try {
+      const res = await api.chatAboutWorkflow(selectedWorkflowId, userMsg, updatedHistory);
+      setChatHistory(prev => [...prev, { role: "assistant", content: res.reply }]);
+    } catch (err: any) {
+      setChatHistory(prev => [...prev, { role: "assistant", content: "⚠️ Error calling Auditor: " + err.message }]);
+    } finally {
+      setSendingChat(false);
     }
   };
 
@@ -344,7 +389,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onStartSimulation }) => {
           />
 
           {/* Modal Content */}
-          <div className="relative bg-white border border-slate-200 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden transform transition-all">
+          <div className="relative bg-white border border-slate-200 rounded-2xl shadow-2xl max-w-6xl w-full max-h-[85vh] flex flex-col overflow-hidden transform transition-all">
             {/* Header */}
             <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
               <div className="flex items-center space-x-2">
@@ -361,20 +406,83 @@ export const Dashboard: React.FC<DashboardProps> = ({ onStartSimulation }) => {
               </button>
             </div>
 
-            {/* Body */}
-            <div className="p-6 flex-1 overflow-y-auto max-h-[60vh] scrollbar-thin">
-              {loadingReport ? (
-                <div className="flex flex-col justify-center items-center py-20 space-y-3">
-                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                  <span className="text-xs text-slate-500 font-semibold animate-pulse">
-                    Gemini AI compiling friendly negotiation report... please hold...
+            {/* Body - Split Screen */}
+            <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-[55vh] max-h-[55vh]">
+              {/* Left Column: Markdown narrative */}
+              <div className="md:w-3/5 p-6 border-r border-slate-200 overflow-y-auto scrollbar-thin">
+                {loadingReport ? (
+                  <div className="flex flex-col justify-center items-center py-20 space-y-3">
+                    <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                    <span className="text-xs text-slate-500 font-semibold animate-pulse text-center">
+                      Gemini AI compiling friendly negotiation report... please hold...
+                    </span>
+                  </div>
+                ) : (
+                  <div className="prose prose-slate max-w-none">
+                    {renderMarkdown(reportText)}
+                  </div>
+                )}
+              </div>
+
+              {/* Right Column: AI Negotiation Auditor chatbot */}
+              <div className="md:w-2/5 flex flex-col bg-slate-50/50 overflow-hidden">
+                {/* Chat header */}
+                <div className="px-4 py-2 bg-slate-100 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+                  <span>AI Negotiation Auditor (Gemini)</span>
+                  <span className="flex h-2 w-2 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                   </span>
                 </div>
-              ) : (
-                <div className="prose prose-slate max-w-none">
-                  {renderMarkdown(reportText)}
+
+                {/* Messages list */}
+                <div className="flex-1 p-4 overflow-y-auto space-y-3 scrollbar-thin">
+                  {chatHistory.map((msg, index) => (
+                    <div 
+                      key={index} 
+                      className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                    >
+                      <div 
+                        className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-xs shadow-sm leading-relaxed ${
+                          msg.role === "user" 
+                            ? "bg-blue-600 text-white rounded-tr-none" 
+                            : "bg-white border border-slate-200 text-slate-800 rounded-tl-none whitespace-pre-wrap"
+                        }`}
+                      >
+                        {msg.content}
+                      </div>
+                    </div>
+                  ))}
+                  {sendingChat && (
+                    <div className="flex justify-start">
+                      <div className="bg-white border border-slate-200 text-slate-500 rounded-2xl rounded-tl-none px-4 py-2.5 text-xs shadow-sm flex items-center space-x-1.5 font-semibold">
+                        <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
+                        <span className="animate-pulse">Auditing logs...</span>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={chatEndRef} />
                 </div>
-              )}
+
+                {/* Chat input */}
+                <form onSubmit={handleSendChat} className="p-3 border-t border-slate-200 bg-white flex items-center space-x-2">
+                  <input
+                    type="text"
+                    placeholder="Ask about savings, supplier actions..."
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    className="flex-1 px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    disabled={sendingChat}
+                  />
+                  <button
+                    type="submit"
+                    disabled={sendingChat || !chatInput.trim()}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    Ask
+                  </button>
+                </form>
+              </div>
             </div>
 
             {/* Footer */}

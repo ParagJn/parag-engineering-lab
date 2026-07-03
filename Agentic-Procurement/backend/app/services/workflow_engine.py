@@ -94,6 +94,101 @@ class WorkflowEngine:
         self.workflow_repo.save(state)
         return state
 
+    def start_workflow_with_skus(self, skus: List[str]) -> WorkflowState:
+        """Step 1: Start a new replenishment workflow pre-populated with low-stock SKUs."""
+        workflow_id = f"WF-{uuid.uuid4().hex[:6].upper()}"
+        settings = self.settings_repo.load_settings()
+        catalog = self.products_repo.get_all()
+        
+        # 1. Instantiate the state
+        state = WorkflowState(
+            workflow_id=workflow_id,
+            status="ACTIVE",
+            current_step=1,
+            documents=[],
+            timeline=[
+                TimelineEvent(
+                    timestamp=self._now_str(),
+                    event="Workflow Initialized",
+                    description="Procurement workflow started. Initializing Material Request Quote.",
+                    actor="Human"
+                )
+            ]
+        )
+        
+        # Generate the items directly from the provided SKUs
+        items = []
+        for sku in skus:
+            prod = next((p for p in catalog if p.sku == sku), None)
+            if not prod:
+                continue
+            # Replenish quantity: base MOQ + 100 units to restore inventory
+            qty = max(prod.moq, 200)
+            items.append({
+                "sku": sku,
+                "requested_quantity": qty,
+                "quoted_quantity": 0,
+                "requested_price": prod.price,
+                "quoted_price": 0.0,
+                "discount": 0.0,
+                "final_price": 0.0
+            })
+            
+        if not items:
+            # Fallback to standard start if no valid SKUs
+            return self.start_workflow()
+            
+        # Build the dynamic letter text for these items
+        items_list_str = "\n".join([f"- {it['sku']}: {it['requested_quantity']} units" for it in items])
+        letter_text = (
+            "Dear FreshFizz Commercial Sales Team,\n\n"
+            "This is an automated auto-replenishment request. MegaMart Online's automated stock tracking system "
+            "has flagged the following catalog lines as falling below our standard safety threshold levels. "
+            "We would like to request an immediate Material Request Quote (MRQ) for:\n"
+            f"{items_list_str}\n\n"
+            "Please verify your current stock levels and issue a formal quote proposal. Let us know estimated dispatch lead times "
+            "so we can prioritize receipt logistics.\n\n"
+            "Sincerely,\n\n"
+            "Automated Replenishment System\nMegaMart Online"
+        )
+        
+        # 3. Create Draft Document
+        doc_id = f"DOC-{uuid.uuid4().hex[:6].upper()}"
+        
+        # Create concrete QuoteDocument structure
+        quote_doc = QuoteDocument(
+            workflow_id=workflow_id,
+            quote_id=doc_id,
+            created_at=self._now_str(),
+            buyer="MegaMart Online",
+            supplier="FreshFizz Consumer Products",
+            items=[QuoteItem(**it) for it in items],
+            status="PENDING",
+            letter_text=letter_text
+        )
+        
+        draft = WorkflowDocument(
+            id=doc_id,
+            type="MRQ",
+            created_at=self._now_str(),
+            created_by="Buyer",
+            content=quote_doc.model_dump(),
+            letter_text=letter_text
+        )
+        
+        state.current_draft = draft
+        state.timeline.append(
+            TimelineEvent(
+                timestamp=self._now_str(),
+                event="Buyer Drafted MRQ",
+                description="Buyer (Automated Replenishment System) generated replenishment Material Request Quote draft. Pending human approval.",
+                actor="Buyer"
+            )
+        )
+        
+        self.workflow_repo.save(state)
+        return state
+
     def _sync_letter_text(self, letter_text: str, items: List[Dict[str, Any]]) -> str:
         """Helper to dynamically sync quantities and prices mentioned in the letter text with items list."""
         import re

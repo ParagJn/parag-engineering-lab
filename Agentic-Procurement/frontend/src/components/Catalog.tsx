@@ -1,13 +1,18 @@
 import React, { useEffect, useState } from "react";
 import { api, type Product } from "../services/api";
-import { Package, Search } from "lucide-react";
+import { Package, Search, AlertTriangle, Zap } from "lucide-react";
 
-export const Catalog: React.FC = () => {
+interface CatalogProps {
+  onTriggerReplenishment: (wf: any) => void;
+}
+
+export const Catalog: React.FC<CatalogProps> = ({ onTriggerReplenishment }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [replenishing, setReplenishing] = useState(false);
 
   useEffect(() => {
     const fetchCatalog = async () => {
@@ -24,6 +29,22 @@ export const Catalog: React.FC = () => {
   }, []);
 
   const categories = ["All", ...Array.from(new Set(products.map((p) => p.category)))];
+
+  const lowStockProducts = products.filter(p => p.inventory < 200);
+
+  const handleTriggerReplenishment = async () => {
+    if (lowStockProducts.length === 0) return;
+    setReplenishing(true);
+    try {
+      const skus = lowStockProducts.map(p => p.sku);
+      const activeWf = await api.startReplenishmentWorkflow(skus);
+      onTriggerReplenishment(activeWf);
+    } catch (err: any) {
+      setError(err.message || "Failed to trigger auto-replenishment.");
+    } finally {
+      setReplenishing(false);
+    }
+  };
 
   const filteredProducts = products.filter((p) => {
     const matchesSearch = 
@@ -50,6 +71,33 @@ export const Catalog: React.FC = () => {
           Available inventory and standard contract pricing for FreshFizz Consumer Products (Supplier).
         </p>
       </div>
+
+      {lowStockProducts.length > 0 && (
+        <div className="mb-8 bg-gradient-to-r from-red-50 to-amber-50 border-2 border-red-100 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0 relative overflow-hidden">
+          <div className="absolute top-0 left-0 h-full w-1.5 bg-gradient-to-b from-[#EA4335] to-[#FBBC05]" />
+          <div className="flex items-start space-x-4 pl-2">
+            <div className="p-3 bg-red-100 rounded-xl text-red-600 shrink-0">
+              <AlertTriangle className="h-6 w-6 animate-pulse" />
+            </div>
+            <div>
+              <h4 className="font-bold text-slate-900 text-sm md:text-base">
+                Stock Shortage Alert: {lowStockProducts.length} Items Below Threshold
+              </h4>
+              <p className="text-xs md:text-sm text-slate-600 mt-1">
+                SKUs: {lowStockProducts.map(p => p.sku).join(", ")} are currently running below safety stock levels (200 units).
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleTriggerReplenishment}
+            disabled={replenishing}
+            className="w-full md:w-auto inline-flex items-center justify-center space-x-2 py-2.5 px-5 bg-gradient-to-r from-[#EA4335] to-[#FBBC05] hover:from-[#d63022] hover:to-[#e5ab04] text-white font-bold text-xs md:text-sm rounded-xl shadow-md transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50"
+          >
+            <Zap className="h-4.5 w-4.5 fill-white" />
+            <span>{replenishing ? "Starting Workflow..." : "Trigger Auto-Replenishment Run"}</span>
+          </button>
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6 rounded-r-lg">
@@ -114,7 +162,7 @@ export const Catalog: React.FC = () => {
             ) : (
               filteredProducts.map((p) => {
                 const outOfStock = p.inventory === 0;
-                const lowStock = p.inventory > 0 && p.inventory < p.moq * 2;
+                const lowStock = p.inventory > 0 && p.inventory < 200;
                 return (
                   <tr key={p.sku} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4">
@@ -141,12 +189,17 @@ export const Catalog: React.FC = () => {
                       {p.moq} units
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span className={`font-bold block ${outOfStock ? "text-red-600" : lowStock ? "text-amber-600" : "text-green-600"}`}>
-                        {p.inventory.toLocaleString()} units
-                      </span>
-                      <span className={`text-xs block mt-0.5 ${outOfStock ? "text-red-400" : lowStock ? "text-amber-400" : "text-green-400"}`}>
-                        {outOfStock ? "Out of Stock" : lowStock ? "Low Stock Alert" : "In Stock"}
-                      </span>
+                      <div className="flex flex-col">
+                        <span className="inline-flex items-center space-x-1.5 font-bold">
+                          <span className={`h-2.5 w-2.5 rounded-full ${outOfStock ? "bg-red-500 animate-ping" : lowStock ? "bg-amber-500 animate-pulse" : "bg-green-500"}`} />
+                          <span className={outOfStock ? "text-red-600" : lowStock ? "text-amber-600" : "text-green-600"}>
+                            {p.inventory.toLocaleString()} units
+                          </span>
+                        </span>
+                        <span className={`text-xs block mt-0.5 ml-4 ${outOfStock ? "text-red-500 font-semibold" : lowStock ? "text-amber-500 font-semibold" : "text-slate-400"}`}>
+                          {outOfStock ? "Out of Stock" : lowStock ? "Low Stock Alert" : "In Stock"}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
                       {p.lead_time} days
