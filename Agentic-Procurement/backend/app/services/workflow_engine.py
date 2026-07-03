@@ -94,6 +94,25 @@ class WorkflowEngine:
         self.workflow_repo.save(state)
         return state
 
+    def _sync_letter_text(self, letter_text: str, items: List[Dict[str, Any]]) -> str:
+        """Helper to dynamically sync quantities and prices mentioned in the letter text with items list."""
+        import re
+        for it in items:
+            sku = it.get("sku", "")
+            qty = it.get("quoted_quantity") or it.get("requested_quantity") or 0
+            price = it.get("final_price") or it.get("quoted_price") or it.get("requested_price") or 0.0
+            
+            # 1. Update quantity: look for SKU, then find the next number
+            # We match SKU followed by any characters except newlines/numbers, then the number
+            pattern_qty = rf"({sku}[^0-9\n]*)\b\d+\b"
+            letter_text = re.sub(pattern_qty, lambda m: f"{m.group(1)}{qty}", letter_text, flags=re.IGNORECASE)
+            
+            # 2. Update price: look for SKU, then find the next '$' and its number
+            pattern_price = rf"({sku}[^$\n]*\$\s*)\d+(\.\d+)?"
+            letter_text = re.sub(pattern_price, lambda m: f"{m.group(1)}{price:.2f}", letter_text, flags=re.IGNORECASE)
+            
+        return letter_text
+
     def update_draft(self, workflow_id: str, letter_text: str, items_data: List[Dict[str, Any]]) -> WorkflowState:
         """Allows human to edit the current draft's letter text or item details before sending."""
         state = self.workflow_repo.get(workflow_id)
@@ -101,8 +120,12 @@ class WorkflowEngine:
             raise ValueError("No active workflow or draft found")
             
         draft = state.current_draft
-        draft.letter_text = letter_text
-        draft.content["letter_text"] = letter_text
+        
+        # Sync the letter text with any edited items quantities/prices first
+        synced_letter_text = self._sync_letter_text(letter_text, items_data)
+        
+        draft.letter_text = synced_letter_text
+        draft.content["letter_text"] = synced_letter_text
         
         # Update items in content
         updated_items = []

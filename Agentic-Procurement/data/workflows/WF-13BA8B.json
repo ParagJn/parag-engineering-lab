@@ -1,0 +1,129 @@
+{
+    "workflow_id": "WF-13BA8B",
+    "status": "ACTIVE",
+    "current_step": 2,
+    "documents": [
+        {
+            "id": "DOC-E2DDBF",
+            "type": "MRQ",
+            "created_at": "2026-07-03T20:23:07.133396",
+            "created_by": "Buyer",
+            "content": {
+                "workflow_id": "WF-13BA8B",
+                "quote_id": "DOC-E2DDBF",
+                "created_at": "2026-07-03T20:23:07.133299",
+                "buyer": "MegaMart Online",
+                "supplier": "FreshFizz Consumer Products",
+                "items": [
+                    {
+                        "sku": "CHIP-002",
+                        "requested_quantity": 200,
+                        "quoted_quantity": 0,
+                        "requested_price": 2.4,
+                        "quoted_price": 0.0,
+                        "discount": 0.0,
+                        "final_price": 0.0,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "JUIC-001",
+                        "requested_quantity": 350,
+                        "quoted_quantity": 0,
+                        "requested_price": 4.2,
+                        "quoted_price": 0.0,
+                        "discount": 0.0,
+                        "final_price": 0.0,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "JUIC-002",
+                        "requested_quantity": 400,
+                        "quoted_quantity": 0,
+                        "requested_price": 4.5,
+                        "quoted_price": 0.0,
+                        "discount": 0.0,
+                        "final_price": 0.0,
+                        "accepted": true
+                    }
+                ],
+                "status": "SENT",
+                "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nMegaMart Online is looking to restock our retail distribution centers with your high-demand beverage and snack lines for the upcoming sales quarter. We have reviewed your catalog and would like to request a formal Material Request Quote (MRQ) for the following items:\n- CHIP-002: 200 units\n- JUIC-001: 350 units\n- JUIC-002: 400 units\n\nPlease review your stock levels and let us know your standard lead times, minimum order requirements, and any bulk purchase terms that might apply to this order. We look forward to establishing a mutually beneficial supply relationship.\n\nBest regards,\n\nProcurement Director\nMegaMart Online"
+            },
+            "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nMegaMart Online is looking to restock our retail distribution centers with your high-demand beverage and snack lines for the upcoming sales quarter. We have reviewed your catalog and would like to request a formal Material Request Quote (MRQ) for the following items:\n- CHIP-002: 200 units\n- JUIC-001: 350 units\n- JUIC-002: 400 units\n\nPlease review your stock levels and let us know your standard lead times, minimum order requirements, and any bulk purchase terms that might apply to this order. We look forward to establishing a mutually beneficial supply relationship.\n\nBest regards,\n\nProcurement Director\nMegaMart Online"
+        }
+    ],
+    "timeline": [
+        {
+            "timestamp": "2026-07-03T20:23:05.497690",
+            "event": "Workflow Initialized",
+            "description": "Procurement workflow started. Initializing Material Request Quote.",
+            "actor": "Human"
+        },
+        {
+            "timestamp": "2026-07-03T20:23:07.133532",
+            "event": "Buyer Drafted MRQ",
+            "description": "Buyer (Gemini) generated Material Request Quote draft. Pending human approval.",
+            "actor": "Buyer"
+        },
+        {
+            "timestamp": "2026-07-03T20:23:18.912773",
+            "event": "MRQ Approved & Sent",
+            "description": "Human approved and sent MRQ to the recipient.",
+            "actor": "Human"
+        },
+        {
+            "timestamp": "2026-07-03T20:23:19.513738",
+            "event": "Supplier Proposed Fulfillment",
+            "description": "Supplier (Claude) generated Fulfillment Proposal draft. Pending human approval.",
+            "actor": "Supplier"
+        }
+    ],
+    "current_draft": {
+        "id": "DOC-09E4D5",
+        "type": "Proposal",
+        "created_at": "2026-07-03T20:23:19.513583",
+        "created_by": "Supplier",
+        "content": {
+            "workflow_id": "WF-13BA8B",
+            "quote_id": "DOC-09E4D5",
+            "created_at": "2026-07-03T20:23:19.513461",
+            "buyer": "MegaMart Online",
+            "supplier": "FreshFizz Consumer Products",
+            "items": [
+                {
+                    "sku": "CHIP-002",
+                    "requested_quantity": 200,
+                    "quoted_quantity": 200,
+                    "requested_price": 2.4,
+                    "quoted_price": 2.4,
+                    "discount": 0.0,
+                    "final_price": 2.4,
+                    "accepted": true
+                },
+                {
+                    "sku": "JUIC-001",
+                    "requested_quantity": 350,
+                    "quoted_quantity": 0,
+                    "requested_price": 4.2,
+                    "quoted_price": 4.2,
+                    "discount": 0.0,
+                    "final_price": 4.2,
+                    "accepted": true
+                },
+                {
+                    "sku": "JUIC-002",
+                    "requested_quantity": 400,
+                    "quoted_quantity": 400,
+                    "requested_price": 4.5,
+                    "quoted_price": 4.5,
+                    "discount": 0.0,
+                    "final_price": 4.5,
+                    "accepted": true
+                }
+            ],
+            "status": "PENDING",
+            "letter_text": "Dear MegaMart Online Procurement Team,\n\nThank you for your Material Request Quote. We appreciate the opportunity to partner with MegaMart Online for your seasonal retail inventory replenishment.\n\nWe have verified our stock levels at our FreshFizz main distribution center. I am pleased to confirm that we have quoted availability based on current inventory, detailed below:\n- SpicyBarbecue Crisps (CHIP-002): 200 units quoted @ $2.40/unit (100% fulfilled)\n- PureOrange Juice (JUIC-001): 0 units quoted @ $4.20/unit (0% fulfilled)\n- RubyGrapefruit Juice (JUIC-002): 400 units quoted @ $4.50/unit (100% fulfilled)\n\nOur estimated lead time for packing and shipping is 3 business days from receiving your official Purchase Order. Please let us know if this proposal meets your timeline, so we can lock in the shipment slots.\n\nSincerely yours,\n\nCommercial Sales Director\nFreshFizz Consumer Products"
+        },
+        "letter_text": "Dear MegaMart Online Procurement Team,\n\nThank you for your Material Request Quote. We appreciate the opportunity to partner with MegaMart Online for your seasonal retail inventory replenishment.\n\nWe have verified our stock levels at our FreshFizz main distribution center. I am pleased to confirm that we have quoted availability based on current inventory, detailed below:\n- SpicyBarbecue Crisps (CHIP-002): 200 units quoted @ $2.40/unit (100% fulfilled)\n- PureOrange Juice (JUIC-001): 0 units quoted @ $4.20/unit (0% fulfilled)\n- RubyGrapefruit Juice (JUIC-002): 400 units quoted @ $4.50/unit (100% fulfilled)\n\nOur estimated lead time for packing and shipping is 3 business days from receiving your official Purchase Order. Please let us know if this proposal meets your timeline, so we can lock in the shipment slots.\n\nSincerely yours,\n\nCommercial Sales Director\nFreshFizz Consumer Products"
+    }
+}

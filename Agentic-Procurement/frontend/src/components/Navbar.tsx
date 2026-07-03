@@ -24,7 +24,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
               P
             </div>
             <div>
-              <span className="font-bold text-lg text-slate-900 block leading-tight">Antigravity Procurement</span>
+              <span className="font-bold text-lg text-slate-900 block leading-tight">Agentic Procurement</span>
               <span className="text-xs text-slate-500 font-medium">Multi-Agent Enterprise Simulator</span>
             </div>
           </div>
@@ -36,11 +36,10 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isActive
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-slate-600 hover:text-slate-950 hover:bg-slate-50"
-                  }`}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
+                    ? "bg-blue-50 text-blue-700"
+                    : "text-slate-600 hover:text-slate-950 hover:bg-slate-50"
+                    }`}
                 >
                   <Icon className={`h-4.5 w-4.5 ${isActive ? "text-blue-600" : "text-slate-400"}`} />
                   <span>{tab.label}</span>

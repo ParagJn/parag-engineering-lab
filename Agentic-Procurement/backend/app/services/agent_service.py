@@ -1,9 +1,11 @@
 import re
 import json
 import logging
+import random
 from typing import Dict, Any, List
 import google.generativeai as genai
 from anthropic import Anthropic
+import httpx
 
 from app.models.settings import Settings
 from app.models.product import Product
@@ -78,7 +80,10 @@ class AgentService:
             return self._mock_supplier(catalog, step, previous_data)
             
         try:
-            client = Anthropic(api_key=settings.claude_key)
+            client = Anthropic(
+                api_key=settings.claude_key,
+                http_client=httpx.Client()
+            )
             model_name = settings.supplier_model or "claude-3-5-sonnet-20240620"
             
             catalog_str = json.dumps([p.model_dump() for p in catalog], indent=2)
@@ -100,16 +105,21 @@ class AgentService:
             return self._mock_supplier(catalog, step, previous_data)
 
     def _mock_buyer(self, catalog: List[Product], step: int, previous_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """Simulates Buyer agent behavior programmatically."""
+        """Simulates Buyer agent behavior programmatically with dynamic letter construction."""
         if step == 1:
-            # Select first 4 items in catalog
             items = []
-            selected_skus = ["SODA-001", "CHIP-001", "COOK-001", "JUIC-001"]
-            for sku in selected_skus:
-                prod = next((p for p in catalog if p.sku == sku), catalog[0])
-                qty = max(prod.moq, 150)
+            
+            # Randomly select between 3 and 5 products from catalog
+            num_items = min(random.randint(3, 5), len(catalog))
+            selected_prods = random.sample(catalog, num_items)
+            
+            for prod in selected_prods:
+                # Randomize quantity based on product MOQ, rounded to nearest 50
+                base_qty = max(prod.moq, 100)
+                qty = base_qty + (random.randint(0, 9) * 50)
+                
                 items.append({
-                    "sku": sku,
+                    "sku": prod.sku,
                     "requested_quantity": qty,
                     "quoted_quantity": 0,
                     "requested_price": prod.price,
@@ -118,15 +128,18 @@ class AgentService:
                     "final_price": 0.0
                 })
             
+            # Sort items by SKU alphabetically
+            items.sort(key=lambda x: x["sku"])
+            
+            # Generate dynamic letter text
+            items_list_str = "\n".join([f"- {it['sku']}: {it['requested_quantity']} units" for it in items])
+            
             letter_text = (
                 "Dear FreshFizz Commercial Sales Team,\n\n"
-                "I hope this letter finds you well. MegaMart Online is looking to restock our CPG product selection "
-                "for the upcoming summer season. Based on our market analytics and current inventory levels, we would "
-                "like to request a fulfillment proposal and price quote for the following products:\n"
-                "- FizzCola Classic (SODA-001): 200 units\n"
-                "- CrunchySalt Potato Chips (CHIP-001): 150 units\n"
-                "- ChocoDelight Cookies (COOK-001): 100 units\n"
-                "- PureOrange Juice (JUIC-001): 80 units\n\n"
+                "MegaMart Online is looking to restock our retail distribution centers with your high-demand beverage "
+                "and snack lines for the upcoming sales quarter. We have reviewed your catalog and would like to request a "
+                "formal Material Request Quote (MRQ) for the following items:\n"
+                f"{items_list_str}\n\n"
                 "Please review your stock levels and let us know your standard lead times, minimum order requirements, "
                 "and any bulk purchase terms that might apply to this order. We look forward to establishing a mutually "
                 "beneficial supply relationship.\n\n"
@@ -136,38 +149,57 @@ class AgentService:
             return {"letter_text": letter_text, "items": items}
             
         elif step == 3:
-            # Negotiate: Apply 3-5% discount, reduce COOK-001 quantity
+            # Negotiate: Apply 3-5% discount to top 2 items, reduce quantity of first item by 20%
             items = []
             orig_items = previous_data.get("items", []) if previous_data else []
-            negotiated_skus = ["SODA-001", "CHIP-001"]
             
-            for item in orig_items:
+            # Identify first two items to apply discounts
+            discount_items = []
+            if len(orig_items) > 0:
+                discount_items.append(orig_items[0]["sku"])
+            if len(orig_items) > 1:
+                discount_items.append(orig_items[1]["sku"])
+                
+            for idx, item in enumerate(orig_items):
                 item_copy = item.copy()
                 sku = item_copy["sku"]
                 
-                # Apply 4% discount to SODA-001 and CHIP-001
-                if sku in negotiated_skus:
+                # Apply 4% discount to discounted items
+                if sku in discount_items:
                     item_copy["discount"] = 0.04
                     item_copy["final_price"] = round(item_copy["quoted_price"] * 0.96, 2)
                 else:
                     item_copy["discount"] = 0.0
                     item_copy["final_price"] = item_copy["quoted_price"]
                 
-                # Reduce quantity for COOK-001 to 80
-                if sku == "COOK-001":
-                    item_copy["requested_quantity"] = 80
-                    item_copy["quoted_quantity"] = 80
+                # Dynamically adjust the 3rd item's quantity down by 20% if we have at least 3 items
+                if idx == 2:
+                    new_qty = int(item_copy["quoted_quantity"] * 0.8)
+                    item_copy["requested_quantity"] = new_qty
+                    item_copy["quoted_quantity"] = new_qty
                 
                 items.append(item_copy)
-                
+            
+            # Generate dynamic counter proposal letter
+            discount_lines_str = ", ".join([sku for sku in discount_items])
             letter_text = (
                 "Dear FreshFizz Commercial Sales Team,\n\n"
                 "Thank you for providing the initial fulfillment proposal and confirming inventory availability. "
                 "We are pleased to see that you can fulfill our requested quantities for most items.\n\n"
                 "Upon reviewing the quoted prices, our finance team has requested that we seek a discount on our "
                 "highest-volume lines to align with our seasonal budget caps. Specifically, we are proposing a 4% discount "
-                "on FizzCola Classic (SODA-001) and CrunchySalt Potato Chips (CHIP-001). Additionally, we have adjusted the "
-                "requested quantity for ChocoDelight Cookies (COOK-001) down to 80 units to better balance our stock levels.\n\n"
+                f"on: {discount_lines_str}.\n\n"
+            )
+            
+            if len(orig_items) > 2:
+                third_sku = orig_items[2]["sku"]
+                new_qty = items[2]["quoted_quantity"]
+                letter_text += (
+                    f"Additionally, we have adjusted the requested quantity for SKU {third_sku} down to {new_qty} units "
+                    "to better balance our stock levels.\n\n"
+                )
+                
+            letter_text += (
                 "We believe this counter-offer is fair and aligns with standard volume discount agreements in the industry. "
                 "If these terms are acceptable, we are prepared to issue a formal Purchase Order immediately.\n\n"
                 "Sincerely,\n\n"
@@ -182,12 +214,23 @@ class AgentService:
             for item in orig_items:
                 items.append(item.copy())
                 
+            # Count accepted vs declined lines
+            accepted_skus = [it["sku"] for it in items if it.get("accepted", True)]
+            declined_skus = [it["sku"] for it in items if not it.get("accepted", True)]
+            
             letter_text = (
                 "Dear FreshFizz Commercial Sales Team,\n\n"
                 "We have received your final pricing counter-proposal (Ref: FinalLetter). "
-                "We accept FizzCola Classic (SODA-001) at the negotiated 4% discounted unit price of $1.44. "
-                "We also accept your pricing of $2.20 for CrunchySalt Potato Chips (CHIP-001) without the discount.\n\n"
-                "Based on these terms, we are sending this final quote approval. "
+                "We have conducted our final review and are proceeding with the following SKU resolutions:\n"
+            )
+            
+            if accepted_skus:
+                letter_text += f"- Accepted SKUs for final order: {', '.join(accepted_skus)}\n"
+            if declined_skus:
+                letter_text += f"- Declined SKUs (excluded from order): {', '.join(declined_skus)}\n"
+                
+            letter_text += (
+                "\nBased on these terms, we are sending this final quote approval. "
                 "Please proceed with generating the official Purchase Order, Commercial Invoice, and Delivery Orders for our logistics teams."
                 "\n\n"
                 "Sincerely,\n\n"
@@ -198,7 +241,7 @@ class AgentService:
         return {}
 
     def _mock_supplier(self, catalog: List[Product], step: int, previous_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Simulates Supplier agent behavior programmatically."""
+        """Simulates Supplier agent behavior programmatically with dynamic inventory checks and price quotes."""
         if step == 2:
             # Check inventory and fulfill
             items = []
@@ -221,17 +264,22 @@ class AgentService:
                     "discount": 0.0,
                     "final_price": price
                 })
+            
+            # Generate dynamic letter text showing the actual quantities and prices from items list
+            items_list_str = ""
+            for it in items:
+                prod = next((p for p in catalog if p.sku == it["sku"]), None)
+                name = prod.name if prod else it["sku"]
+                fulfillment_pct = (it["quoted_quantity"] / it["requested_quantity"] * 100) if it["requested_quantity"] > 0 else 100
+                items_list_str += f"- {name} ({it['sku']}): {it['quoted_quantity']} units quoted @ ${it['quoted_price']:.2f}/unit ({fulfillment_pct:.0f}% fulfilled)\n"
                 
             letter_text = (
                 "Dear MegaMart Online Procurement Team,\n\n"
                 "Thank you for your Material Request Quote. We appreciate the opportunity to partner with "
                 "MegaMart Online for your seasonal retail inventory replenishment.\n\n"
                 "We have verified our stock levels at our FreshFizz main distribution center. I am pleased to confirm "
-                "that we have full inventory availability for all requested items and can fulfill 100% of your requested quantities:\n"
-                "- FizzCola Classic (SODA-001): 200 units @ $1.50/unit\n"
-                "- CrunchySalt Potato Chips (CHIP-001): 150 units @ $2.20/unit\n"
-                "- ChocoDelight Cookies (COOK-001): 100 units @ $3.50/unit\n"
-                "- PureOrange Juice (JUIC-001): 80 units @ $4.20/unit\n\n"
+                "that we have quoted availability based on current inventory, detailed below:\n"
+                f"{items_list_str}\n"
                 "Our estimated lead time for packing and shipping is 3 business days from receiving your official "
                 "Purchase Order. Please let us know if this proposal meets your timeline, so we can lock in the shipment slots.\n\n"
                 "Sincerely yours,\n\n"
@@ -240,12 +288,20 @@ class AgentService:
             return {"letter_text": letter_text, "items": items}
             
         elif step == 4:
-            # Decline discount for CHIP-001, accept for others
+            # Decline discount for CHIP-001 (or the second discounted item), accept for others
             items = []
             orig_items = previous_data.get("items", [])
+            
+            discounted_skus = [it["sku"] for it in orig_items if it.get("discount", 0) > 0]
+            rejected_sku = None
+            if len(discounted_skus) > 1:
+                rejected_sku = discounted_skus[1] # Reject the second one (e.g. CHIP-001)
+            elif len(discounted_skus) > 0:
+                rejected_sku = discounted_skus[0] # Fallback reject the first
+                
             for item in orig_items:
                 item_copy = item.copy()
-                if item_copy["sku"] == "CHIP-001":
+                if rejected_sku and item_copy["sku"] == rejected_sku:
                     # Reject discount: set back to quoted price
                     item_copy["discount"] = 0.0
                     item_copy["final_price"] = item_copy["quoted_price"]
@@ -255,11 +311,27 @@ class AgentService:
                 "Dear MegaMart Online Procurement Team,\n\n"
                 "Thank you for your feedback and counter-proposal. We appreciate your transparency regarding your seasonal "
                 "budget constraints. \n\n"
-                "After reviewing the proposal with our commercial pricing committee, we have approved the proposed 4% discount "
-                "on FizzCola Classic (SODA-001), lowering its unit price to $1.44. However, due to tight margins and rising supply "
-                "costs for raw potatoes, we are UNABLE to approve the discount on CrunchySalt Potato Chips (CHIP-001). Its unit "
-                "price must remain at the original quoted rate of $2.20.\n\n"
-                "We accept the quantity adjustment for ChocoDelight Cookies (COOK-001) down to 80 units. "
+                "After reviewing the proposal with our commercial pricing committee, we have approved the proposed discount terms "
+                "for accepted lines. "
+            )
+            
+            if rejected_sku:
+                prod = next((p for p in catalog if p.sku == rejected_sku), None)
+                name = prod.name if prod else rejected_sku
+                # Find quoted price
+                q_price = 2.0
+                for it in items:
+                    if it["sku"] == rejected_sku:
+                        q_price = it["quoted_price"]
+                        break
+                letter_text += (
+                    f"However, due to tight margins and rising supply costs, we are UNABLE to approve the discount on "
+                    f"{name} ({rejected_sku}). Its unit price must remain at the original quoted rate of ${q_price:.2f}.\n\n"
+                )
+            else:
+                letter_text += "\n\n"
+                
+            letter_text += (
                 "Please review these final pricing terms. If you accept this final proposal, you may proceed with submitting your PO."
                 "\n\n"
                 "With best regards,\n\n"

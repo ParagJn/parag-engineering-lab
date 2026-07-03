@@ -1,0 +1,155 @@
+{
+    "workflow_id": "WF-82EEE1",
+    "status": "ACTIVE",
+    "current_step": 2,
+    "documents": [
+        {
+            "id": "DOC-6D6BAD",
+            "type": "MRQ",
+            "created_at": "2026-07-03T19:44:30.258487",
+            "created_by": "Buyer",
+            "content": {
+                "workflow_id": "WF-82EEE1",
+                "quote_id": "DOC-6D6BAD",
+                "created_at": "2026-07-03T19:44:30.258328",
+                "buyer": "MegaMart Online",
+                "supplier": "FreshFizz Consumer Products",
+                "items": [
+                    {
+                        "sku": "SODA-001",
+                        "requested_quantity": 600,
+                        "quoted_quantity": 600,
+                        "requested_price": 1.7,
+                        "quoted_price": 1.7,
+                        "discount": 0.0,
+                        "final_price": 1.7,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "CHIP-001",
+                        "requested_quantity": 1800,
+                        "quoted_quantity": 1800,
+                        "requested_price": 2.2,
+                        "quoted_price": 0.0,
+                        "discount": 0.0,
+                        "final_price": 0.0,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "COOK-001",
+                        "requested_quantity": 3300,
+                        "quoted_quantity": 3300,
+                        "requested_price": 3.5,
+                        "quoted_price": 0.0,
+                        "discount": 0.0,
+                        "final_price": 0.0,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "JUIC-001",
+                        "requested_quantity": 2500,
+                        "quoted_quantity": 2500,
+                        "requested_price": 4.2,
+                        "quoted_price": 0.0,
+                        "discount": 0.0,
+                        "final_price": 0.0,
+                        "accepted": true
+                    }
+                ],
+                "status": "SENT",
+                "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nMegaMart Online is looking to restock our retail distribution centers with your high-demand beverage and snack lines for the upcoming sales quarter. We have reviewed your catalog and would like to request a formal Material Request Quote (MRQ) for the following items:\n- SODA-001: 150 units\n- CHIP-001: 150 units\n- COOK-001: 150 units\n- JUIC-001: 150 units\n\nPlease review your stock levels and let us know your standard lead times, minimum order requirements, and any bulk purchase terms that might apply to this order. We look forward to establishing a mutually beneficial supply relationship.\n\nBest regards,\n\nProcurement Director\nMegaMart Online"
+            },
+            "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nMegaMart Online is looking to restock our retail distribution centers with your high-demand beverage and snack lines for the upcoming sales quarter. We have reviewed your catalog and would like to request a formal Material Request Quote (MRQ) for the following items:\n- SODA-001: 150 units\n- CHIP-001: 150 units\n- COOK-001: 150 units\n- JUIC-001: 150 units\n\nPlease review your stock levels and let us know your standard lead times, minimum order requirements, and any bulk purchase terms that might apply to this order. We look forward to establishing a mutually beneficial supply relationship.\n\nBest regards,\n\nProcurement Director\nMegaMart Online"
+        }
+    ],
+    "timeline": [
+        {
+            "timestamp": "2026-07-03T19:44:28.435944",
+            "event": "Workflow Initialized",
+            "description": "Procurement workflow started. Initializing Material Request Quote.",
+            "actor": "Human"
+        },
+        {
+            "timestamp": "2026-07-03T19:44:30.258784",
+            "event": "Buyer Drafted MRQ",
+            "description": "Buyer (Gemini) generated Material Request Quote draft. Pending human approval.",
+            "actor": "Buyer"
+        },
+        {
+            "timestamp": "2026-07-03T19:44:55.266254",
+            "event": "Draft Modified",
+            "description": "Human operator updated the draft contents.",
+            "actor": "Human"
+        },
+        {
+            "timestamp": "2026-07-03T19:44:56.079143",
+            "event": "MRQ Approved & Sent",
+            "description": "Human approved and sent MRQ to the recipient.",
+            "actor": "Human"
+        },
+        {
+            "timestamp": "2026-07-03T19:44:56.082281",
+            "event": "Supplier Proposed Fulfillment",
+            "description": "Supplier (Claude) generated Fulfillment Proposal draft. Pending human approval.",
+            "actor": "Supplier"
+        }
+    ],
+    "current_draft": {
+        "id": "DOC-AF5356",
+        "type": "Proposal",
+        "created_at": "2026-07-03T19:44:56.082196",
+        "created_by": "Supplier",
+        "content": {
+            "workflow_id": "WF-82EEE1",
+            "quote_id": "DOC-AF5356",
+            "created_at": "2026-07-03T19:44:56.082130",
+            "buyer": "MegaMart Online",
+            "supplier": "FreshFizz Consumer Products",
+            "items": [
+                {
+                    "sku": "SODA-001",
+                    "requested_quantity": 600,
+                    "quoted_quantity": 600,
+                    "requested_price": 1.7,
+                    "quoted_price": 1.5,
+                    "discount": 0.0,
+                    "final_price": 1.5,
+                    "accepted": true
+                },
+                {
+                    "sku": "CHIP-001",
+                    "requested_quantity": 1800,
+                    "quoted_quantity": 550,
+                    "requested_price": 2.2,
+                    "quoted_price": 2.2,
+                    "discount": 0.0,
+                    "final_price": 2.2,
+                    "accepted": true
+                },
+                {
+                    "sku": "COOK-001",
+                    "requested_quantity": 3300,
+                    "quoted_quantity": 460,
+                    "requested_price": 3.5,
+                    "quoted_price": 3.5,
+                    "discount": 0.0,
+                    "final_price": 3.5,
+                    "accepted": true
+                },
+                {
+                    "sku": "JUIC-001",
+                    "requested_quantity": 2500,
+                    "quoted_quantity": 50,
+                    "requested_price": 4.2,
+                    "quoted_price": 4.2,
+                    "discount": 0.0,
+                    "final_price": 4.2,
+                    "accepted": true
+                }
+            ],
+            "status": "PENDING",
+            "letter_text": "Dear MegaMart Online Procurement Team,\n\nThank you for your Material Request Quote. We appreciate the opportunity to partner with MegaMart Online for your seasonal retail inventory replenishment.\n\nWe have verified our stock levels at our FreshFizz main distribution center. I am pleased to confirm that we have quoted availability based on current inventory, detailed below:\n- FizzCola Classic (SODA-001): 600 units quoted @ $1.50/unit (100% fulfilled)\n- CrunchySalt Potato Chips (CHIP-001): 550 units quoted @ $2.20/unit (31% fulfilled)\n- ChocoDelight Cookies (COOK-001): 460 units quoted @ $3.50/unit (14% fulfilled)\n- PureOrange Juice (JUIC-001): 50 units quoted @ $4.20/unit (2% fulfilled)\n\nOur estimated lead time for packing and shipping is 3 business days from receiving your official Purchase Order. Please let us know if this proposal meets your timeline, so we can lock in the shipment slots.\n\nSincerely yours,\n\nCommercial Sales Director\nFreshFizz Consumer Products"
+        },
+        "letter_text": "Dear MegaMart Online Procurement Team,\n\nThank you for your Material Request Quote. We appreciate the opportunity to partner with MegaMart Online for your seasonal retail inventory replenishment.\n\nWe have verified our stock levels at our FreshFizz main distribution center. I am pleased to confirm that we have quoted availability based on current inventory, detailed below:\n- FizzCola Classic (SODA-001): 600 units quoted @ $1.50/unit (100% fulfilled)\n- CrunchySalt Potato Chips (CHIP-001): 550 units quoted @ $2.20/unit (31% fulfilled)\n- ChocoDelight Cookies (COOK-001): 460 units quoted @ $3.50/unit (14% fulfilled)\n- PureOrange Juice (JUIC-001): 50 units quoted @ $4.20/unit (2% fulfilled)\n\nOur estimated lead time for packing and shipping is 3 business days from receiving your official Purchase Order. Please let us know if this proposal meets your timeline, so we can lock in the shipment slots.\n\nSincerely yours,\n\nCommercial Sales Director\nFreshFizz Consumer Products"
+    }
+}

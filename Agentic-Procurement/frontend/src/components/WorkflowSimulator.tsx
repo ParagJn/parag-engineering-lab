@@ -233,11 +233,14 @@ export const WorkflowSimulator: React.FC = () => {
     
     // Calculate total values (only sum up items where accepted !== false)
     const activeItems = items.filter(it => it.accepted !== false);
-    const totalQty = activeItems.reduce((sum, it) => sum + (it.quoted_quantity || it.requested_quantity || 0), 0);
+    const totalQty = activeItems.reduce((sum, it) => {
+      const q = doc.type === "MRQ" ? it.requested_quantity : (it.quoted_quantity !== undefined ? it.quoted_quantity : it.requested_quantity);
+      return sum + (q || 0);
+    }, 0);
     const totalCost = activeItems.reduce((sum, it) => {
-      const q = it.quoted_quantity || it.requested_quantity || 0;
+      const q = doc.type === "MRQ" ? it.requested_quantity : (it.quoted_quantity !== undefined ? it.quoted_quantity : it.requested_quantity);
       const p = it.final_price || it.quoted_price || it.requested_price || 0;
-      return sum + (q * p);
+      return sum + ((q || 0) * p);
     }, 0);
 
     return (
@@ -293,7 +296,8 @@ export const WorkflowSimulator: React.FC = () => {
                 <tbody className="bg-white divide-y divide-slate-100">
                   {items.map((it, idx) => {
                     const isItemAccepted = it.accepted !== false;
-                    const qty = isItemAccepted ? (it.quoted_quantity || it.requested_quantity || 0) : 0;
+                    const qVal = doc.type === "MRQ" ? it.requested_quantity : (it.quoted_quantity !== undefined ? it.quoted_quantity : it.requested_quantity);
+                    const qty = isItemAccepted ? (qVal || 0) : 0;
                     const price = it.quoted_price || it.requested_price || 0;
                     const finalPrice = it.final_price || price;
                     const subtotal = qty * finalPrice;
@@ -311,7 +315,7 @@ export const WorkflowSimulator: React.FC = () => {
                               className="w-16 px-1.5 py-0.5 border border-slate-300 rounded text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
                             />
                           ) : (
-                            it.quoted_quantity || it.requested_quantity || 0
+                            doc.type === "MRQ" ? it.requested_quantity : (it.quoted_quantity !== undefined ? it.quoted_quantity : it.requested_quantity)
                           )}
                         </td>
                         <td className="px-3 py-2 text-right">
@@ -383,7 +387,7 @@ export const WorkflowSimulator: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col h-[calc(100vh-64px)] justify-between">
+    <div className="max-w-none w-full px-8 py-6 flex flex-col h-[calc(100vh-64px)] justify-between">
       {/* Upper header */}
       <div className="mb-4 flex justify-between items-center">
         <div>
@@ -416,8 +420,8 @@ export const WorkflowSimulator: React.FC = () => {
 
       {/* Main split-screen panel */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 overflow-hidden min-h-[500px]">
-        {/* Buyer Panel (cols 1-4.5) */}
-        <div className="lg:col-span-4 bg-white border border-slate-200 rounded-2xl shadow-sm p-5 flex flex-col justify-between overflow-hidden">
+        <div className="lg:col-span-5 bg-white border-2 border-blue-100 rounded-2xl shadow-md p-5 pt-6 flex flex-col justify-between overflow-hidden relative">
+          <div className="h-1.5 bg-gradient-to-r from-[#4285F4] via-[#EA4335] via-[#FBBC05] to-[#34A853] w-full absolute top-0 left-0" />
           <div className="flex flex-col h-full justify-between">
             {/* Buyer header */}
             <div className="flex justify-between items-start pb-4 border-b border-slate-100 mb-4">
@@ -469,8 +473,9 @@ export const WorkflowSimulator: React.FC = () => {
           </div>
         </div>
 
-        {/* Timeline Panel (cols 4.5-7.5) */}
-        <div className="lg:col-span-4 bg-slate-50 border border-slate-200 rounded-2xl p-5 flex flex-col justify-between overflow-y-auto">
+        {/* Timeline Panel */}
+        <div className="lg:col-span-2 bg-slate-50 border-2 border-slate-100 rounded-2xl shadow-md p-4 pt-5 flex flex-col justify-between overflow-y-auto relative">
+          <div className="h-1.5 bg-gradient-to-r from-[#4285F4] via-[#EA4335] via-[#FBBC05] to-[#34A853] w-full absolute top-0 left-0" />
           {renderTimeline()}
           
           {/* Action console for Human Operator */}
@@ -581,8 +586,9 @@ export const WorkflowSimulator: React.FC = () => {
           </div>
         </div>
 
-        {/* Supplier Panel (cols 7.5-12) */}
-        <div className="lg:col-span-4 bg-white border border-slate-200 rounded-2xl shadow-sm p-5 flex flex-col justify-between overflow-hidden">
+        {/* Supplier Panel */}
+        <div className="lg:col-span-5 bg-white border-2 border-orange-100 rounded-2xl shadow-md p-5 pt-6 flex flex-col justify-between overflow-hidden relative">
+          <div className="h-1.5 bg-gradient-to-r from-[#4285F4] via-[#EA4335] via-[#FBBC05] to-[#34A853] w-full absolute top-0 left-0" />
           <div className="flex flex-col h-full justify-between">
             {/* Supplier header */}
             <div className="flex justify-between items-start pb-4 border-b border-slate-100 mb-4">

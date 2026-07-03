@@ -1,0 +1,392 @@
+{
+    "workflow_id": "WF-A27EDE",
+    "status": "COMPLETED",
+    "current_step": 6,
+    "documents": [
+        {
+            "id": "DOC-8A7561",
+            "type": "MRQ",
+            "created_at": "2026-07-03T20:26:49.510837",
+            "created_by": "Buyer",
+            "content": {
+                "workflow_id": "WF-A27EDE",
+                "quote_id": "DOC-8A7561",
+                "created_at": "2026-07-03T20:26:49.510709",
+                "buyer": "MegaMart Online",
+                "supplier": "FreshFizz Consumer Products",
+                "items": [
+                    {
+                        "sku": "CHIP-002",
+                        "requested_quantity": 550,
+                        "quoted_quantity": 0,
+                        "requested_price": 2.4,
+                        "quoted_price": 0.0,
+                        "discount": 0.0,
+                        "final_price": 0.0,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "ENER-001",
+                        "requested_quantity": 420,
+                        "quoted_quantity": 0,
+                        "requested_price": 2.9,
+                        "quoted_price": 0.0,
+                        "discount": 0.0,
+                        "final_price": 0.0,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "SODA-001",
+                        "requested_quantity": 350,
+                        "quoted_quantity": 0,
+                        "requested_price": 1.5,
+                        "quoted_price": 0.0,
+                        "discount": 0.0,
+                        "final_price": 0.0,
+                        "accepted": true
+                    }
+                ],
+                "status": "SENT",
+                "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nMegaMart Online is looking to restock our retail distribution centers with your high-demand beverage and snack lines for the upcoming sales quarter. We have reviewed your catalog and would like to request a formal Material Request Quote (MRQ) for the following items:\n- CHIP-002: 550 units\n- ENER-001: 420 units\n- SODA-001: 350 units\n\nPlease review your stock levels and let us know your standard lead times, minimum order requirements, and any bulk purchase terms that might apply to this order. We look forward to establishing a mutually beneficial supply relationship.\n\nBest regards,\n\nProcurement Director\nMegaMart Online"
+            },
+            "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nMegaMart Online is looking to restock our retail distribution centers with your high-demand beverage and snack lines for the upcoming sales quarter. We have reviewed your catalog and would like to request a formal Material Request Quote (MRQ) for the following items:\n- CHIP-002: 550 units\n- ENER-001: 420 units\n- SODA-001: 350 units\n\nPlease review your stock levels and let us know your standard lead times, minimum order requirements, and any bulk purchase terms that might apply to this order. We look forward to establishing a mutually beneficial supply relationship.\n\nBest regards,\n\nProcurement Director\nMegaMart Online"
+        },
+        {
+            "id": "DOC-C970E2",
+            "type": "Proposal",
+            "created_at": "2026-07-03T20:26:55.086663",
+            "created_by": "Supplier",
+            "content": {
+                "workflow_id": "WF-A27EDE",
+                "quote_id": "DOC-C970E2",
+                "created_at": "2026-07-03T20:26:55.086536",
+                "buyer": "MegaMart Online",
+                "supplier": "FreshFizz Consumer Products",
+                "items": [
+                    {
+                        "sku": "CHIP-002",
+                        "requested_quantity": 550,
+                        "quoted_quantity": 550,
+                        "requested_price": 2.4,
+                        "quoted_price": 2.4,
+                        "discount": 0.0,
+                        "final_price": 2.4,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "ENER-001",
+                        "requested_quantity": 100,
+                        "quoted_quantity": 100,
+                        "requested_price": 2.9,
+                        "quoted_price": 2.9,
+                        "discount": 0.0,
+                        "final_price": 2.9,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "SODA-001",
+                        "requested_quantity": 350,
+                        "quoted_quantity": 350,
+                        "requested_price": 1.5,
+                        "quoted_price": 1.5,
+                        "discount": 0.0,
+                        "final_price": 1.5,
+                        "accepted": true
+                    }
+                ],
+                "status": "SENT",
+                "letter_text": "Dear MegaMart Online Procurement Team,\n\nThank you for your Material Request Quote. We appreciate the opportunity to partner with MegaMart Online for your seasonal retail inventory replenishment.\n\nWe have verified our stock levels at our FreshFizz main distribution center. I am pleased to confirm that we have quoted availability based on current inventory, detailed below:\n- SpicyBarbecue Crisps (CHIP-002): 550 units quoted @ $2.40/unit (100% fulfilled)\n- BoltEnergy Original (ENER-001): 100 units quoted @ $2.90/unit (100% fulfilled)\n- FizzCola Classic (SODA-001): 350 units quoted @ $1.50/unit (100% fulfilled)\n\nOur estimated lead time for packing and shipping is 3 business days from receiving your official Purchase Order. Please let us know if this proposal meets your timeline, so we can lock in the shipment slots.\n\nSincerely yours,\n\nCommercial Sales Director\nFreshFizz Consumer Products"
+            },
+            "letter_text": "Dear MegaMart Online Procurement Team,\n\nThank you for your Material Request Quote. We appreciate the opportunity to partner with MegaMart Online for your seasonal retail inventory replenishment.\n\nWe have verified our stock levels at our FreshFizz main distribution center. I am pleased to confirm that we have quoted availability based on current inventory, detailed below:\n- SpicyBarbecue Crisps (CHIP-002): 550 units quoted @ $2.40/unit (100% fulfilled)\n- BoltEnergy Original (ENER-001): 100 units quoted @ $2.90/unit (100% fulfilled)\n- FizzCola Classic (SODA-001): 350 units quoted @ $1.50/unit (100% fulfilled)\n\nOur estimated lead time for packing and shipping is 3 business days from receiving your official Purchase Order. Please let us know if this proposal meets your timeline, so we can lock in the shipment slots.\n\nSincerely yours,\n\nCommercial Sales Director\nFreshFizz Consumer Products"
+        },
+        {
+            "id": "DOC-0D8B18",
+            "type": "CounterOffer",
+            "created_at": "2026-07-03T20:27:19.411349",
+            "created_by": "Buyer",
+            "content": {
+                "workflow_id": "WF-A27EDE",
+                "quote_id": "DOC-0D8B18",
+                "created_at": "2026-07-03T20:27:19.411261",
+                "buyer": "MegaMart Online",
+                "supplier": "FreshFizz Consumer Products",
+                "items": [
+                    {
+                        "sku": "CHIP-002",
+                        "requested_quantity": 550,
+                        "quoted_quantity": 550,
+                        "requested_price": 2.4,
+                        "quoted_price": 2.4,
+                        "discount": 0.04,
+                        "final_price": 2.3,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "ENER-001",
+                        "requested_quantity": 100,
+                        "quoted_quantity": 100,
+                        "requested_price": 2.9,
+                        "quoted_price": 2.9,
+                        "discount": 0.04,
+                        "final_price": 2.78,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "SODA-001",
+                        "requested_quantity": 280,
+                        "quoted_quantity": 280,
+                        "requested_price": 1.5,
+                        "quoted_price": 1.5,
+                        "discount": 0.0,
+                        "final_price": 1.5,
+                        "accepted": true
+                    }
+                ],
+                "status": "SENT",
+                "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nThank you for providing the initial fulfillment proposal and confirming inventory availability. We are pleased to see that you can fulfill our requested quantities for most items.\n\nUpon reviewing the quoted prices, our finance team has requested that we seek a discount on our highest-volume lines to align with our seasonal budget caps. Specifically, we are proposing a 4% discount on: CHIP-002, ENER-001.\n\nAdditionally, we have adjusted the requested quantity for SKU SODA-001 down to 280 units to better balance our stock levels.\n\nWe believe this counter-offer is fair and aligns with standard volume discount agreements in the industry. If these terms are acceptable, we are prepared to issue a formal Purchase Order immediately.\n\nSincerely,\n\nProcurement Director\nMegaMart Online"
+            },
+            "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nThank you for providing the initial fulfillment proposal and confirming inventory availability. We are pleased to see that you can fulfill our requested quantities for most items.\n\nUpon reviewing the quoted prices, our finance team has requested that we seek a discount on our highest-volume lines to align with our seasonal budget caps. Specifically, we are proposing a 4% discount on: CHIP-002, ENER-001.\n\nAdditionally, we have adjusted the requested quantity for SKU SODA-001 down to 280 units to better balance our stock levels.\n\nWe believe this counter-offer is fair and aligns with standard volume discount agreements in the industry. If these terms are acceptable, we are prepared to issue a formal Purchase Order immediately.\n\nSincerely,\n\nProcurement Director\nMegaMart Online"
+        },
+        {
+            "id": "DOC-9E36EB",
+            "type": "FinalLetter",
+            "created_at": "2026-07-03T20:27:26.531222",
+            "created_by": "Supplier",
+            "content": {
+                "workflow_id": "WF-A27EDE",
+                "quote_id": "DOC-9E36EB",
+                "created_at": "2026-07-03T20:27:26.531132",
+                "buyer": "MegaMart Online",
+                "supplier": "FreshFizz Consumer Products",
+                "items": [
+                    {
+                        "sku": "CHIP-002",
+                        "requested_quantity": 550,
+                        "quoted_quantity": 550,
+                        "requested_price": 2.4,
+                        "quoted_price": 2.4,
+                        "discount": 0.04,
+                        "final_price": 2.3,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "ENER-001",
+                        "requested_quantity": 100,
+                        "quoted_quantity": 100,
+                        "requested_price": 2.9,
+                        "quoted_price": 2.9,
+                        "discount": 0.0,
+                        "final_price": 2.9,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "SODA-001",
+                        "requested_quantity": 280,
+                        "quoted_quantity": 280,
+                        "requested_price": 1.5,
+                        "quoted_price": 1.5,
+                        "discount": 0.0,
+                        "final_price": 1.5,
+                        "accepted": true
+                    }
+                ],
+                "status": "SENT",
+                "letter_text": "Dear MegaMart Online Procurement Team,\n\nThank you for your feedback and counter-proposal. We appreciate your transparency regarding your seasonal budget constraints. \n\nAfter reviewing the proposal with our commercial pricing committee, we have approved the proposed discount terms for accepted lines. However, due to tight margins and rising supply costs, we are UNABLE to approve the discount on BoltEnergy Original (ENER-001). Its unit price must remain at the original quoted rate of $2.90.\n\nPlease review these final pricing terms. If you accept this final proposal, you may proceed with submitting your PO.\n\nWith best regards,\n\nCommercial Sales Director\nFreshFizz Consumer Products"
+            },
+            "letter_text": "Dear MegaMart Online Procurement Team,\n\nThank you for your feedback and counter-proposal. We appreciate your transparency regarding your seasonal budget constraints. \n\nAfter reviewing the proposal with our commercial pricing committee, we have approved the proposed discount terms for accepted lines. However, due to tight margins and rising supply costs, we are UNABLE to approve the discount on BoltEnergy Original (ENER-001). Its unit price must remain at the original quoted rate of $2.90.\n\nPlease review these final pricing terms. If you accept this final proposal, you may proceed with submitting your PO.\n\nWith best regards,\n\nCommercial Sales Director\nFreshFizz Consumer Products"
+        },
+        {
+            "id": "DOC-D36994",
+            "type": "FinalQuote",
+            "created_at": "2026-07-03T20:27:44.911146",
+            "created_by": "Buyer",
+            "content": {
+                "workflow_id": "WF-A27EDE",
+                "quote_id": "DOC-D36994",
+                "created_at": "2026-07-03T20:27:44.911021",
+                "buyer": "MegaMart Online",
+                "supplier": "FreshFizz Consumer Products",
+                "items": [
+                    {
+                        "sku": "CHIP-002",
+                        "requested_quantity": 550,
+                        "quoted_quantity": 550,
+                        "requested_price": 2.4,
+                        "quoted_price": 2.4,
+                        "discount": 0.04,
+                        "final_price": 2.3,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "ENER-001",
+                        "requested_quantity": 100,
+                        "quoted_quantity": 100,
+                        "requested_price": 2.9,
+                        "quoted_price": 2.9,
+                        "discount": 0.0,
+                        "final_price": 2.9,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "SODA-001",
+                        "requested_quantity": 280,
+                        "quoted_quantity": 280,
+                        "requested_price": 1.5,
+                        "quoted_price": 1.5,
+                        "discount": 0.0,
+                        "final_price": 1.5,
+                        "accepted": true
+                    }
+                ],
+                "status": "SENT",
+                "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nWe have received your final pricing counter-proposal (Ref: FinalLetter). We have conducted our final review and are proceeding with the following SKU resolutions:\n- Accepted SKUs for final order: CHIP-002, ENER-001, SODA-001\n\nBased on these terms, we are sending this final quote approval. Please proceed with generating the official Purchase Order, Commercial Invoice, and Delivery Orders for our logistics teams.\n\nSincerely,\n\nProcurement Director\nMegaMart Online"
+            },
+            "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nWe have received your final pricing counter-proposal (Ref: FinalLetter). We have conducted our final review and are proceeding with the following SKU resolutions:\n- Accepted SKUs for final order: CHIP-002, ENER-001, SODA-001\n\nBased on these terms, we are sending this final quote approval. Please proceed with generating the official Purchase Order, Commercial Invoice, and Delivery Orders for our logistics teams.\n\nSincerely,\n\nProcurement Director\nMegaMart Online"
+        },
+        {
+            "id": "PO-35D518",
+            "type": "PO",
+            "created_at": "2026-07-03T20:27:49.007208",
+            "created_by": "Buyer",
+            "content": {
+                "po_id": "PO-35D518",
+                "items": [
+                    {
+                        "sku": "CHIP-002",
+                        "requested_quantity": 550,
+                        "quoted_quantity": 550,
+                        "requested_price": 2.4,
+                        "quoted_price": 2.4,
+                        "discount": 0.04,
+                        "final_price": 2.3,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "ENER-001",
+                        "requested_quantity": 100,
+                        "quoted_quantity": 100,
+                        "requested_price": 2.9,
+                        "quoted_price": 2.9,
+                        "discount": 0.0,
+                        "final_price": 2.9,
+                        "accepted": true
+                    },
+                    {
+                        "sku": "SODA-001",
+                        "requested_quantity": 280,
+                        "quoted_quantity": 280,
+                        "requested_price": 1.5,
+                        "quoted_price": 1.5,
+                        "discount": 0.0,
+                        "final_price": 1.5,
+                        "accepted": true
+                    }
+                ],
+                "total_value": 1975.0
+            },
+            "letter_text": "PURCHASE ORDER\n\nOrder Reference: PO-35D518\nWorkflow Reference: WF-A27EDE\nDate: 2026-07-03\nBuyer: MegaMart Online\nSupplier: FreshFizz Consumer Products\n\nItems:\n1. SKU: CHIP-002 - Qty: 550 @ $2.30/unit (Subtotal: $1265.00)\n2. SKU: ENER-001 - Qty: 100 @ $2.90/unit (Subtotal: $290.00)\n3. SKU: SODA-001 - Qty: 280 @ $1.50/unit (Subtotal: $420.00)\n\nTotal PO Value: $1975.00\n\nPayment Terms: Net 30 days.\nShipping Terms: FOB Origin."
+        },
+        {
+            "id": "INV-8DA7C9",
+            "type": "Invoice",
+            "created_at": "2026-07-03T20:27:49.007326",
+            "created_by": "Supplier",
+            "content": {
+                "invoice_id": "INV-8DA7C9",
+                "total_value": 1975.0
+            },
+            "letter_text": "COMMERCIAL INVOICE\n\nInvoice Reference: INV-8DA7C9\nPurchase Order Reference: PO-35D518\nDate: 2026-07-03\nRemit To: FreshFizz Consumer Products\nBill To: MegaMart Online\n\nItems Invoiced:\n1. SKU: CHIP-002 - Qty: 550 @ $2.30/unit (Subtotal: $1265.00)\n2. SKU: ENER-001 - Qty: 100 @ $2.90/unit (Subtotal: $290.00)\n3. SKU: SODA-001 - Qty: 280 @ $1.50/unit (Subtotal: $420.00)\n\nTotal Amount Due: $1975.00\n\nPlease remit payment via ACH transfer within 30 days."
+        },
+        {
+            "id": "DO-B0A5C6",
+            "type": "DO",
+            "created_at": "2026-07-03T20:27:49.010793",
+            "created_by": "Supplier",
+            "content": {
+                "delivery_id": "DO-B0A5C6"
+            },
+            "letter_text": "DELIVERY ORDER / PACKING SLIP\n\nDelivery Reference: DO-B0A5C6\nAssociated PO: PO-35D518\nCarrier: Standard CPG Carrier\nShip To: MegaMart Fulfillment Center\nShip From: FreshFizz Distribution Hub\n\nItems Scheduled for Dispatch:\n1. SKU: CHIP-002 - Dispatch Qty: 550 units (Estimated Lead Time: 3 days)\n2. SKU: ENER-001 - Dispatch Qty: 100 units (Estimated Lead Time: 3 days)\n3. SKU: SODA-001 - Dispatch Qty: 280 units (Estimated Lead Time: 2 days)\n\nGoods received in good condition signature required."
+        }
+    ],
+    "timeline": [
+        {
+            "timestamp": "2026-07-03T20:26:47.805051",
+            "event": "Workflow Initialized",
+            "description": "Procurement workflow started. Initializing Material Request Quote.",
+            "actor": "Human"
+        },
+        {
+            "timestamp": "2026-07-03T20:26:49.510980",
+            "event": "Buyer Drafted MRQ",
+            "description": "Buyer (Gemini) generated Material Request Quote draft. Pending human approval.",
+            "actor": "Buyer"
+        },
+        {
+            "timestamp": "2026-07-03T20:26:54.153691",
+            "event": "MRQ Approved & Sent",
+            "description": "Human approved and sent MRQ to the recipient.",
+            "actor": "Human"
+        },
+        {
+            "timestamp": "2026-07-03T20:26:55.086824",
+            "event": "Supplier Proposed Fulfillment",
+            "description": "Supplier (Claude) generated Fulfillment Proposal draft. Pending human approval.",
+            "actor": "Supplier"
+        },
+        {
+            "timestamp": "2026-07-03T20:27:17.056623",
+            "event": "Draft Modified",
+            "description": "Human operator updated the draft contents.",
+            "actor": "Human"
+        },
+        {
+            "timestamp": "2026-07-03T20:27:18.853160",
+            "event": "Proposal Approved & Sent",
+            "description": "Human approved and sent Proposal to the recipient.",
+            "actor": "Human"
+        },
+        {
+            "timestamp": "2026-07-03T20:27:19.411446",
+            "event": "Buyer Proposed Counter-Offer",
+            "description": "Buyer (Gemini) generated Counter-Offer draft (discounts & qty modifications). Pending human approval.",
+            "actor": "Buyer"
+        },
+        {
+            "timestamp": "2026-07-03T20:27:26.137020",
+            "event": "CounterOffer Approved & Sent",
+            "description": "Human approved and sent CounterOffer to the recipient.",
+            "actor": "Human"
+        },
+        {
+            "timestamp": "2026-07-03T20:27:26.531323",
+            "event": "Supplier Drafted Final Letter",
+            "description": "Supplier (Claude) generated Final Acceptance Letter draft. Pending human approval.",
+            "actor": "Supplier"
+        },
+        {
+            "timestamp": "2026-07-03T20:27:42.991723",
+            "event": "FinalLetter Approved & Sent",
+            "description": "Human approved and sent FinalLetter to the recipient.",
+            "actor": "Human"
+        },
+        {
+            "timestamp": "2026-07-03T20:27:44.911278",
+            "event": "Buyer Drafted Final Acceptance",
+            "description": "Buyer (Gemini) drafted the final acceptance terms. Pending human review and approval.",
+            "actor": "Buyer"
+        },
+        {
+            "timestamp": "2026-07-03T20:27:49.005602",
+            "event": "FinalQuote Approved & Sent",
+            "description": "Human approved and sent FinalQuote to the recipient.",
+            "actor": "Human"
+        },
+        {
+            "timestamp": "2026-07-03T20:27:49.478591",
+            "event": "Workflow Completed",
+            "description": "Final PO, Commercial Invoice, and Delivery Orders generated. Inventory levels decremented.",
+            "actor": "Human"
+        }
+    ],
+    "current_draft": null
+}
