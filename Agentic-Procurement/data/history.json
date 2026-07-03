@@ -1,0 +1,982 @@
+[
+    {
+        "workflow_id": "WF-0E493F",
+        "start_time": "2026-07-03T11:29:10.220792",
+        "end_time": "2026-07-03T11:29:57.506303",
+        "documents": [
+            {
+                "id": "DOC-404259",
+                "type": "MRQ",
+                "created_at": "2026-07-03T11:29:11.683061",
+                "created_by": "Buyer",
+                "content": {
+                    "workflow_id": "WF-0E493F",
+                    "quote_id": "DOC-404259",
+                    "created_at": "2026-07-03T11:29:11.682664",
+                    "buyer": "MegaMart Online",
+                    "supplier": "FreshFizz Consumer Products",
+                    "items": [
+                        {
+                            "sku": "SODA-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 0,
+                            "requested_price": 1.5,
+                            "quoted_price": 0.0,
+                            "discount": 0.0,
+                            "final_price": 0.0
+                        },
+                        {
+                            "sku": "CHIP-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 0,
+                            "requested_price": 2.2,
+                            "quoted_price": 0.0,
+                            "discount": 0.0,
+                            "final_price": 0.0
+                        },
+                        {
+                            "sku": "COOK-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 0,
+                            "requested_price": 3.5,
+                            "quoted_price": 0.0,
+                            "discount": 0.0,
+                            "final_price": 0.0
+                        },
+                        {
+                            "sku": "JUIC-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 0,
+                            "requested_price": 4.2,
+                            "quoted_price": 0.0,
+                            "discount": 0.0,
+                            "final_price": 0.0
+                        }
+                    ],
+                    "status": "SENT",
+                    "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nI hope this letter finds you well. MegaMart Online is looking to restock our CPG product selection for the upcoming summer season. Based on our market analytics and current inventory levels, we would like to request a fulfillment proposal and price quote for the following products:\n- FizzCola Classic (SODA-001): 200 units\n- CrunchySalt Potato Chips (CHIP-001): 150 units\n- ChocoDelight Cookies (COOK-001): 100 units\n- PureOrange Juice (JUIC-001): 80 units\n\nPlease review your stock levels and let us know your standard lead times, minimum order requirements, and any bulk purchase terms that might apply to this order. We look forward to establishing a mutually beneficial supply relationship.\n\nBest regards,\n\nProcurement Director\nMegaMart Online"
+                },
+                "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nI hope this letter finds you well. MegaMart Online is looking to restock our CPG product selection for the upcoming summer season. Based on our market analytics and current inventory levels, we would like to request a fulfillment proposal and price quote for the following products:\n- FizzCola Classic (SODA-001): 200 units\n- CrunchySalt Potato Chips (CHIP-001): 150 units\n- ChocoDelight Cookies (COOK-001): 100 units\n- PureOrange Juice (JUIC-001): 80 units\n\nPlease review your stock levels and let us know your standard lead times, minimum order requirements, and any bulk purchase terms that might apply to this order. We look forward to establishing a mutually beneficial supply relationship.\n\nBest regards,\n\nProcurement Director\nMegaMart Online"
+            },
+            {
+                "id": "DOC-CDB693",
+                "type": "Proposal",
+                "created_at": "2026-07-03T11:29:19.301521",
+                "created_by": "Supplier",
+                "content": {
+                    "workflow_id": "WF-0E493F",
+                    "quote_id": "DOC-CDB693",
+                    "created_at": "2026-07-03T11:29:19.301458",
+                    "buyer": "MegaMart Online",
+                    "supplier": "FreshFizz Consumer Products",
+                    "items": [
+                        {
+                            "sku": "SODA-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 1.5,
+                            "quoted_price": 1.5,
+                            "discount": 0.0,
+                            "final_price": 1.5
+                        },
+                        {
+                            "sku": "CHIP-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 2.2,
+                            "quoted_price": 2.2,
+                            "discount": 0.0,
+                            "final_price": 2.2
+                        },
+                        {
+                            "sku": "COOK-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 3.5,
+                            "quoted_price": 3.5,
+                            "discount": 0.0,
+                            "final_price": 3.5
+                        },
+                        {
+                            "sku": "JUIC-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 4.2,
+                            "quoted_price": 4.2,
+                            "discount": 0.0,
+                            "final_price": 4.2
+                        }
+                    ],
+                    "status": "SENT",
+                    "letter_text": "Dear MegaMart Online Procurement Team,\n\nThank you for your Material Request Quote. We appreciate the opportunity to partner with MegaMart Online for your seasonal retail inventory replenishment.\n\nWe have verified our stock levels at our FreshFizz main distribution center. I am pleased to confirm that we have full inventory availability for all requested items and can fulfill 100% of your requested quantities:\n- FizzCola Classic (SODA-001): 200 units @ $1.50/unit\n- CrunchySalt Potato Chips (CHIP-001): 150 units @ $2.20/unit\n- ChocoDelight Cookies (COOK-001): 100 units @ $3.50/unit\n- PureOrange Juice (JUIC-001): 80 units @ $4.20/unit\n\nOur estimated lead time for packing and shipping is 3 business days from receiving your official Purchase Order. Please let us know if this proposal meets your timeline, so we can lock in the shipment slots.\n\nSincerely yours,\n\nCommercial Sales Director\nFreshFizz Consumer Products"
+                },
+                "letter_text": "Dear MegaMart Online Procurement Team,\n\nThank you for your Material Request Quote. We appreciate the opportunity to partner with MegaMart Online for your seasonal retail inventory replenishment.\n\nWe have verified our stock levels at our FreshFizz main distribution center. I am pleased to confirm that we have full inventory availability for all requested items and can fulfill 100% of your requested quantities:\n- FizzCola Classic (SODA-001): 200 units @ $1.50/unit\n- CrunchySalt Potato Chips (CHIP-001): 150 units @ $2.20/unit\n- ChocoDelight Cookies (COOK-001): 100 units @ $3.50/unit\n- PureOrange Juice (JUIC-001): 80 units @ $4.20/unit\n\nOur estimated lead time for packing and shipping is 3 business days from receiving your official Purchase Order. Please let us know if this proposal meets your timeline, so we can lock in the shipment slots.\n\nSincerely yours,\n\nCommercial Sales Director\nFreshFizz Consumer Products"
+            },
+            {
+                "id": "DOC-7F6C9A",
+                "type": "CounterOffer",
+                "created_at": "2026-07-03T11:29:29.772236",
+                "created_by": "Buyer",
+                "content": {
+                    "workflow_id": "WF-0E493F",
+                    "quote_id": "DOC-7F6C9A",
+                    "created_at": "2026-07-03T11:29:29.772139",
+                    "buyer": "MegaMart Online",
+                    "supplier": "FreshFizz Consumer Products",
+                    "items": [
+                        {
+                            "sku": "SODA-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 1.5,
+                            "quoted_price": 1.5,
+                            "discount": 0.04,
+                            "final_price": 1.44
+                        },
+                        {
+                            "sku": "CHIP-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 2.2,
+                            "quoted_price": 2.2,
+                            "discount": 0.04,
+                            "final_price": 2.11
+                        },
+                        {
+                            "sku": "COOK-001",
+                            "requested_quantity": 80,
+                            "quoted_quantity": 80,
+                            "requested_price": 3.5,
+                            "quoted_price": 3.5,
+                            "discount": 0.0,
+                            "final_price": 3.5
+                        },
+                        {
+                            "sku": "JUIC-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 4.2,
+                            "quoted_price": 4.2,
+                            "discount": 0.0,
+                            "final_price": 4.2
+                        }
+                    ],
+                    "status": "SENT",
+                    "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nThank you for providing the initial fulfillment proposal and confirming inventory availability. We are pleased to see that you can fulfill our requested quantities for most items.\n\nUpon reviewing the quoted prices, our finance team has requested that we seek a discount on our highest-volume lines to align with our seasonal budget caps. Specifically, we are proposing a 4% discount on FizzCola Classic (SODA-001) and CrunchySalt Potato Chips (CHIP-001). Additionally, we have adjusted the requested quantity for ChocoDelight Cookies (COOK-001) down to 80 units to better balance our stock levels.\n\nWe believe this counter-offer is fair and aligns with standard volume discount agreements in the industry. If these terms are acceptable, we are prepared to issue a formal Purchase Order immediately.\n\nSincerely,\n\nProcurement Director\nMegaMart Online"
+                },
+                "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nThank you for providing the initial fulfillment proposal and confirming inventory availability. We are pleased to see that you can fulfill our requested quantities for most items.\n\nUpon reviewing the quoted prices, our finance team has requested that we seek a discount on our highest-volume lines to align with our seasonal budget caps. Specifically, we are proposing a 4% discount on FizzCola Classic (SODA-001) and CrunchySalt Potato Chips (CHIP-001). Additionally, we have adjusted the requested quantity for ChocoDelight Cookies (COOK-001) down to 80 units to better balance our stock levels.\n\nWe believe this counter-offer is fair and aligns with standard volume discount agreements in the industry. If these terms are acceptable, we are prepared to issue a formal Purchase Order immediately.\n\nSincerely,\n\nProcurement Director\nMegaMart Online"
+            },
+            {
+                "id": "DOC-6102CA",
+                "type": "FinalLetter",
+                "created_at": "2026-07-03T11:29:45.704041",
+                "created_by": "Supplier",
+                "content": {
+                    "workflow_id": "WF-0E493F",
+                    "quote_id": "DOC-6102CA",
+                    "created_at": "2026-07-03T11:29:45.703989",
+                    "buyer": "MegaMart Online",
+                    "supplier": "FreshFizz Consumer Products",
+                    "items": [
+                        {
+                            "sku": "SODA-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 1.5,
+                            "quoted_price": 1.5,
+                            "discount": 0.04,
+                            "final_price": 1.44
+                        },
+                        {
+                            "sku": "CHIP-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 2.2,
+                            "quoted_price": 2.2,
+                            "discount": 0.04,
+                            "final_price": 2.11
+                        },
+                        {
+                            "sku": "COOK-001",
+                            "requested_quantity": 80,
+                            "quoted_quantity": 80,
+                            "requested_price": 3.5,
+                            "quoted_price": 3.5,
+                            "discount": 0.0,
+                            "final_price": 3.5
+                        },
+                        {
+                            "sku": "JUIC-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 4.2,
+                            "quoted_price": 4.2,
+                            "discount": 0.0,
+                            "final_price": 4.2
+                        }
+                    ],
+                    "status": "SENT",
+                    "letter_text": "Dear MegaMart Online Procurement Team,\n\nThank you for your feedback and counter-proposal. We appreciate your transparency regarding your seasonal budget constraints and desire to establish a long-term supply agreement.\n\nFreshFizz values our relationship with MegaMart. Therefore, our management team has approved the proposed 4% discount on FizzCola Classic (SODA-001) and CrunchySalt Potato Chips (CHIP-001), lowering their unit prices to $1.44 and $2.11 respectively. We also note the reduction in ChocoDelight Cookies (COOK-001) quantity to 80 units and have updated our packing slips accordingly.\n\nThis letter serves as our formal acceptance of your counter-offer terms. We await your official Purchase Order to proceed with generating the Commercial Invoice and Delivery Order.\n\nWith best regards,\n\nCommercial Sales Director\nFreshFizz Consumer Products"
+                },
+                "letter_text": "Dear MegaMart Online Procurement Team,\n\nThank you for your feedback and counter-proposal. We appreciate your transparency regarding your seasonal budget constraints and desire to establish a long-term supply agreement.\n\nFreshFizz values our relationship with MegaMart. Therefore, our management team has approved the proposed 4% discount on FizzCola Classic (SODA-001) and CrunchySalt Potato Chips (CHIP-001), lowering their unit prices to $1.44 and $2.11 respectively. We also note the reduction in ChocoDelight Cookies (COOK-001) quantity to 80 units and have updated our packing slips accordingly.\n\nThis letter serves as our formal acceptance of your counter-offer terms. We await your official Purchase Order to proceed with generating the Commercial Invoice and Delivery Order.\n\nWith best regards,\n\nCommercial Sales Director\nFreshFizz Consumer Products"
+            },
+            {
+                "id": "PO-487368",
+                "type": "PO",
+                "created_at": "2026-07-03T11:29:57.501636",
+                "created_by": "Buyer",
+                "content": {
+                    "po_id": "PO-487368",
+                    "items": [
+                        {
+                            "sku": "SODA-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 1.5,
+                            "quoted_price": 1.5,
+                            "discount": 0.04,
+                            "final_price": 1.44
+                        },
+                        {
+                            "sku": "CHIP-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 2.2,
+                            "quoted_price": 2.2,
+                            "discount": 0.04,
+                            "final_price": 2.11
+                        },
+                        {
+                            "sku": "COOK-001",
+                            "requested_quantity": 80,
+                            "quoted_quantity": 80,
+                            "requested_price": 3.5,
+                            "quoted_price": 3.5,
+                            "discount": 0.0,
+                            "final_price": 3.5
+                        },
+                        {
+                            "sku": "JUIC-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 4.2,
+                            "quoted_price": 4.2,
+                            "discount": 0.0,
+                            "final_price": 4.2
+                        }
+                    ],
+                    "total_value": 1442.5
+                },
+                "letter_text": "PURCHASE ORDER\n\nOrder Reference: PO-487368\nWorkflow Reference: WF-0E493F\nDate: 2026-07-03\nBuyer: MegaMart Online\nSupplier: FreshFizz Consumer Products\n\nItems:\n1. SKU: SODA-001 - Qty: 150 @ $1.44/unit (Subtotal: $216.00)\n2. SKU: CHIP-001 - Qty: 150 @ $2.11/unit (Subtotal: $316.50)\n3. SKU: COOK-001 - Qty: 80 @ $3.50/unit (Subtotal: $280.00)\n4. SKU: JUIC-001 - Qty: 150 @ $4.20/unit (Subtotal: $630.00)\n\nTotal PO Value: $1442.50\n\nPayment Terms: Net 30 days.\nShipping Terms: FOB Origin."
+            },
+            {
+                "id": "INV-CE2ED1",
+                "type": "Invoice",
+                "created_at": "2026-07-03T11:29:57.501698",
+                "created_by": "Supplier",
+                "content": {
+                    "invoice_id": "INV-CE2ED1",
+                    "total_value": 1442.5
+                },
+                "letter_text": "COMMERCIAL INVOICE\n\nInvoice Reference: INV-CE2ED1\nPurchase Order Reference: PO-487368\nDate: 2026-07-03\nRemit To: FreshFizz Consumer Products\nBill To: MegaMart Online\n\nItems Invoiced:\n1. SKU: SODA-001 - Qty: 150 @ $1.44/unit (Subtotal: $216.00)\n2. SKU: CHIP-001 - Qty: 150 @ $2.11/unit (Subtotal: $316.50)\n3. SKU: COOK-001 - Qty: 80 @ $3.50/unit (Subtotal: $280.00)\n4. SKU: JUIC-001 - Qty: 150 @ $4.20/unit (Subtotal: $630.00)\n\nTotal Amount Due: $1442.50\n\nPlease remit payment via ACH transfer within 30 days."
+            },
+            {
+                "id": "DO-0E292A",
+                "type": "DO",
+                "created_at": "2026-07-03T11:29:57.503104",
+                "created_by": "Supplier",
+                "content": {
+                    "delivery_id": "DO-0E292A"
+                },
+                "letter_text": "DELIVERY ORDER / PACKING SLIP\n\nDelivery Reference: DO-0E292A\nAssociated PO: PO-487368\nCarrier: Standard CPG Carrier\nShip To: MegaMart Fulfillment Center\nShip From: FreshFizz Distribution Hub\n\nItems Scheduled for Dispatch:\n1. SKU: SODA-001 - Dispatch Qty: 150 units (Estimated Lead Time: 2 days)\n2. SKU: CHIP-001 - Dispatch Qty: 150 units (Estimated Lead Time: 3 days)\n3. SKU: COOK-001 - Dispatch Qty: 80 units (Estimated Lead Time: 5 days)\n4. SKU: JUIC-001 - Dispatch Qty: 150 units (Estimated Lead Time: 2 days)\n\nGoods received in good condition signature required."
+            }
+        ],
+        "summary": "Completed negotiation session WF-0E493F for a total order value of $1442.50. Acquired CPG inventory replenishment for MegaMart Online: 150x SODA-001, 150x CHIP-001, 80x COOK-001, 150x JUIC-001. Supplier accepted buyer discounts (3-5%) on volume lines."
+    },
+    {
+        "workflow_id": "WF-3A605C",
+        "start_time": "2026-07-03T11:38:52.134407",
+        "end_time": "2026-07-03T11:39:33.581803",
+        "documents": [
+            {
+                "id": "DOC-E0B18E",
+                "type": "MRQ",
+                "created_at": "2026-07-03T11:38:53.838588",
+                "created_by": "Buyer",
+                "content": {
+                    "workflow_id": "WF-3A605C",
+                    "quote_id": "DOC-E0B18E",
+                    "created_at": "2026-07-03T11:38:53.838527",
+                    "buyer": "MegaMart Online",
+                    "supplier": "FreshFizz Consumer Products",
+                    "items": [
+                        {
+                            "sku": "SODA-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 0,
+                            "requested_price": 1.5,
+                            "quoted_price": 0.0,
+                            "discount": 0.0,
+                            "final_price": 0.0,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "CHIP-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 0,
+                            "requested_price": 2.2,
+                            "quoted_price": 0.0,
+                            "discount": 0.0,
+                            "final_price": 0.0,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "COOK-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 0,
+                            "requested_price": 3.5,
+                            "quoted_price": 0.0,
+                            "discount": 0.0,
+                            "final_price": 0.0,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "JUIC-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 0,
+                            "requested_price": 4.2,
+                            "quoted_price": 0.0,
+                            "discount": 0.0,
+                            "final_price": 0.0,
+                            "accepted": true
+                        }
+                    ],
+                    "status": "SENT",
+                    "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nI hope this letter finds you well. MegaMart Online is looking to restock our CPG product selection for the upcoming summer season. Based on our market analytics and current inventory levels, we would like to request a fulfillment proposal and price quote for the following products:\n- FizzCola Classic (SODA-001): 200 units\n- CrunchySalt Potato Chips (CHIP-001): 150 units\n- ChocoDelight Cookies (COOK-001): 100 units\n- PureOrange Juice (JUIC-001): 80 units\n\nPlease review your stock levels and let us know your standard lead times, minimum order requirements, and any bulk purchase terms that might apply to this order. We look forward to establishing a mutually beneficial supply relationship.\n\nBest regards,\n\nProcurement Director\nMegaMart Online"
+                },
+                "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nI hope this letter finds you well. MegaMart Online is looking to restock our CPG product selection for the upcoming summer season. Based on our market analytics and current inventory levels, we would like to request a fulfillment proposal and price quote for the following products:\n- FizzCola Classic (SODA-001): 200 units\n- CrunchySalt Potato Chips (CHIP-001): 150 units\n- ChocoDelight Cookies (COOK-001): 100 units\n- PureOrange Juice (JUIC-001): 80 units\n\nPlease review your stock levels and let us know your standard lead times, minimum order requirements, and any bulk purchase terms that might apply to this order. We look forward to establishing a mutually beneficial supply relationship.\n\nBest regards,\n\nProcurement Director\nMegaMart Online"
+            },
+            {
+                "id": "DOC-4F022E",
+                "type": "Proposal",
+                "created_at": "2026-07-03T11:38:56.285297",
+                "created_by": "Supplier",
+                "content": {
+                    "workflow_id": "WF-3A605C",
+                    "quote_id": "DOC-4F022E",
+                    "created_at": "2026-07-03T11:38:56.285225",
+                    "buyer": "MegaMart Online",
+                    "supplier": "FreshFizz Consumer Products",
+                    "items": [
+                        {
+                            "sku": "SODA-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 1.5,
+                            "quoted_price": 1.5,
+                            "discount": 0.0,
+                            "final_price": 1.5,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "CHIP-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 2.2,
+                            "quoted_price": 2.2,
+                            "discount": 0.0,
+                            "final_price": 2.2,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "COOK-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 3.5,
+                            "quoted_price": 3.5,
+                            "discount": 0.0,
+                            "final_price": 3.5,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "JUIC-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 4.2,
+                            "quoted_price": 4.2,
+                            "discount": 0.0,
+                            "final_price": 4.2,
+                            "accepted": true
+                        }
+                    ],
+                    "status": "SENT",
+                    "letter_text": "Dear MegaMart Online Procurement Team,\n\nThank you for your Material Request Quote. We appreciate the opportunity to partner with MegaMart Online for your seasonal retail inventory replenishment.\n\nWe have verified our stock levels at our FreshFizz main distribution center. I am pleased to confirm that we have full inventory availability for all requested items and can fulfill 100% of your requested quantities:\n- FizzCola Classic (SODA-001): 200 units @ $1.50/unit\n- CrunchySalt Potato Chips (CHIP-001): 150 units @ $2.20/unit\n- ChocoDelight Cookies (COOK-001): 100 units @ $3.50/unit\n- PureOrange Juice (JUIC-001): 80 units @ $4.20/unit\n\nOur estimated lead time for packing and shipping is 3 business days from receiving your official Purchase Order. Please let us know if this proposal meets your timeline, so we can lock in the shipment slots.\n\nSincerely yours,\n\nCommercial Sales Director\nFreshFizz Consumer Products"
+                },
+                "letter_text": "Dear MegaMart Online Procurement Team,\n\nThank you for your Material Request Quote. We appreciate the opportunity to partner with MegaMart Online for your seasonal retail inventory replenishment.\n\nWe have verified our stock levels at our FreshFizz main distribution center. I am pleased to confirm that we have full inventory availability for all requested items and can fulfill 100% of your requested quantities:\n- FizzCola Classic (SODA-001): 200 units @ $1.50/unit\n- CrunchySalt Potato Chips (CHIP-001): 150 units @ $2.20/unit\n- ChocoDelight Cookies (COOK-001): 100 units @ $3.50/unit\n- PureOrange Juice (JUIC-001): 80 units @ $4.20/unit\n\nOur estimated lead time for packing and shipping is 3 business days from receiving your official Purchase Order. Please let us know if this proposal meets your timeline, so we can lock in the shipment slots.\n\nSincerely yours,\n\nCommercial Sales Director\nFreshFizz Consumer Products"
+            },
+            {
+                "id": "DOC-46B554",
+                "type": "CounterOffer",
+                "created_at": "2026-07-03T11:39:09.057966",
+                "created_by": "Buyer",
+                "content": {
+                    "workflow_id": "WF-3A605C",
+                    "quote_id": "DOC-46B554",
+                    "created_at": "2026-07-03T11:39:09.057892",
+                    "buyer": "MegaMart Online",
+                    "supplier": "FreshFizz Consumer Products",
+                    "items": [
+                        {
+                            "sku": "SODA-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 1.5,
+                            "quoted_price": 1.5,
+                            "discount": 0.04,
+                            "final_price": 1.44,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "CHIP-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 2.2,
+                            "quoted_price": 2.2,
+                            "discount": 0.04,
+                            "final_price": 2.11,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "COOK-001",
+                            "requested_quantity": 80,
+                            "quoted_quantity": 80,
+                            "requested_price": 3.5,
+                            "quoted_price": 3.5,
+                            "discount": 0.0,
+                            "final_price": 3.5,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "JUIC-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 4.2,
+                            "quoted_price": 4.2,
+                            "discount": 0.0,
+                            "final_price": 4.2,
+                            "accepted": true
+                        }
+                    ],
+                    "status": "SENT",
+                    "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nThank you for providing the initial fulfillment proposal and confirming inventory availability. We are pleased to see that you can fulfill our requested quantities for most items.\n\nUpon reviewing the quoted prices, our finance team has requested that we seek a discount on our highest-volume lines to align with our seasonal budget caps. Specifically, we are proposing a 4% discount on FizzCola Classic (SODA-001) and CrunchySalt Potato Chips (CHIP-001). Additionally, we have adjusted the requested quantity for ChocoDelight Cookies (COOK-001) down to 80 units to better balance our stock levels.\n\nWe believe this counter-offer is fair and aligns with standard volume discount agreements in the industry. If these terms are acceptable, we are prepared to issue a formal Purchase Order immediately.\n\nSincerely,\n\nProcurement Director\nMegaMart Online"
+                },
+                "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nThank you for providing the initial fulfillment proposal and confirming inventory availability. We are pleased to see that you can fulfill our requested quantities for most items.\n\nUpon reviewing the quoted prices, our finance team has requested that we seek a discount on our highest-volume lines to align with our seasonal budget caps. Specifically, we are proposing a 4% discount on FizzCola Classic (SODA-001) and CrunchySalt Potato Chips (CHIP-001). Additionally, we have adjusted the requested quantity for ChocoDelight Cookies (COOK-001) down to 80 units to better balance our stock levels.\n\nWe believe this counter-offer is fair and aligns with standard volume discount agreements in the industry. If these terms are acceptable, we are prepared to issue a formal Purchase Order immediately.\n\nSincerely,\n\nProcurement Director\nMegaMart Online"
+            },
+            {
+                "id": "DOC-601762",
+                "type": "FinalLetter",
+                "created_at": "2026-07-03T11:39:22.403231",
+                "created_by": "Supplier",
+                "content": {
+                    "workflow_id": "WF-3A605C",
+                    "quote_id": "DOC-601762",
+                    "created_at": "2026-07-03T11:39:22.403181",
+                    "buyer": "MegaMart Online",
+                    "supplier": "FreshFizz Consumer Products",
+                    "items": [
+                        {
+                            "sku": "SODA-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 1.5,
+                            "quoted_price": 1.5,
+                            "discount": 0.04,
+                            "final_price": 1.44,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "CHIP-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 2.2,
+                            "quoted_price": 2.2,
+                            "discount": 0.0,
+                            "final_price": 2.2,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "COOK-001",
+                            "requested_quantity": 80,
+                            "quoted_quantity": 80,
+                            "requested_price": 3.5,
+                            "quoted_price": 3.5,
+                            "discount": 0.0,
+                            "final_price": 3.5,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "JUIC-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 4.2,
+                            "quoted_price": 4.2,
+                            "discount": 0.0,
+                            "final_price": 4.2,
+                            "accepted": true
+                        }
+                    ],
+                    "status": "SENT",
+                    "letter_text": "Dear MegaMart Online Procurement Team,\n\nThank you for your feedback and counter-proposal. We appreciate your transparency regarding your seasonal budget constraints. \n\nAfter reviewing the proposal with our commercial pricing committee, we have approved the proposed 4% discount on FizzCola Classic (SODA-001), lowering its unit price to $1.44. However, due to tight margins and rising supply costs for raw potatoes, we are UNABLE to approve the discount on CrunchySalt Potato Chips (CHIP-001). Its unit price must remain at the original quoted rate of $2.20.\n\nWe accept the quantity adjustment for ChocoDelight Cookies (COOK-001) down to 80 units. Please review these final pricing terms. If you accept this final proposal, you may proceed with submitting your PO.\n\nWith best regards,\n\nCommercial Sales Director\nFreshFizz Consumer Products"
+                },
+                "letter_text": "Dear MegaMart Online Procurement Team,\n\nThank you for your feedback and counter-proposal. We appreciate your transparency regarding your seasonal budget constraints. \n\nAfter reviewing the proposal with our commercial pricing committee, we have approved the proposed 4% discount on FizzCola Classic (SODA-001), lowering its unit price to $1.44. However, due to tight margins and rising supply costs for raw potatoes, we are UNABLE to approve the discount on CrunchySalt Potato Chips (CHIP-001). Its unit price must remain at the original quoted rate of $2.20.\n\nWe accept the quantity adjustment for ChocoDelight Cookies (COOK-001) down to 80 units. Please review these final pricing terms. If you accept this final proposal, you may proceed with submitting your PO.\n\nWith best regards,\n\nCommercial Sales Director\nFreshFizz Consumer Products"
+            },
+            {
+                "id": "PO-7CBE67",
+                "type": "PO",
+                "created_at": "2026-07-03T11:39:32.600363",
+                "created_by": "Buyer",
+                "content": {
+                    "po_id": "PO-7CBE67",
+                    "items": [
+                        {
+                            "sku": "SODA-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 1.5,
+                            "quoted_price": 1.5,
+                            "discount": 0.04,
+                            "final_price": 1.44,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "CHIP-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 2.2,
+                            "quoted_price": 2.2,
+                            "discount": 0.0,
+                            "final_price": 2.2,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "COOK-001",
+                            "requested_quantity": 80,
+                            "quoted_quantity": 80,
+                            "requested_price": 3.5,
+                            "quoted_price": 3.5,
+                            "discount": 0.0,
+                            "final_price": 3.5,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "JUIC-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 4.2,
+                            "quoted_price": 4.2,
+                            "discount": 0.0,
+                            "final_price": 4.2,
+                            "accepted": true
+                        }
+                    ],
+                    "total_value": 1456.0
+                },
+                "letter_text": "PURCHASE ORDER\n\nOrder Reference: PO-7CBE67\nWorkflow Reference: WF-3A605C\nDate: 2026-07-03\nBuyer: MegaMart Online\nSupplier: FreshFizz Consumer Products\n\nItems:\n1. SKU: SODA-001 - Qty: 150 @ $1.44/unit (Subtotal: $216.00)\n2. SKU: CHIP-001 - Qty: 150 @ $2.20/unit (Subtotal: $330.00)\n3. SKU: COOK-001 - Qty: 80 @ $3.50/unit (Subtotal: $280.00)\n4. SKU: JUIC-001 - Qty: 150 @ $4.20/unit (Subtotal: $630.00)\n\nTotal PO Value: $1456.00\n\nPayment Terms: Net 30 days.\nShipping Terms: FOB Origin."
+            },
+            {
+                "id": "INV-0F9AAF",
+                "type": "Invoice",
+                "created_at": "2026-07-03T11:39:32.600426",
+                "created_by": "Supplier",
+                "content": {
+                    "invoice_id": "INV-0F9AAF",
+                    "total_value": 1456.0
+                },
+                "letter_text": "COMMERCIAL INVOICE\n\nInvoice Reference: INV-0F9AAF\nPurchase Order Reference: PO-7CBE67\nDate: 2026-07-03\nRemit To: FreshFizz Consumer Products\nBill To: MegaMart Online\n\nItems Invoiced:\n1. SKU: SODA-001 - Qty: 150 @ $1.44/unit (Subtotal: $216.00)\n2. SKU: CHIP-001 - Qty: 150 @ $2.20/unit (Subtotal: $330.00)\n3. SKU: COOK-001 - Qty: 80 @ $3.50/unit (Subtotal: $280.00)\n4. SKU: JUIC-001 - Qty: 150 @ $4.20/unit (Subtotal: $630.00)\n\nTotal Amount Due: $1456.00\n\nPlease remit payment via ACH transfer within 30 days."
+            },
+            {
+                "id": "DO-BADBCB",
+                "type": "DO",
+                "created_at": "2026-07-03T11:39:32.601910",
+                "created_by": "Supplier",
+                "content": {
+                    "delivery_id": "DO-BADBCB"
+                },
+                "letter_text": "DELIVERY ORDER / PACKING SLIP\n\nDelivery Reference: DO-BADBCB\nAssociated PO: PO-7CBE67\nCarrier: Standard CPG Carrier\nShip To: MegaMart Fulfillment Center\nShip From: FreshFizz Distribution Hub\n\nItems Scheduled for Dispatch:\n1. SKU: SODA-001 - Dispatch Qty: 150 units (Estimated Lead Time: 2 days)\n2. SKU: CHIP-001 - Dispatch Qty: 150 units (Estimated Lead Time: 3 days)\n3. SKU: COOK-001 - Dispatch Qty: 80 units (Estimated Lead Time: 5 days)\n4. SKU: JUIC-001 - Dispatch Qty: 150 units (Estimated Lead Time: 2 days)\n\nGoods received in good condition signature required."
+            }
+        ],
+        "summary": "# \ud83d\udcca High-Level Negotiation Report\n\n**Ref**: MegaMart-FreshFizz Procurement Sync\n\n## 1. Executive Summary\nThis negotiation session represents a replenishment cycle between **MegaMart Online** (Buyer) and **FreshFizz Consumer Products** (Supplier). Through cooperative agent-driven negotiation, the parties reached agreement on restocking key CPG lines. The human operator guided approvals at each outbound communication step, ensuring complete policy compliance.\n\n## 2. SKU-Level Negotiation Breakdown\nDuring Step 3, MegaMart requested a **4% discount** on volume products. FreshFizz accepted the terms on **SODA-001** but declined the discount on **CHIP-001** due to local ingredient costs. \n\nHere is how each SKU was resolved:\n\n| SKU | Status | Final Quantity | Unit Price | Notes |\n| :--- | :--- | :--- | :--- | :--- |\n| **SODA-001** | \u2705 ACCEPTED | 150 units | $1.44 | 4% off |\n| **CHIP-001** | \u2705 ACCEPTED | 150 units | $2.20 | Full Price |\n| **COOK-001** | \u2705 ACCEPTED | 80 units | $3.50 | Full Price |\n| **JUIC-001** | \u2705 ACCEPTED | 150 units | $4.20 | Full Price |\n\n## 3. Financial Summary\n* **Total Contract Value**: `$1,456.00`\n* **Negotiated Savings**: `$9.00`\n* **Net Payment Terms**: Net 30 days\n\n## 4. Shipping & Lead Times\nEstimated dispatch is **3 business days** from Purchase Order validation. Cargo will ship via Freight Carrier from the FreshFizz main distribution hub to the MegaMart fulfillment center."
+    },
+    {
+        "workflow_id": "WF-AEEDD7",
+        "start_time": "2026-07-03T11:48:47.464922",
+        "end_time": "2026-07-03T11:49:56.372944",
+        "documents": [
+            {
+                "id": "DOC-109E1B",
+                "type": "MRQ",
+                "created_at": "2026-07-03T11:48:49.274719",
+                "created_by": "Buyer",
+                "content": {
+                    "workflow_id": "WF-AEEDD7",
+                    "quote_id": "DOC-109E1B",
+                    "created_at": "2026-07-03T11:48:49.274654",
+                    "buyer": "MegaMart Online",
+                    "supplier": "FreshFizz Consumer Products",
+                    "items": [
+                        {
+                            "sku": "SODA-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 0,
+                            "requested_price": 1.5,
+                            "quoted_price": 0.0,
+                            "discount": 0.0,
+                            "final_price": 0.0,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "CHIP-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 0,
+                            "requested_price": 2.2,
+                            "quoted_price": 0.0,
+                            "discount": 0.0,
+                            "final_price": 0.0,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "COOK-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 0,
+                            "requested_price": 3.5,
+                            "quoted_price": 0.0,
+                            "discount": 0.0,
+                            "final_price": 0.0,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "JUIC-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 0,
+                            "requested_price": 4.2,
+                            "quoted_price": 0.0,
+                            "discount": 0.0,
+                            "final_price": 0.0,
+                            "accepted": true
+                        }
+                    ],
+                    "status": "SENT",
+                    "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nI hope this letter finds you well. MegaMart Online is looking to restock our CPG product selection for the upcoming summer season. Based on our market analytics and current inventory levels, we would like to request a fulfillment proposal and price quote for the following products:\n- FizzCola Classic (SODA-001): 200 units\n- CrunchySalt Potato Chips (CHIP-001): 150 units\n- ChocoDelight Cookies (COOK-001): 100 units\n- PureOrange Juice (JUIC-001): 80 units\n\nPlease review your stock levels and let us know your standard lead times, minimum order requirements, and any bulk purchase terms that might apply to this order. We look forward to establishing a mutually beneficial supply relationship.\n\nBest regards,\n\nProcurement Director\nMegaMart Online"
+                },
+                "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nI hope this letter finds you well. MegaMart Online is looking to restock our CPG product selection for the upcoming summer season. Based on our market analytics and current inventory levels, we would like to request a fulfillment proposal and price quote for the following products:\n- FizzCola Classic (SODA-001): 200 units\n- CrunchySalt Potato Chips (CHIP-001): 150 units\n- ChocoDelight Cookies (COOK-001): 100 units\n- PureOrange Juice (JUIC-001): 80 units\n\nPlease review your stock levels and let us know your standard lead times, minimum order requirements, and any bulk purchase terms that might apply to this order. We look forward to establishing a mutually beneficial supply relationship.\n\nBest regards,\n\nProcurement Director\nMegaMart Online"
+            },
+            {
+                "id": "DOC-C9BA0D",
+                "type": "Proposal",
+                "created_at": "2026-07-03T11:48:52.736553",
+                "created_by": "Supplier",
+                "content": {
+                    "workflow_id": "WF-AEEDD7",
+                    "quote_id": "DOC-C9BA0D",
+                    "created_at": "2026-07-03T11:48:52.736439",
+                    "buyer": "MegaMart Online",
+                    "supplier": "FreshFizz Consumer Products",
+                    "items": [
+                        {
+                            "sku": "SODA-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 1.5,
+                            "quoted_price": 1.5,
+                            "discount": 0.0,
+                            "final_price": 1.5,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "CHIP-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 2.2,
+                            "quoted_price": 2.2,
+                            "discount": 0.0,
+                            "final_price": 2.2,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "COOK-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 3.5,
+                            "quoted_price": 3.5,
+                            "discount": 0.0,
+                            "final_price": 3.5,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "JUIC-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 4.2,
+                            "quoted_price": 4.2,
+                            "discount": 0.0,
+                            "final_price": 4.2,
+                            "accepted": true
+                        }
+                    ],
+                    "status": "SENT",
+                    "letter_text": "Dear MegaMart Online Procurement Team,\n\nThank you for your Material Request Quote. We appreciate the opportunity to partner with MegaMart Online for your seasonal retail inventory replenishment.\n\nWe have verified our stock levels at our FreshFizz main distribution center. I am pleased to confirm that we have full inventory availability for all requested items and can fulfill 100% of your requested quantities:\n- FizzCola Classic (SODA-001): 200 units @ $1.50/unit\n- CrunchySalt Potato Chips (CHIP-001): 150 units @ $2.20/unit\n- ChocoDelight Cookies (COOK-001): 100 units @ $3.50/unit\n- PureOrange Juice (JUIC-001): 80 units @ $4.20/unit\n\nOur estimated lead time for packing and shipping is 3 business days from receiving your official Purchase Order. Please let us know if this proposal meets your timeline, so we can lock in the shipment slots.\n\nSincerely yours,\n\nCommercial Sales Director\nFreshFizz Consumer Products"
+                },
+                "letter_text": "Dear MegaMart Online Procurement Team,\n\nThank you for your Material Request Quote. We appreciate the opportunity to partner with MegaMart Online for your seasonal retail inventory replenishment.\n\nWe have verified our stock levels at our FreshFizz main distribution center. I am pleased to confirm that we have full inventory availability for all requested items and can fulfill 100% of your requested quantities:\n- FizzCola Classic (SODA-001): 200 units @ $1.50/unit\n- CrunchySalt Potato Chips (CHIP-001): 150 units @ $2.20/unit\n- ChocoDelight Cookies (COOK-001): 100 units @ $3.50/unit\n- PureOrange Juice (JUIC-001): 80 units @ $4.20/unit\n\nOur estimated lead time for packing and shipping is 3 business days from receiving your official Purchase Order. Please let us know if this proposal meets your timeline, so we can lock in the shipment slots.\n\nSincerely yours,\n\nCommercial Sales Director\nFreshFizz Consumer Products"
+            },
+            {
+                "id": "DOC-A9A554",
+                "type": "CounterOffer",
+                "created_at": "2026-07-03T11:49:04.997518",
+                "created_by": "Buyer",
+                "content": {
+                    "workflow_id": "WF-AEEDD7",
+                    "quote_id": "DOC-A9A554",
+                    "created_at": "2026-07-03T11:49:04.997441",
+                    "buyer": "MegaMart Online",
+                    "supplier": "FreshFizz Consumer Products",
+                    "items": [
+                        {
+                            "sku": "SODA-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 1.5,
+                            "quoted_price": 1.5,
+                            "discount": 0.04,
+                            "final_price": 1.44,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "CHIP-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 2.2,
+                            "quoted_price": 2.2,
+                            "discount": 0.04,
+                            "final_price": 2.11,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "COOK-001",
+                            "requested_quantity": 80,
+                            "quoted_quantity": 80,
+                            "requested_price": 3.5,
+                            "quoted_price": 3.5,
+                            "discount": 0.0,
+                            "final_price": 3.5,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "JUIC-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 4.2,
+                            "quoted_price": 4.2,
+                            "discount": 0.0,
+                            "final_price": 4.2,
+                            "accepted": true
+                        }
+                    ],
+                    "status": "SENT",
+                    "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nThank you for providing the initial fulfillment proposal and confirming inventory availability. We are pleased to see that you can fulfill our requested quantities for most items.\n\nUpon reviewing the quoted prices, our finance team has requested that we seek a discount on our highest-volume lines to align with our seasonal budget caps. Specifically, we are proposing a 4% discount on FizzCola Classic (SODA-001) and CrunchySalt Potato Chips (CHIP-001). Additionally, we have adjusted the requested quantity for ChocoDelight Cookies (COOK-001) down to 80 units to better balance our stock levels.\n\nWe believe this counter-offer is fair and aligns with standard volume discount agreements in the industry. If these terms are acceptable, we are prepared to issue a formal Purchase Order immediately.\n\nSincerely,\n\nProcurement Director\nMegaMart Online"
+                },
+                "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nThank you for providing the initial fulfillment proposal and confirming inventory availability. We are pleased to see that you can fulfill our requested quantities for most items.\n\nUpon reviewing the quoted prices, our finance team has requested that we seek a discount on our highest-volume lines to align with our seasonal budget caps. Specifically, we are proposing a 4% discount on FizzCola Classic (SODA-001) and CrunchySalt Potato Chips (CHIP-001). Additionally, we have adjusted the requested quantity for ChocoDelight Cookies (COOK-001) down to 80 units to better balance our stock levels.\n\nWe believe this counter-offer is fair and aligns with standard volume discount agreements in the industry. If these terms are acceptable, we are prepared to issue a formal Purchase Order immediately.\n\nSincerely,\n\nProcurement Director\nMegaMart Online"
+            },
+            {
+                "id": "DOC-C5B34A",
+                "type": "FinalLetter",
+                "created_at": "2026-07-03T11:49:15.285940",
+                "created_by": "Supplier",
+                "content": {
+                    "workflow_id": "WF-AEEDD7",
+                    "quote_id": "DOC-C5B34A",
+                    "created_at": "2026-07-03T11:49:15.285822",
+                    "buyer": "MegaMart Online",
+                    "supplier": "FreshFizz Consumer Products",
+                    "items": [
+                        {
+                            "sku": "SODA-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 1.5,
+                            "quoted_price": 1.5,
+                            "discount": 0.04,
+                            "final_price": 1.44,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "CHIP-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 2.3,
+                            "quoted_price": 2.3,
+                            "discount": 0.0,
+                            "final_price": 2.3,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "COOK-001",
+                            "requested_quantity": 80,
+                            "quoted_quantity": 80,
+                            "requested_price": 2.75,
+                            "quoted_price": 2.75,
+                            "discount": 0.0,
+                            "final_price": 2.75,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "JUIC-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 4.2,
+                            "quoted_price": 4.2,
+                            "discount": 0.0,
+                            "final_price": 4.2,
+                            "accepted": true
+                        }
+                    ],
+                    "status": "SENT",
+                    "letter_text": "Dear MegaMart Online Procurement Team,\n\nThank you for your feedback and counter-proposal. We appreciate your transparency regarding your seasonal budget constraints. \n\nAfter reviewing the proposal with our commercial pricing committee, we have approved the proposed 4% discount on FizzCola Classic (SODA-001), lowering its unit price to $1.44. However, due to tight margins and rising supply costs for raw potatoes, we are UNABLE to approve the discount on CrunchySalt Potato Chips (CHIP-001). Its unit price must remain at the original quoted rate of $2.20.\n\nWe accept the quantity adjustment for ChocoDelight Cookies (COOK-001) down to 80 units. Please review these final pricing terms. If you accept this final proposal, you may proceed with submitting your PO.\n\nWith best regards,\n\nCommercial Sales Director\nFreshFizz Consumer Products"
+                },
+                "letter_text": "Dear MegaMart Online Procurement Team,\n\nThank you for your feedback and counter-proposal. We appreciate your transparency regarding your seasonal budget constraints. \n\nAfter reviewing the proposal with our commercial pricing committee, we have approved the proposed 4% discount on FizzCola Classic (SODA-001), lowering its unit price to $1.44. However, due to tight margins and rising supply costs for raw potatoes, we are UNABLE to approve the discount on CrunchySalt Potato Chips (CHIP-001). Its unit price must remain at the original quoted rate of $2.20.\n\nWe accept the quantity adjustment for ChocoDelight Cookies (COOK-001) down to 80 units. Please review these final pricing terms. If you accept this final proposal, you may proceed with submitting your PO.\n\nWith best regards,\n\nCommercial Sales Director\nFreshFizz Consumer Products"
+            },
+            {
+                "id": "DOC-865C54",
+                "type": "FinalQuote",
+                "created_at": "2026-07-03T11:49:48.237083",
+                "created_by": "Buyer",
+                "content": {
+                    "workflow_id": "WF-AEEDD7",
+                    "quote_id": "DOC-865C54",
+                    "created_at": "2026-07-03T11:49:48.236994",
+                    "buyer": "MegaMart Online",
+                    "supplier": "FreshFizz Consumer Products",
+                    "items": [
+                        {
+                            "sku": "SODA-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 1.5,
+                            "quoted_price": 1.5,
+                            "discount": 0.04,
+                            "final_price": 1.44,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "CHIP-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 2.3,
+                            "quoted_price": 2.3,
+                            "discount": 0.0,
+                            "final_price": 2.3,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "COOK-001",
+                            "requested_quantity": 80,
+                            "quoted_quantity": 80,
+                            "requested_price": 2.75,
+                            "quoted_price": 2.75,
+                            "discount": 0.0,
+                            "final_price": 2.75,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "JUIC-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 4.2,
+                            "quoted_price": 4.2,
+                            "discount": 0.0,
+                            "final_price": 4.2,
+                            "accepted": true
+                        }
+                    ],
+                    "status": "SENT",
+                    "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nWe have received your final pricing counter-proposal (Ref: FinalLetter). We accept FizzCola Classic (SODA-001) at the negotiated 4% discounted unit price of $1.44. We also accept your pricing of $2.20 for CrunchySalt Potato Chips (CHIP-001) without the discount.\n\nBased on these terms, we are sending this final quote approval. Please proceed with generating the official Purchase Order, Commercial Invoice, and Delivery Orders for our logistics teams.\n\nSincerely,\n\nProcurement Director\nMegaMart Online"
+                },
+                "letter_text": "Dear FreshFizz Commercial Sales Team,\n\nWe have received your final pricing counter-proposal (Ref: FinalLetter). We accept FizzCola Classic (SODA-001) at the negotiated 4% discounted unit price of $1.44. We also accept your pricing of $2.20 for CrunchySalt Potato Chips (CHIP-001) without the discount.\n\nBased on these terms, we are sending this final quote approval. Please proceed with generating the official Purchase Order, Commercial Invoice, and Delivery Orders for our logistics teams.\n\nSincerely,\n\nProcurement Director\nMegaMart Online"
+            },
+            {
+                "id": "PO-DF257F",
+                "type": "PO",
+                "created_at": "2026-07-03T11:49:55.752867",
+                "created_by": "Buyer",
+                "content": {
+                    "po_id": "PO-DF257F",
+                    "items": [
+                        {
+                            "sku": "SODA-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 1.5,
+                            "quoted_price": 1.5,
+                            "discount": 0.04,
+                            "final_price": 1.44,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "CHIP-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 2.3,
+                            "quoted_price": 2.3,
+                            "discount": 0.0,
+                            "final_price": 2.3,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "COOK-001",
+                            "requested_quantity": 80,
+                            "quoted_quantity": 80,
+                            "requested_price": 2.75,
+                            "quoted_price": 2.75,
+                            "discount": 0.0,
+                            "final_price": 2.75,
+                            "accepted": true
+                        },
+                        {
+                            "sku": "JUIC-001",
+                            "requested_quantity": 150,
+                            "quoted_quantity": 150,
+                            "requested_price": 4.2,
+                            "quoted_price": 4.2,
+                            "discount": 0.0,
+                            "final_price": 4.2,
+                            "accepted": true
+                        }
+                    ],
+                    "total_value": 1411.0
+                },
+                "letter_text": "PURCHASE ORDER\n\nOrder Reference: PO-DF257F\nWorkflow Reference: WF-AEEDD7\nDate: 2026-07-03\nBuyer: MegaMart Online\nSupplier: FreshFizz Consumer Products\n\nItems:\n1. SKU: SODA-001 - Qty: 150 @ $1.44/unit (Subtotal: $216.00)\n2. SKU: CHIP-001 - Qty: 150 @ $2.30/unit (Subtotal: $345.00)\n3. SKU: COOK-001 - Qty: 80 @ $2.75/unit (Subtotal: $220.00)\n4. SKU: JUIC-001 - Qty: 150 @ $4.20/unit (Subtotal: $630.00)\n\nTotal PO Value: $1411.00\n\nPayment Terms: Net 30 days.\nShipping Terms: FOB Origin."
+            },
+            {
+                "id": "INV-C5A823",
+                "type": "Invoice",
+                "created_at": "2026-07-03T11:49:55.752955",
+                "created_by": "Supplier",
+                "content": {
+                    "invoice_id": "INV-C5A823",
+                    "total_value": 1411.0
+                },
+                "letter_text": "COMMERCIAL INVOICE\n\nInvoice Reference: INV-C5A823\nPurchase Order Reference: PO-DF257F\nDate: 2026-07-03\nRemit To: FreshFizz Consumer Products\nBill To: MegaMart Online\n\nItems Invoiced:\n1. SKU: SODA-001 - Qty: 150 @ $1.44/unit (Subtotal: $216.00)\n2. SKU: CHIP-001 - Qty: 150 @ $2.30/unit (Subtotal: $345.00)\n3. SKU: COOK-001 - Qty: 80 @ $2.75/unit (Subtotal: $220.00)\n4. SKU: JUIC-001 - Qty: 150 @ $4.20/unit (Subtotal: $630.00)\n\nTotal Amount Due: $1411.00\n\nPlease remit payment via ACH transfer within 30 days."
+            },
+            {
+                "id": "DO-0A7977",
+                "type": "DO",
+                "created_at": "2026-07-03T11:49:55.754511",
+                "created_by": "Supplier",
+                "content": {
+                    "delivery_id": "DO-0A7977"
+                },
+                "letter_text": "DELIVERY ORDER / PACKING SLIP\n\nDelivery Reference: DO-0A7977\nAssociated PO: PO-DF257F\nCarrier: Standard CPG Carrier\nShip To: MegaMart Fulfillment Center\nShip From: FreshFizz Distribution Hub\n\nItems Scheduled for Dispatch:\n1. SKU: SODA-001 - Dispatch Qty: 150 units (Estimated Lead Time: 2 days)\n2. SKU: CHIP-001 - Dispatch Qty: 150 units (Estimated Lead Time: 3 days)\n3. SKU: COOK-001 - Dispatch Qty: 80 units (Estimated Lead Time: 5 days)\n4. SKU: JUIC-001 - Dispatch Qty: 150 units (Estimated Lead Time: 2 days)\n\nGoods received in good condition signature required."
+            }
+        ],
+        "summary": "# \ud83d\udcca High-Level Negotiation Report\n\n**Ref**: MegaMart-FreshFizz Procurement Sync\n\n## 1. Executive Summary\nThis negotiation session represents a replenishment cycle between **MegaMart Online** (Buyer) and **FreshFizz Consumer Products** (Supplier). Through cooperative agent-driven negotiation, the parties reached agreement on restocking key CPG lines. The human operator guided approvals at each outbound communication step, ensuring complete policy compliance.\n\n## 2. SKU-Level Negotiation Breakdown\nDuring Step 3, MegaMart requested a **4% discount** on volume products. FreshFizz accepted the terms on **SODA-001** but declined the discount on **CHIP-001** due to local ingredient costs. \n\nHere is how each SKU was resolved:\n\n| SKU | Status | Final Quantity | Unit Price | Notes |\n| :--- | :--- | :--- | :--- | :--- |\n| **SODA-001** | \u2705 ACCEPTED | 150 units | $1.44 | 4% off |\n| **CHIP-001** | \u2705 ACCEPTED | 150 units | $2.30 | Full Price |\n| **COOK-001** | \u2705 ACCEPTED | 80 units | $2.75 | Full Price |\n| **JUIC-001** | \u2705 ACCEPTED | 150 units | $4.20 | Full Price |\n\n## 3. Financial Summary\n* **Total Contract Value**: `$1,411.00`\n* **Negotiated Savings**: `$9.00`\n* **Net Payment Terms**: Net 30 days\n\n## 4. Shipping & Lead Times\nEstimated dispatch is **3 business days** from Purchase Order validation. Cargo will ship via Freight Carrier from the FreshFizz main distribution hub to the MegaMart fulfillment center."
+    }
+]

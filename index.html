@@ -262,6 +262,7 @@
     .card:nth-child(13) { animation-delay: 0.65s; }
     .card:nth-child(14) { animation-delay: 0.70s; }
     .card:nth-child(15) { animation-delay: 0.75s; }
+    .card:nth-child(16) { animation-delay: 0.80s; }
 
     .card-header {
       display: flex;
@@ -324,6 +325,30 @@
     .tag-teal   { background: #f0fdfa; color: #0f766e; border: 1px solid #99f6e4; }
     .tag-red    { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
     .tag-yellow { background: #fefce8; color: #854d0e; border: 1px solid #fef08a; }
+    .tag-working { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; font-weight: 600; }
+
+    /* ── CURRENTLY WORKING BADGE ── */
+    .working-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(234,88,12,0.08);
+      border: 1px solid rgba(234,88,12,0.25);
+      border-radius: 100px;
+      padding: 3px 10px;
+      font-size: 10px;
+      font-weight: 600;
+      color: #c2410c;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+    .working-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #ea580c;
+      animation: pulse-dot 1.5s infinite;
+    }
 
     .card-link {
       display: inline-flex;
@@ -415,7 +440,7 @@
 
     <!-- ══════════════ STATS ══════════════ -->
     <div class="stats-bar">
-      <div class="stat"><div class="stat-number">14</div><div class="stat-label">Projects</div></div>
+      <div class="stat"><div class="stat-number">15</div><div class="stat-label">Projects</div></div>
       <div class="stat"><div class="stat-number">6+</div><div class="stat-label">AI Models</div></div>
       <div class="stat"><div class="stat-number">5</div><div class="stat-label">LLM Providers</div></div>
       <div class="stat"><div class="stat-number">∞</div><div class="stat-label">Ideas</div></div>
@@ -747,6 +772,33 @@
           <span class="tag tag-orange">DOCX</span>
         </div>
         <a class="card-link" href="https://github.com/ParagJn/parag-engineering-lab/tree/Lineage/md-to-docx" target="_blank" rel="noopener">
+          View project
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+
+      <!-- 15. Agentic Procurement -->
+      <div class="card">
+        <div class="card-stripe" style="background: linear-gradient(180deg,#34d399,#2563eb)"></div>
+        <div class="card-header">
+          <div class="card-icon icon-teal">🤝</div>
+          <div>
+            <div class="card-title">Agentic Procurement</div>
+            <div class="card-category">Enterprise Agentic AI</div>
+            <div class="working-badge"><span class="working-dot"></span>Currently Working</div>
+          </div>
+        </div>
+        <p class="card-description">
+          Enterprise B2B procurement simulator modeled after SAP/Oracle workflows. Two adversarial AI agents — a Buyer (Gemini) and a Supplier (Claude) — negotiate a full 6-step procurement lifecycle with human-in-the-loop governance at every outbound document.
+        </p>
+        <div class="card-tags">
+          <span class="tag tag-green">Gemini</span>
+          <span class="tag tag-purple">Claude</span>
+          <span class="tag tag-orange">React</span>
+          <span class="tag tag-teal">FastAPI</span>
+          <span class="tag tag-blue">HITL</span>
+        </div>
+        <a class="card-link" href="https://github.com/ParagJn/parag-engineering-lab/tree/Lineage/Agentic-Procurement" target="_blank" rel="noopener">
           View project
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </a>

@@ -1,0 +1,182 @@
+[
+    {
+        "sku": "SODA-001",
+        "name": "FizzCola Classic",
+        "category": "Soda",
+        "price": 1.5,
+        "lead_time": 2,
+        "moq": 100,
+        "description": "Classic sparkling cola beverage."
+    },
+    {
+        "sku": "SODA-002",
+        "name": "DietFizz Lemon-Lime",
+        "category": "Soda",
+        "price": 1.6,
+        "lead_time": 2,
+        "moq": 100,
+        "description": "Zero calorie lemon-lime soda."
+    },
+    {
+        "sku": "SODA-003",
+        "name": "WildCherry Pop",
+        "category": "Soda",
+        "price": 1.7,
+        "lead_time": 2,
+        "moq": 100,
+        "description": "Sweet wild cherry flavored soda."
+    },
+    {
+        "sku": "CHIP-001",
+        "name": "CrunchySalt Potato Chips",
+        "category": "Chips",
+        "price": 2.2,
+        "lead_time": 3,
+        "moq": 50,
+        "description": "Crispy salted potato chips."
+    },
+    {
+        "sku": "CHIP-002",
+        "name": "SpicyBarbecue Crisps",
+        "category": "Chips",
+        "price": 2.4,
+        "lead_time": 3,
+        "moq": 50,
+        "description": "Smokey and spicy barbecue chips."
+    },
+    {
+        "sku": "CHIP-003",
+        "name": "CheddarSourCream Crisps",
+        "category": "Chips",
+        "price": 2.5,
+        "lead_time": 3,
+        "moq": 50,
+        "description": "Creamy cheddar and sour cream potato chips."
+    },
+    {
+        "sku": "SNAK-001",
+        "name": "ProteinPower Bar",
+        "category": "Snacks",
+        "price": 2.8,
+        "lead_time": 4,
+        "moq": 80,
+        "description": "High protein chocolate peanut butter bar."
+    },
+    {
+        "sku": "SNAK-002",
+        "name": "VeggieStraws Original",
+        "category": "Snacks",
+        "price": 3.0,
+        "lead_time": 4,
+        "moq": 60,
+        "description": "Crispy vegetable straws lightly salted."
+    },
+    {
+        "sku": "SNAK-003",
+        "name": "RoastedAlmonds Salted",
+        "category": "Snacks",
+        "price": 4.8,
+        "lead_time": 4,
+        "moq": 50,
+        "description": "Premium roasted almonds with sea salt."
+    },
+    {
+        "sku": "ENER-001",
+        "name": "BoltEnergy Original",
+        "category": "Energy Drinks",
+        "price": 2.9,
+        "lead_time": 3,
+        "moq": 120,
+        "description": "High energy drink with taurine and caffeine."
+    },
+    {
+        "sku": "ENER-002",
+        "name": "BoltEnergy BlueRaspberry",
+        "category": "Energy Drinks",
+        "price": 3.1,
+        "lead_time": 3,
+        "moq": 120,
+        "description": "Sugar-free blue raspberry energy drink."
+    },
+    {
+        "sku": "ENER-003",
+        "name": "BoltEnergy Citrus Blend",
+        "category": "Energy Drinks",
+        "price": 3.0,
+        "lead_time": 3,
+        "moq": 120,
+        "description": "Tangy citrus blend energy drink."
+    },
+    {
+        "sku": "COOK-001",
+        "name": "ChocoDelight Cookies",
+        "category": "Cookies",
+        "price": 3.5,
+        "lead_time": 5,
+        "moq": 50,
+        "description": "Double chocolate chip cookies."
+    },
+    {
+        "sku": "COOK-002",
+        "name": "OatsNHoney Biscuits",
+        "category": "Cookies",
+        "price": 2.8,
+        "lead_time": 5,
+        "moq": 50,
+        "description": "Wholesome oats and sweet honey cookies."
+    },
+    {
+        "sku": "COOK-003",
+        "name": "VanillaSwirl Sandwiches",
+        "category": "Cookies",
+        "price": 3.2,
+        "lead_time": 5,
+        "moq": 50,
+        "description": "Creamy vanilla filling sandwich cookies."
+    },
+    {
+        "sku": "CRAC-001",
+        "name": "SeaSalt Crackers",
+        "category": "Crackers",
+        "price": 1.8,
+        "lead_time": 3,
+        "moq": 100,
+        "description": "Thin crispy sea salt crackers."
+    },
+    {
+        "sku": "CRAC-002",
+        "name": "CheddarCheese Thins",
+        "category": "Crackers",
+        "price": 2.0,
+        "lead_time": 3,
+        "moq": 100,
+        "description": "Real cheddar cheese baked crackers."
+    },
+    {
+        "sku": "JUIC-001",
+        "name": "PureOrange Juice",
+        "category": "Juice",
+        "price": 4.2,
+        "lead_time": 2,
+        "moq": 40,
+        "description": "100% freshly squeezed orange juice."
+    },
+    {
+        "sku": "JUIC-002",
+        "name": "RubyGrapefruit Juice",
+        "category": "Juice",
+        "price": 4.5,
+        "lead_time": 2,
+        "moq": 40,
+        "description": "Tart and refreshing grapefruit juice."
+    },
+    {
+        "sku": "JUIC-003",
+        "name": "AppleOrchard Cider",
+        "category": "Juice",
+        "price": 3.9,
+        "lead_time": 2,
+        "moq": 40,
+        "description": "Crisp and sweet apple cider juice."
+    }
+]

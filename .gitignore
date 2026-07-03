@@ -33,8 +33,11 @@ dist/
 *.swo
 
 # Interview Coach — sensitive runtime data
-sessions/*.json
+**/sessions/*.json
 **/config.json
+
+# Agentic-Procurement — API keys in settings
+Agentic-Procurement/data/settings.json
 
 # Logs
 *.log
