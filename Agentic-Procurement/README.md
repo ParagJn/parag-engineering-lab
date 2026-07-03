@@ -5,9 +5,9 @@ A state-of-the-art, multi-agent business simulation demonstrating automated proc
 The platform provides full **Human-in-the-Loop (HITL)** governance, real-time CPG inventory synchronization, cost-savings analytics, and an interactive AI Auditing companion.
 
 ## 📺 Project Intro Video
-<video src="./About-Agentic-Procurement.mp4" controls width="100%"></video>
+[![Watch Walkthrough Video](./video_thumbnail.png)](./About-Agentic-Procurement.mp4)
 
-> 💡 *Note: If the embedded player is not visible in your markdown viewer, you can access the video directly at [About-Agentic-Procurement.mp4](file:///Users/paragjain/dev-works/parag-engineering-lab/Agentic-Procurement/About-Agentic-Procurement.mp4).*
+> 💡 *Note: Click the thumbnail image above to open the video in your markdown viewer, or access the file directly at [About-Agentic-Procurement.mp4](file:///Users/paragjain/dev-works/parag-engineering-lab/Agentic-Procurement/About-Agentic-Procurement.mp4).*
 
 ---
 
