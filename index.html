@@ -247,6 +247,36 @@
       to   { opacity: 1; transform: translateY(0); }
     }
 
+    /* Google Colored Card Borders */
+    .card:nth-child(4n+1) {
+      border-color: rgba(66, 133, 244, 0.3); /* Google Blue */
+    }
+    .card:nth-child(4n+1):hover {
+      border-color: rgba(66, 133, 244, 1);
+      box-shadow: 0 20px 60px rgba(15,23,42,0.1), 0 0 0 1px rgba(66, 133, 244, 0.4);
+    }
+    .card:nth-child(4n+2) {
+      border-color: rgba(234, 67, 53, 0.3); /* Google Red */
+    }
+    .card:nth-child(4n+2):hover {
+      border-color: rgba(234, 67, 53, 1);
+      box-shadow: 0 20px 60px rgba(15,23,42,0.1), 0 0 0 1px rgba(234, 67, 53, 0.4);
+    }
+    .card:nth-child(4n+3) {
+      border-color: rgba(251, 188, 5, 0.35); /* Google Yellow */
+    }
+    .card:nth-child(4n+3):hover {
+      border-color: rgba(251, 188, 5, 1);
+      box-shadow: 0 20px 60px rgba(15,23,42,0.1), 0 0 0 1px rgba(251, 188, 5, 0.45);
+    }
+    .card:nth-child(4n) {
+      border-color: rgba(52, 168, 83, 0.3); /* Google Green */
+    }
+    .card:nth-child(4n):hover {
+      border-color: rgba(52, 168, 83, 1);
+      box-shadow: 0 20px 60px rgba(15,23,42,0.1), 0 0 0 1px rgba(52, 168, 83, 0.4);
+    }
+
     .card:nth-child(1)  { animation-delay: 0.05s; }
     .card:nth-child(2)  { animation-delay: 0.10s; }
     .card:nth-child(3)  { animation-delay: 0.15s; }
