@@ -36,11 +36,71 @@ export function Dashboard() {
   const loadProject = useProjectStore((s) => s.loadProject);
   const setTasks = useTaskStore((s) => s.setTasks);
 
+  interface DraftPlan {
+    filename: string;
+    name: string;
+    customer: string;
+    lastSaved: string;
+  }
+
   const [savedPlans, setSavedPlans] = useState<any[]>([]);
+  const [drafts, setDrafts] = useState<DraftPlan[]>([]);
+
+  const fetchDrafts = async () => {
+    try {
+      const response = await fetch('/api/list-drafts');
+      if (response.ok) {
+        const data = await response.json();
+        setDrafts(data);
+      }
+    } catch (e) {
+      console.error('Failed to fetch drafts:', e);
+    }
+  };
 
   useEffect(() => {
     setSavedPlans(storage.getPlans());
+    fetchDrafts();
   }, []);
+
+  const handleOpenDraft = async (filename: string) => {
+    try {
+      const response = await fetch(`/api/load-draft?filename=${encodeURIComponent(filename)}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.project && Array.isArray(data.tasks)) {
+          loadProject(data.project);
+          setTasks(data.tasks);
+          navigate('/planner');
+        }
+      } else {
+        alert('Failed to load draft file.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error loading draft file.');
+    }
+  };
+
+  const handleDeleteDraft = async (filename: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm('Are you sure you want to delete this draft file?')) {
+      try {
+        const response = await fetch('/api/delete-draft', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ filename })
+        });
+        if (response.ok) {
+          fetchDrafts();
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  };
 
   const handleNewProject = () => {
     resetProject();
@@ -292,17 +352,95 @@ export function Dashboard() {
           </Box>
         )}
 
+        {/* In-Progress Drafts List */}
+        {drafts.length > 0 && (
+          <Box sx={{ mb: 6 }}>
+            <Typography variant="h5" sx={{ fontWeight: '800', mb: 3 }}>
+              In-Progress Drafts (in local drafts/ folder)
+            </Typography>
+            <TableContainer
+              component={Paper}
+              sx={{
+                borderRadius: 3,
+                border: '1.5px solid rgba(251, 188, 5, 0.4)', // Google Yellow border
+                boxShadow: 'none',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  borderColor: '#FBBC05',
+                  boxShadow: '0 12px 20px -10px rgba(251, 188, 5, 0.15)'
+                }
+              }}
+            >
+              <Table>
+                <TableHead sx={{ bgcolor: '#fffbeb' }}>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: '700' }}>Project Name</TableCell>
+                    <TableCell sx={{ fontWeight: '700' }}>Customer</TableCell>
+                    <TableCell sx={{ fontWeight: '700' }}>Last Saved</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: '700', pr: 4 }}>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {drafts.map((draft) => (
+                    <TableRow
+                      key={draft.filename}
+                      hover
+                      onClick={() => handleOpenDraft(draft.filename)}
+                      sx={{ cursor: 'pointer', '&:last-child td, &:last-child th': { border: 0 } }}
+                    >
+                      <TableCell sx={{ fontWeight: '600', color: 'warning.main' }}>
+                        {draft.name}
+                      </TableCell>
+                      <TableCell>{draft.customer}</TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', flexDirection: 'row', gap: 1, alignItems: 'center' }}>
+                          <AccessTimeIcon fontSize="inherit" color="action" />
+                          <Typography variant="body2">
+                            {new Date(draft.lastSaved).toLocaleString()}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell align="right" sx={{ pr: 3 }}>
+                        <Button
+                          variant="outlined"
+                          color="warning"
+                          size="small"
+                          startIcon={<FolderOpenIcon />}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenDraft(draft.filename);
+                          }}
+                          sx={{ mr: 1 }}
+                        >
+                          Open Draft
+                        </Button>
+                        <IconButton
+                          color="error"
+                          size="small"
+                          onClick={(e) => handleDeleteDraft(draft.filename, e)}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
+        )}
+
         {/* Quick Instructions section */}
         <Box
           sx={{
             p: 4,
             borderRadius: 3,
             bgcolor: 'background.paper',
-            border: '1.5px solid rgba(251, 188, 5, 0.5)',
+            border: '1.5px solid rgba(234, 67, 53, 0.4)', // Google Red border
             transition: 'all 0.3s ease',
             '&:hover': {
-              borderColor: '#FBBC05',
-              boxShadow: '0 12px 20px -10px rgba(251, 188, 5, 0.15)'
+              borderColor: '#EA4335',
+              boxShadow: '0 12px 20px -10px rgba(234, 67, 53, 0.15)'
             }
           }}
         >
