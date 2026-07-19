@@ -8,12 +8,14 @@ import { useProjectStore } from './projectStore';
 interface TaskState {
   tasks: Task[];
   weeks: Week[];
+  minWeeksToShow: number;
   addTask: () => void;
   deleteTask: (id: string) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
   setTasks: (tasks: Task[]) => void;
   clearTasks: () => void;
   recalculate: (startDate?: string) => void;
+  setMinWeeksToShow: (num: number) => void;
 }
 
 const initialTasks: Task[] = [
@@ -70,6 +72,7 @@ const initialTasks: Task[] = [
 export const useTaskStore = create<TaskState>((set, get) => ({
   tasks: [],
   weeks: [],
+  minWeeksToShow: 52, // Default to 52 weeks (1 year) for a spacious planning timeline
 
   addTask: () => {
     const currentTasks = get().tasks;
@@ -134,8 +137,13 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     // We fetch start date from projectStore if not supplied
     const suggestedStartDateStr = startDate || useProjectStore.getState().project.suggestedStartDate || new Date().toISOString().split('T')[0];
 
-    const { tasks, weeks } = calculateSchedule(get().tasks, suggestedStartDateStr);
+    const { tasks, weeks } = calculateSchedule(get().tasks, suggestedStartDateStr, get().minWeeksToShow || 52);
     set({ tasks, weeks });
+  },
+
+  setMinWeeksToShow: (num) => {
+    set({ minWeeksToShow: Math.max(1, num) });
+    get().recalculate();
   }
 }));
 

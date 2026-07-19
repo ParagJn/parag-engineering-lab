@@ -25,7 +25,11 @@ import {
   DialogContent,
   DialogActions,
   Snackbar,
-  Alert
+  Alert,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -71,11 +75,13 @@ export function Planner() {
   // Task store hooks
   const tasks = useTaskStore((s) => s.tasks);
   const weeks = useTaskStore((s) => s.weeks);
+  const minWeeksToShow = useTaskStore((s) => s.minWeeksToShow);
   const addTask = useTaskStore((s) => s.addTask);
   const deleteTask = useTaskStore((s) => s.deleteTask);
   const updateTask = useTaskStore((s) => s.updateTask);
   const setTasks = useTaskStore((s) => s.setTasks);
   const recalculate = useTaskStore((s) => s.recalculate);
+  const setMinWeeksToShow = useTaskStore((s) => s.setMinWeeksToShow);
 
   // Dialog and Snackbar states
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
@@ -477,6 +483,23 @@ export function Planner() {
               ref={fileInputRef}
               onChange={handleOpenJSON}
             />
+            <FormControl size="small" sx={{ minWidth: 160 }}>
+              <InputLabel id="timeline-duration-label" sx={{ fontSize: '0.85rem', top: -1 }}>Timeline Range</InputLabel>
+              <Select
+                labelId="timeline-duration-label"
+                id="timeline-duration"
+                value={minWeeksToShow}
+                label="Timeline Range"
+                onChange={(e) => setMinWeeksToShow(Number(e.target.value))}
+                sx={{ height: 34, fontSize: '0.85rem' }}
+              >
+                <MenuItem value={13}>13 Weeks (~3 Months)</MenuItem>
+                <MenuItem value={26}>26 Weeks (~6 Months)</MenuItem>
+                <MenuItem value={52}>52 Weeks (1 Year)</MenuItem>
+                <MenuItem value={104}>104 Weeks (2 Years)</MenuItem>
+                <MenuItem value={156}>156 Weeks (3 Years)</MenuItem>
+              </Select>
+            </FormControl>
             <Button
               variant="outlined"
               startIcon={<UploadFileIcon />}
@@ -529,7 +552,7 @@ export function Planner() {
                 sx={{ flex: 1 }}
               />
               <TextField
-                label="Project Start Date"
+                label="Tentative Start Date"
                 type="date"
                 value={project.suggestedStartDate}
                 onChange={(e) => setStartDate(e.target.value)}
