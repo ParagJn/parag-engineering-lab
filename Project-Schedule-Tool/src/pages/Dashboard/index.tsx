@@ -137,10 +137,13 @@ export function Dashboard() {
                 height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
-                transition: 'all 0.3s',
+                border: '1.5px solid rgba(66, 133, 244, 0.3)',
+                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
+                transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)',
                 '&:hover': {
                   transform: 'translateY(-6px)',
-                  boxShadow: '0 12px 20px -10px rgba(0,0,0,0.1)'
+                  borderColor: '#4285F4',
+                  boxShadow: '0 20px 25px -5px rgba(66, 133, 244, 0.15), 0 0 0 1px rgba(66, 133, 244, 0.2)'
                 }
               }}
             >
@@ -172,10 +175,13 @@ export function Dashboard() {
                 height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
-                transition: 'all 0.3s',
+                border: '1.5px solid rgba(234, 67, 53, 0.3)',
+                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
+                transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)',
                 '&:hover': {
                   transform: 'translateY(-6px)',
-                  boxShadow: '0 12px 20px -10px rgba(0,0,0,0.1)'
+                  borderColor: '#EA4335',
+                  boxShadow: '0 20px 25px -5px rgba(234, 67, 53, 0.15), 0 0 0 1px rgba(234, 67, 53, 0.2)'
                 }
               }}
             >
@@ -215,7 +221,19 @@ export function Dashboard() {
             <Typography variant="h5" sx={{ fontWeight: '800', mb: 3 }}>
               Saved Plans in Browser
             </Typography>
-            <TableContainer component={Paper} sx={{ borderRadius: 3, border: '1px solid #e2e8f0', boxShadow: 'none' }}>
+            <TableContainer
+              component={Paper}
+              sx={{
+                borderRadius: 3,
+                border: '1.5px solid rgba(52, 168, 83, 0.4)',
+                boxShadow: 'none',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  borderColor: '#34A853',
+                  boxShadow: '0 12px 20px -10px rgba(52, 168, 83, 0.1)'
+                }
+              }}
+            >
               <Table>
                 <TableHead sx={{ bgcolor: '#f1f5f9' }}>
                   <TableRow>
@@ -275,7 +293,19 @@ export function Dashboard() {
         )}
 
         {/* Quick Instructions section */}
-        <Box sx={{ p: 4, borderRadius: 3, bgcolor: 'background.paper', border: '1px solid #e2e8f0' }}>
+        <Box
+          sx={{
+            p: 4,
+            borderRadius: 3,
+            bgcolor: 'background.paper',
+            border: '1.5px solid rgba(251, 188, 5, 0.5)',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              borderColor: '#FBBC05',
+              boxShadow: '0 12px 20px -10px rgba(251, 188, 5, 0.15)'
+            }
+          }}
+        >
           <Typography variant="h6" gutterBottom sx={{ fontWeight: '700' }}>
             Workflow Highlights
           </Typography>
