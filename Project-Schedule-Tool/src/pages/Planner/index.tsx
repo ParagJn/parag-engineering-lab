@@ -89,6 +89,7 @@ export function Planner() {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'info' | 'error'>('success');
+  const [lastDraftSavedTime, setLastDraftSavedTime] = useState<string | null>(null);
 
   // Synchronize dynamic customPlanName when project.name updates in store
   useEffect(() => {
@@ -181,6 +182,78 @@ export function Planner() {
     setSnackbarMessage(`Plan downloaded as "${filename}"`);
     setSnackbarOpen(true);
   };
+
+  // Ref to track latest project & tasks for background auto-save
+  const latestDataRef = useRef({ project, tasks });
+  useEffect(() => {
+    latestDataRef.current = { project, tasks };
+  }, [project, tasks]);
+
+  // Save draft locally to drafts/ folder
+  const handleSaveDraft = async (isAutoSave = false) => {
+    const now = new Date();
+    // Format: YYYY-MM-DD_HH-mm-ss
+    const datetimeStr = now.getFullYear() +
+      '-' + String(now.getMonth() + 1).padStart(2, '0') +
+      '-' + String(now.getDate()).padStart(2, '0') +
+      '_' + String(now.getHours()).padStart(2, '0') +
+      '-' + String(now.getMinutes()).padStart(2, '0') +
+      '-' + String(now.getSeconds()).padStart(2, '0');
+
+    const currentProj = latestDataRef.current.project;
+    const currentTasks = latestDataRef.current.tasks;
+    const cleanProjectName = (currentProj.name || 'Untitled').trim().replace(/[^a-zA-Z0-9-_]/g, '_') || 'Untitled';
+    const filename = `${cleanProjectName}_${datetimeStr}_draft.json`;
+
+    const dataToSave = {
+      project: currentProj,
+      tasks: currentTasks
+    };
+
+    try {
+      const response = await fetch('/api/save-draft', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          filename,
+          data: dataToSave
+        })
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        const timeStr = now.toLocaleTimeString();
+        setLastDraftSavedTime(timeStr);
+        if (!isAutoSave) {
+          setSnackbarSeverity('success');
+          setSnackbarMessage(`Draft saved successfully to drafts/${filename}`);
+          setSnackbarOpen(true);
+        }
+      } else {
+        throw new Error(result.error || 'Unknown error');
+      }
+    } catch (error: any) {
+      if (!isAutoSave) {
+        setSnackbarSeverity('error');
+        setSnackbarMessage(`Failed to save draft: ${error.message}`);
+        setSnackbarOpen(true);
+      } else {
+        console.error('Auto-save failed:', error);
+      }
+    }
+  };
+
+  // Auto-save draft every 120 seconds in the background
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (latestDataRef.current.tasks.length > 0) {
+        handleSaveDraft(true);
+      }
+    }, 120000); // 2 minutes
+    return () => clearInterval(interval);
+  }, []);
 
   // JSON Load functionality
   const handleOpenJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -508,6 +581,23 @@ export function Planner() {
             >
               Open JSON
             </Button>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <Button
+                variant="outlined"
+                color="warning"
+                startIcon={<SaveIcon />}
+                size="small"
+                onClick={() => handleSaveDraft(false)}
+                sx={{ height: 34 }}
+              >
+                Save Draft
+              </Button>
+              {lastDraftSavedTime && (
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '9px', mt: 0.25, lineHeight: 1 }}>
+                  Saved: {lastDraftSavedTime}
+                </Typography>
+              )}
+            </Box>
             <Button
               variant="outlined"
               startIcon={<SaveIcon />}
