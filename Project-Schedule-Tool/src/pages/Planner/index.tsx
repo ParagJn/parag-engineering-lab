@@ -192,18 +192,10 @@ export function Planner() {
   // Save draft locally to drafts/ folder
   const handleSaveDraft = async (isAutoSave = false) => {
     const now = new Date();
-    // Format: YYYY-MM-DD_HH-mm-ss
-    const datetimeStr = now.getFullYear() +
-      '-' + String(now.getMonth() + 1).padStart(2, '0') +
-      '-' + String(now.getDate()).padStart(2, '0') +
-      '_' + String(now.getHours()).padStart(2, '0') +
-      '-' + String(now.getMinutes()).padStart(2, '0') +
-      '-' + String(now.getSeconds()).padStart(2, '0');
-
     const currentProj = latestDataRef.current.project;
     const currentTasks = latestDataRef.current.tasks;
     const cleanProjectName = (currentProj.name || 'Untitled').trim().replace(/[^a-zA-Z0-9-_]/g, '_') || 'Untitled';
-    const filename = `${cleanProjectName}_${datetimeStr}_draft.json`;
+    const filename = `${cleanProjectName}_draft.json`;
 
     const dataToSave = {
       project: currentProj,
