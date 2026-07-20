@@ -299,8 +299,20 @@ export function Planner() {
     const field = colDef.field;
     if (!field) return;
 
-    // Propagate updates to store
-    updateTask(data.id, { [field]: newValue });
+    if (field === 'calculatedStartDate') {
+      let manualStartDate: string | undefined = undefined;
+      const strVal = String(newValue || '').trim();
+      if (strVal !== '') {
+        const parsed = dayjs(strVal);
+        if (parsed.isValid()) {
+          manualStartDate = parsed.format('YYYY-MM-DD');
+        }
+      }
+      updateTask(data.id, { manualStartDate });
+    } else {
+      // Propagate updates to store
+      updateTask(data.id, { [field]: newValue });
+    }
   };
 
   // Define column definitions for Left Task Grid (40%)
@@ -370,16 +382,25 @@ export function Planner() {
       {
         headerName: 'Calc. Start',
         field: 'calculatedStartDate',
-        width: 110,
-        editable: false,
-        cellStyle: { textAlign: 'center', color: '#1e293b' }
+        width: 130,
+        editable: true,
+        cellEditor: 'agDateCellEditor',
+        cellStyle: (params: any) => {
+          const hasManual = !!params.data?.manualStartDate;
+          return {
+            textAlign: 'center',
+            color: hasManual ? '#1d4ed8' : '#1e293b',
+            fontWeight: hasManual ? '600' : 'normal',
+            backgroundColor: hasManual ? '#eff6ff' : 'transparent'
+          };
+        }
       },
       {
         headerName: 'Calc. Finish',
         field: 'calculatedFinishDate',
-        width: 110,
+        width: 115,
         editable: false,
-        cellStyle: { textAlign: 'center', color: '#1e293b' }
+        cellStyle: { textAlign: 'center', color: '#64748b' }
       },
       {
         headerName: 'Color',
