@@ -454,7 +454,10 @@ export function Planner() {
         if (dow !== 0 && dow !== 6) {
           const dateStr = currentDate.format('YYYY-MM-DD');
           const dayLabel = dayNames[dow - 1];
-          const dateLabel = currentDate.format('DD MMM');
+          // Show month only on Mondays or 1st of month to keep columns compact
+          const dateLabel = (dow === 1 || currentDate.date() === 1)
+            ? currentDate.format('DD MMM')
+            : currentDate.format('DD');
           const capturedDate = dateStr;
 
           columns.push({
