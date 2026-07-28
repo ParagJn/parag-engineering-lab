@@ -70,6 +70,7 @@ export function Planner() {
   const setProjectName = useProjectStore((s) => s.setProjectName);
   const setCustomer = useProjectStore((s) => s.setCustomer);
   const setStartDate = useProjectStore((s) => s.setStartDate);
+  const setAssumptions = useProjectStore((s) => s.setAssumptions);
   const loadProject = useProjectStore((s) => s.loadProject);
 
   // Task store hooks
@@ -90,6 +91,7 @@ export function Planner() {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'info' | 'error'>('success');
   const [lastDraftSavedTime, setLastDraftSavedTime] = useState<string | null>(null);
+  const [timelineMode, setTimelineMode] = useState<'weekly' | 'weekday'>('weekly');
 
   // Synchronize dynamic customPlanName when project.name updates in store
   useEffect(() => {
@@ -275,7 +277,7 @@ export function Planner() {
   // Excel Export triggering
   const handleExportExcel = async () => {
     try {
-      await exportProjectToExcel(project, tasks, weeks);
+      await exportProjectToExcel(project, tasks, weeks, project.assumptions);
       setSnackbarSeverity('success');
       setSnackbarMessage('Excel sheet generated successfully!');
       setSnackbarOpen(true);
@@ -438,6 +440,78 @@ export function Planner() {
 
   // Define column definitions for Right Timeline Grid (60%)
   const rightColumnDefs = useMemo<ColDef[]>(() => {
+    if (timelineMode === 'weekday') {
+      // Generate individual weekday columns from project start
+      const startDate = dayjs(project.suggestedStartDate || new Date().toISOString().split('T')[0]);
+      const daysToShow = minWeeksToShow * 5; // Convert weeks to weekdays
+      const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+      const columns: ColDef[] = [];
+      let currentDate = startDate;
+      let dayCount = 0;
+
+      while (dayCount < daysToShow) {
+        const dow = currentDate.day(); // 0=Sun, 6=Sat
+        if (dow !== 0 && dow !== 6) {
+          const dateStr = currentDate.format('YYYY-MM-DD');
+          const dayLabel = dayNames[dow - 1];
+          const dateLabel = currentDate.format('DD MMM');
+          const capturedDate = dateStr;
+
+          columns.push({
+            headerName: `${dayLabel}\n${dateLabel}`,
+            headerClass: 'multiline-header-cell',
+            field: `day_${capturedDate}`,
+            width: 65,
+            resizable: true,
+            sortable: false,
+            editable: false,
+            cellRenderer: (params: any) => {
+              const task = params.data as Task;
+              const taskStart = task.calculatedStartDate;
+              const taskFinish = task.calculatedFinishDate;
+              if (!taskStart || !taskFinish) return null;
+
+              const cellDate = dayjs(capturedDate);
+              const isActive = (cellDate.isAfter(dayjs(taskStart), 'day') || cellDate.isSame(dayjs(taskStart), 'day')) &&
+                (cellDate.isBefore(dayjs(taskFinish), 'day') || cellDate.isSame(dayjs(taskFinish), 'day'));
+
+              if (!isActive) return null;
+
+              const color = task.color || '#2196F3';
+              const r = parseInt(color.substring(1, 3), 16) || 0;
+              const g = parseInt(color.substring(3, 5), 16) || 0;
+              const b = parseInt(color.substring(5, 7), 16) || 0;
+              const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+              const textColor = luminance > 0.6 ? '#000000' : '#ffffff';
+
+              return (
+                <Box sx={{
+                  width: '100%',
+                  height: '24px',
+                  bgcolor: color,
+                  color: textColor,
+                  fontWeight: 'bold',
+                  fontSize: '9px',
+                  borderRadius: '3px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                  mt: '4px'
+                }}>
+                  ●
+                </Box>
+              );
+            }
+          });
+          dayCount++;
+        }
+        currentDate = currentDate.add(1, 'day');
+      }
+      return columns;
+    }
+
+    // Weekly mode (default)
     return weeks.map((week) => ({
       headerName: `${week.label}\n${dayjs(week.fridayDate).format('DD MMM')}`,
       headerClass: 'multiline-header-cell',
@@ -511,7 +585,7 @@ export function Planner() {
         );
       }
     }));
-  }, [weeks]);
+  }, [weeks, timelineMode, project.suggestedStartDate, minWeeksToShow]);
 
   // Inject multiline header and vertical scroll hiding CSS
   useEffect(() => {
@@ -569,6 +643,29 @@ export function Planner() {
               ref={fileInputRef}
               onChange={handleOpenJSON}
             />
+            <FormControl size="small" sx={{ minWidth: 120 }}>
+              <InputLabel id="timeline-mode-label" sx={{ fontSize: '0.85rem', top: -1 }}>Timeline Mode</InputLabel>
+              <Select
+                labelId="timeline-mode-label"
+                id="timeline-mode"
+                value={timelineMode}
+                label="Timeline Mode"
+                onChange={(e) => {
+                  const mode = e.target.value as 'weekly' | 'weekday';
+                  setTimelineMode(mode);
+                  // Set sensible defaults when switching
+                  if (mode === 'weekday') {
+                    setMinWeeksToShow(9); // ~2 months of weekdays
+                  } else {
+                    setMinWeeksToShow(52); // 1 year of weeks
+                  }
+                }}
+                sx={{ height: 34, fontSize: '0.85rem' }}
+              >
+                <MenuItem value="weekly">Weekly</MenuItem>
+                <MenuItem value="weekday">Weekday</MenuItem>
+              </Select>
+            </FormControl>
             <FormControl size="small" sx={{ minWidth: 160 }}>
               <InputLabel id="timeline-duration-label" sx={{ fontSize: '0.85rem', top: -1 }}>Timeline Range</InputLabel>
               <Select
@@ -579,11 +676,19 @@ export function Planner() {
                 onChange={(e) => setMinWeeksToShow(Number(e.target.value))}
                 sx={{ height: 34, fontSize: '0.85rem' }}
               >
-                <MenuItem value={13}>13 Weeks (~3 Months)</MenuItem>
-                <MenuItem value={26}>26 Weeks (~6 Months)</MenuItem>
-                <MenuItem value={52}>52 Weeks (1 Year)</MenuItem>
-                <MenuItem value={104}>104 Weeks (2 Years)</MenuItem>
-                <MenuItem value={156}>156 Weeks (3 Years)</MenuItem>
+                {timelineMode === 'weekday' ? [
+                  <MenuItem key={9} value={9}>~2 Months (45 Days)</MenuItem>,
+                  <MenuItem key={13} value={13}>~3 Months (65 Days)</MenuItem>,
+                  <MenuItem key={22} value={22}>~5 Months (110 Days)</MenuItem>,
+                  <MenuItem key={26} value={26}>~6 Months (130 Days)</MenuItem>,
+                  <MenuItem key={52} value={52}>~1 Year (260 Days)</MenuItem>
+                ] : [
+                  <MenuItem key={13} value={13}>13 Weeks (~3 Months)</MenuItem>,
+                  <MenuItem key={26} value={26}>26 Weeks (~6 Months)</MenuItem>,
+                  <MenuItem key={52} value={52}>52 Weeks (1 Year)</MenuItem>,
+                  <MenuItem key={104} value={104}>104 Weeks (2 Years)</MenuItem>,
+                  <MenuItem key={156} value={156}>156 Weeks (3 Years)</MenuItem>
+                ]}
               </Select>
             </FormControl>
             <Button
@@ -664,6 +769,24 @@ export function Planner() {
                 sx={{ width: 180 }}
               />
             </Box>
+          </CardContent>
+        </Card>
+
+        {/* Assumptions Text Area */}
+        <Card sx={{ boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+          <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+            <TextField
+              label="Assumptions & Notes"
+              value={project.assumptions || ''}
+              onChange={(e) => setAssumptions(e.target.value)}
+              placeholder="Enter project assumptions, constraints, risks, or notes here. These will be exported below the schedule in Excel."
+              multiline
+              minRows={2}
+              maxRows={6}
+              fullWidth
+              size="small"
+              sx={{ '& .MuiInputBase-root': { fontSize: '0.875rem' } }}
+            />
           </CardContent>
         </Card>
 

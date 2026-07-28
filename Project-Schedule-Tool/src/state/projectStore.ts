@@ -7,6 +7,7 @@ interface ProjectState {
   setProjectName: (name: string) => void;
   setCustomer: (customer: string) => void;
   setStartDate: (date: string) => void;
+  setAssumptions: (assumptions: string) => void;
   loadProject: (project: Project) => void;
   resetProject: () => void;
 }
@@ -34,6 +35,11 @@ export const useProjectStore = create<ProjectState>((set) => ({
   setStartDate: (date) =>
     set((state) => ({
       project: { ...state.project, suggestedStartDate: date }
+    })),
+
+  setAssumptions: (assumptions) =>
+    set((state) => ({
+      project: { ...state.project, assumptions }
     })),
 
   loadProject: (project) =>

@@ -3,4 +3,5 @@ export interface Project {
   name: string;
   customer: string;
   suggestedStartDate: string; // YYYY-MM-DD
+  assumptions?: string; // Free-text assumptions for the project
 }

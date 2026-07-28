@@ -28,7 +28,8 @@ function getColumnLetter(colIndex: number): string {
 export async function exportProjectToExcel(
   project: Project,
   tasks: Task[],
-  weeks: Week[]
+  weeks: Week[],
+  assumptions?: string
 ): Promise<void> {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Project Schedule', {
@@ -332,6 +333,32 @@ export async function exportProjectToExcel(
 
   // Auto-Filter on Columns G-M
   worksheet.autoFilter = `G7:M7`;
+
+  // Assumptions Section (below task rows)
+  if (assumptions && assumptions.trim()) {
+    const lastTaskRow = 8 + tasks.length; // Row after the last task
+    const assumptionsStartRow = lastTaskRow + 2; // Leave a blank row gap
+
+    // Title
+    const titleCell = worksheet.getCell(assumptionsStartRow, 7); // Column G
+    titleCell.value = 'Assumptions & Notes';
+    titleCell.font = { name: fontName, size: 13, bold: true, color: { argb: 'FF1F497D' } };
+    worksheet.mergeCells(assumptionsStartRow, 7, assumptionsStartRow, 13);
+    titleCell.border = {
+      bottom: { style: 'medium', color: { argb: 'FF366092' } }
+    };
+
+    // Write each assumption line
+    const lines = assumptions.split('\n').filter((l: string) => l.trim().length > 0);
+    lines.forEach((line: string, idx: number) => {
+      const rowIdx = assumptionsStartRow + 1 + idx;
+      const cell = worksheet.getCell(rowIdx, 7);
+      cell.value = line.trim();
+      cell.font = { name: fontName, size: 11, color: { argb: 'FF333333' } };
+      cell.alignment = { wrapText: true, vertical: 'top' };
+      worksheet.mergeCells(rowIdx, 7, rowIdx, 13);
+    });
+  }
 
   // Generate and Download Excel
   const buffer = await workbook.xlsx.writeBuffer();
