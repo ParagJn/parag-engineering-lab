@@ -29,8 +29,12 @@ import {
   Select,
   MenuItem,
   FormControl,
-  InputLabel
+  InputLabel,
+  Slide,
+  Chip,
+  Divider
 } from '@mui/material';
+import type { TransitionProps } from '@mui/material/transitions';
 import {
   ArrowBack as ArrowBackIcon,
   Add as AddIcon,
@@ -38,7 +42,9 @@ import {
   Download as DownloadIcon,
   Save as SaveIcon,
   UploadFile as UploadFileIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  ListAlt as ListAltIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
 
 import { useProjectStore } from '../../state/projectStore';
@@ -60,6 +66,14 @@ const PRESET_COLORS = [
   { value: '#795548', name: 'Brown' },
   { value: '#607D8B', name: 'Slate' }
 ];
+
+// Smooth slide-up transition for dialogs
+const SlideTransition = React.forwardRef(function Transition(
+  props: TransitionProps & { children: React.ReactElement },
+  ref: React.Ref<unknown>
+) {
+  return <Slide direction="up" ref={ref} {...props} />;
+});
 
 export function Planner() {
   const navigate = useNavigate();
@@ -92,6 +106,35 @@ export function Planner() {
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'info' | 'error'>('success');
   const [lastDraftSavedTime, setLastDraftSavedTime] = useState<string | null>(null);
   const [timelineMode, setTimelineMode] = useState<'weekly' | 'weekday'>('weekly');
+
+  // Sub-Activities Modal state
+  const [subActDialogOpen, setSubActDialogOpen] = useState(false);
+  const [subActTaskId, setSubActTaskId] = useState<string | null>(null);
+  const [subActTaskName, setSubActTaskName] = useState('');
+  const [subActItems, setSubActItems] = useState<string[]>([]);
+
+  const handleOpenSubActivities = (task: Task) => {
+    setSubActTaskId(task.id);
+    setSubActTaskName(task.activity);
+    // Start with existing sub-activities or 5 empty slots
+    const existing = task.subActivities || [];
+    const items = [...existing];
+    while (items.length < 5) items.push('');
+    setSubActItems(items);
+    setSubActDialogOpen(true);
+  };
+
+  const handleSaveSubActivities = () => {
+    if (subActTaskId) {
+      // Filter out empty strings for storage, but keep non-empty ones
+      const cleaned = subActItems.filter(s => s.trim() !== '');
+      updateTask(subActTaskId, { subActivities: cleaned.length > 0 ? cleaned : undefined });
+      setSnackbarSeverity('success');
+      setSnackbarMessage(`Sub-activities saved for "${subActTaskName}"`);
+      setSnackbarOpen(true);
+    }
+    setSubActDialogOpen(false);
+  };
 
   // Synchronize dynamic customPlanName when project.name updates in store
   useEffect(() => {
@@ -420,18 +463,42 @@ export function Planner() {
       {
         headerName: '',
         field: 'actions',
-        width: 60,
+        width: 90,
         editable: false,
         cellRenderer: (params: any) => {
+          const task = params.data as Task;
+          const hasSubActs = task.subActivities && task.subActivities.length > 0;
           return (
-            <IconButton
-              size="small"
-              color="error"
-              onClick={() => deleteTask(params.data.id)}
-              sx={{ py: 0.5 }}
-            >
-              <DeleteIcon fontSize="small" />
-            </IconButton>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+              <IconButton
+                size="small"
+                color={hasSubActs ? 'primary' : 'default'}
+                onClick={() => handleOpenSubActivities(task)}
+                sx={{ py: 0.5, position: 'relative' }}
+                title="Sub-Activities"
+              >
+                <ListAltIcon fontSize="small" />
+                {hasSubActs && (
+                  <Box sx={{
+                    position: 'absolute', top: 0, right: 0,
+                    bgcolor: '#4285F4', color: '#fff',
+                    borderRadius: '50%', width: 14, height: 14,
+                    fontSize: '9px', fontWeight: 'bold',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    {task.subActivities!.length}
+                  </Box>
+                )}
+              </IconButton>
+              <IconButton
+                size="small"
+                color="error"
+                onClick={() => deleteTask(params.data.id)}
+                sx={{ py: 0.5 }}
+              >
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Box>
           );
         }
       }
@@ -464,7 +531,7 @@ export function Planner() {
             headerName: `${dayLabel}\n${dateLabel}`,
             headerClass: 'multiline-header-cell',
             field: `day_${capturedDate}`,
-            width: 65,
+            width: 80,
             resizable: true,
             sortable: false,
             editable: false,
@@ -862,7 +929,7 @@ export function Planner() {
                 onGridReady={onGrid2Ready}
                 onBodyScroll={onBodyScroll2}
                 animateRows={true}
-                headerHeight={48}
+                headerHeight={56}
                 rowHeight={38}
                 suppressDragLeaveHidesColumns={true}
               />
@@ -900,7 +967,126 @@ export function Planner() {
         </DialogActions>
       </Dialog>
 
-      {/* 5. Notifications Toast */}
+      {/* 5. Sub-Activities Modal Dialog */}
+      <Dialog
+        open={subActDialogOpen}
+        onClose={() => setSubActDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        slots={{ transition: SlideTransition }}
+        slotProps={{
+          transition: { timeout: { enter: 350, exit: 250 } },
+          paper: {
+            sx: {
+              borderRadius: 3,
+              boxShadow: '0 24px 48px rgba(0,0,0,0.2)',
+              overflow: 'hidden'
+            }
+          }
+        }}
+      >
+        <DialogTitle sx={{
+          fontWeight: '800',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          bgcolor: '#f8f9fa',
+          borderBottom: '1px solid #e2e8f0',
+          py: 1.5
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <ListAltIcon sx={{ color: '#4285F4' }} />
+            <Box>
+              <Typography variant="subtitle1" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
+                Sub-Activities
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {subActTaskName}
+              </Typography>
+            </Box>
+          </Box>
+          <IconButton size="small" onClick={() => setSubActDialogOpen(false)}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2, pb: 1 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Add detailed activities under this task. These will appear as sub-items in the exported Excel file.
+          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            {subActItems.map((item, idx) => (
+              <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Chip
+                  label={idx + 1}
+                  size="small"
+                  sx={{
+                    minWidth: 28, height: 24,
+                    fontWeight: 'bold',
+                    fontSize: '11px',
+                    bgcolor: '#e8f0fe',
+                    color: '#1a73e8'
+                  }}
+                />
+                <TextField
+                  value={item}
+                  onChange={(e) => {
+                    const updated = [...subActItems];
+                    updated[idx] = e.target.value;
+                    setSubActItems(updated);
+                  }}
+                  placeholder={`Activity ${idx + 1}`}
+                  size="small"
+                  fullWidth
+                  sx={{ '& .MuiInputBase-root': { fontSize: '0.875rem' } }}
+                />
+                {subActItems.length > 1 && (
+                  <IconButton
+                    size="small"
+                    color="error"
+                    onClick={() => {
+                      const updated = subActItems.filter((_, i) => i !== idx);
+                      setSubActItems(updated);
+                    }}
+                    sx={{ p: 0.5 }}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                )}
+              </Box>
+            ))}
+          </Box>
+          <Button
+            variant="text"
+            size="small"
+            startIcon={<AddIcon />}
+            onClick={() => setSubActItems([...subActItems, ''])}
+            sx={{ mt: 1.5, textTransform: 'none', fontWeight: 600 }}
+          >
+            Add Activity
+          </Button>
+        </DialogContent>
+        <Divider />
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button
+            onClick={() => setSubActDialogOpen(false)}
+            variant="outlined"
+            size="small"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSaveSubActivities}
+            variant="contained"
+            color="primary"
+            size="small"
+            startIcon={<SaveIcon />}
+          >
+            Save Activities
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 6. Notifications Toast */}
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={4000}

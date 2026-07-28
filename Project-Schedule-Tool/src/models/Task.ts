@@ -11,6 +11,7 @@ export interface Task {
   calculatedStartDate?: string; // YYYY-MM-DD (calculated by engine)
   calculatedFinishDate?: string; // YYYY-MM-DD (calculated by engine)
   weekAssignments?: Record<string, number>; // friday YYYY-MM-DD string -> percentage allocation (0.0 to 1.0)
+  subActivities?: string[]; // Optional list of sub-activities under this task
   color: string; // hex color for timeline bar
   status: 'planned' | 'active' | 'completed' | 'on-hold';
 }

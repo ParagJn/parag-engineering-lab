@@ -197,26 +197,29 @@ export async function exportProjectToExcel(
     };
   });
 
-  // 7. Write Task Rows (starting from Row 8)
+  // 7. Write Task Rows (starting from Row 8) with sub-activities
+  const subActivityFont = { name: fontName, size: 10, italic: true, color: { argb: 'FF666666' } };
+  let currentRow = 8;
+
   tasks.forEach((task, taskIdx) => {
-    const rowIdx = 8 + taskIdx;
+    const taskRowIdx = currentRow;
 
     // Col G: Index
-    const indexCell = worksheet.getCell(rowIdx, 7);
+    const indexCell = worksheet.getCell(taskRowIdx, 7);
     indexCell.value = task.index;
-    indexCell.font = defaultFont;
+    indexCell.font = { ...defaultFont, bold: true };
     indexCell.alignment = { horizontal: 'center' };
     indexCell.border = thinBorder;
 
     // Col H: Activity/Task Name
-    const activityCell = worksheet.getCell(rowIdx, 8);
+    const activityCell = worksheet.getCell(taskRowIdx, 8);
     activityCell.value = task.activity;
-    activityCell.font = defaultFont;
+    activityCell.font = { ...defaultFont, bold: true };
     activityCell.alignment = { horizontal: 'left' };
     activityCell.border = thinBorder;
 
     // Col I: Est. Hours
-    const hoursCell = worksheet.getCell(rowIdx, 9);
+    const hoursCell = worksheet.getCell(taskRowIdx, 9);
     hoursCell.value = task.estimatedHours;
     hoursCell.font = defaultFont;
     hoursCell.numFmt = '#,##0';
@@ -224,23 +227,23 @@ export async function exportProjectToExcel(
     hoursCell.border = thinBorder;
 
     // Col J: Est. Days (=ROUND(I{row}/8, 0))
-    const daysCell = worksheet.getCell(rowIdx, 10);
-    daysCell.value = { formula: `=ROUND(I${rowIdx}/8,0)` };
+    const daysCell = worksheet.getCell(taskRowIdx, 10);
+    daysCell.value = { formula: `=ROUND(I${taskRowIdx}/8,0)` };
     daysCell.font = defaultFont;
     daysCell.numFmt = '#,##0';
     daysCell.alignment = { horizontal: 'center' };
     daysCell.border = thinBorder;
 
     // Col K: Est. Weeks (=ROUND(J{row}/5, 0))
-    const weeksCell = worksheet.getCell(rowIdx, 11);
-    weeksCell.value = { formula: `=ROUND(J${rowIdx}/5,0)` };
+    const weeksCell = worksheet.getCell(taskRowIdx, 11);
+    weeksCell.value = { formula: `=ROUND(J${taskRowIdx}/5,0)` };
     weeksCell.font = defaultFont;
     weeksCell.numFmt = '#,##0';
     weeksCell.alignment = { horizontal: 'center' };
     weeksCell.border = thinBorder;
 
     // Col L: FTE
-    const fteCell = worksheet.getCell(rowIdx, 12);
+    const fteCell = worksheet.getCell(taskRowIdx, 12);
     fteCell.value = task.fte;
     fteCell.font = defaultFont;
     fteCell.numFmt = '#,##0';
@@ -248,7 +251,7 @@ export async function exportProjectToExcel(
     fteCell.border = thinBorder;
 
     // Col M: Dependency
-    const depCell = worksheet.getCell(rowIdx, 13);
+    const depCell = worksheet.getCell(taskRowIdx, 13);
     depCell.value = task.dependency || null;
     depCell.font = defaultFont;
     depCell.alignment = { horizontal: 'center' };
@@ -257,14 +260,14 @@ export async function exportProjectToExcel(
     // Apply alternating row shading to the task metadata columns G-M
     if (taskIdx % 2 === 1) {
       for (let colIdx = 7; colIdx <= 13; colIdx++) {
-        worksheet.getCell(rowIdx, colIdx).fill = alternateRowFill;
+        worksheet.getCell(taskRowIdx, colIdx).fill = alternateRowFill;
       }
     }
 
     // Set timeline cells borders (empty grid style)
     weeks.forEach((_, idx) => {
       const colIdx = startTimelineColIdx + idx;
-      worksheet.getCell(rowIdx, colIdx).border = thinBorder;
+      worksheet.getCell(taskRowIdx, colIdx).border = thinBorder;
     });
 
     // 8. Draw Timeline Task Color Bar
@@ -281,11 +284,11 @@ export async function exportProjectToExcel(
 
       // Merge active columns in this row
       if (startCol < endCol) {
-        worksheet.mergeCells(rowIdx, startCol, rowIdx, endCol);
+        worksheet.mergeCells(taskRowIdx, startCol, taskRowIdx, endCol);
       }
 
       // Configure the merged cell representing the bar
-      const barCell = worksheet.getCell(rowIdx, startCol);
+      const barCell = worksheet.getCell(taskRowIdx, startCol);
       barCell.value = `${task.fte} FTE`;
 
       const barColorHex = hexToArgb(task.color, 'FF2196F3');
@@ -297,7 +300,7 @@ export async function exportProjectToExcel(
 
       // Style all cells in the bar range to ensure fill and border are drawn nicely
       for (let c = startCol; c <= endCol; c++) {
-        const cCell = worksheet.getCell(rowIdx, c);
+        const cCell = worksheet.getCell(taskRowIdx, c);
         cCell.fill = barFill;
         cCell.border = thinBorder;
       }
@@ -318,6 +321,44 @@ export async function exportProjectToExcel(
       };
       barCell.alignment = { horizontal: 'center', vertical: 'middle' };
     }
+
+    currentRow++;
+
+    // 9. Write Sub-Activity rows (indented under the task, no Gantt bar)
+    const subActivities = task.subActivities || [];
+    subActivities.forEach((subAct, subIdx) => {
+      const subRowIdx = currentRow;
+
+      // Col G: Sub-index (e.g. "1.1", "1.2")
+      const subIdxCell = worksheet.getCell(subRowIdx, 7);
+      subIdxCell.value = `${task.index}.${subIdx + 1}`;
+      subIdxCell.font = subActivityFont;
+      subIdxCell.alignment = { horizontal: 'center' };
+      subIdxCell.border = thinBorder;
+
+      // Col H: Sub-activity name (indented with arrow)
+      const subActCell = worksheet.getCell(subRowIdx, 8);
+      subActCell.value = `  ↳ ${subAct}`;
+      subActCell.font = subActivityFont;
+      subActCell.alignment = { horizontal: 'left', indent: 2 };
+      subActCell.border = thinBorder;
+
+      // Light fill for sub-activity rows
+      const subActFill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFF9FAFB' }
+      } as ExcelJS.Fill;
+
+      for (let colIdx = 7; colIdx <= 13; colIdx++) {
+        worksheet.getCell(subRowIdx, colIdx).fill = subActFill;
+        if (colIdx > 8) {
+          worksheet.getCell(subRowIdx, colIdx).border = thinBorder;
+        }
+      }
+
+      currentRow++;
+    });
   });
 
   // Freeze Panes (Freeze columns A-M, and rows 1-7)
@@ -336,8 +377,7 @@ export async function exportProjectToExcel(
 
   // Assumptions Section (below task rows)
   if (assumptions && assumptions.trim()) {
-    const lastTaskRow = 8 + tasks.length; // Row after the last task
-    const assumptionsStartRow = lastTaskRow + 2; // Leave a blank row gap
+    const assumptionsStartRow = currentRow + 2; // Leave a blank row gap
 
     // Title
     const titleCell = worksheet.getCell(assumptionsStartRow, 7); // Column G
