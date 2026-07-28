@@ -371,9 +371,9 @@ export function Planner() {
         cellEditor: 'agTextCellEditor'
       },
       {
-        headerName: 'Sub-Act',
+        headerName: '',
         field: 'subActivitiesCol',
-        width: 75,
+        width: 45,
         editable: false,
         sortable: false,
         cellStyle: { textAlign: 'center' },
