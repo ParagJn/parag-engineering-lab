@@ -8,6 +8,7 @@ interface ProjectState {
   setCustomer: (customer: string) => void;
   setStartDate: (date: string) => void;
   setAssumptions: (assumptions: string) => void;
+  setOutOfScope: (outOfScope: string) => void;
   loadProject: (project: Project) => void;
   resetProject: () => void;
 }
@@ -40,6 +41,11 @@ export const useProjectStore = create<ProjectState>((set) => ({
   setAssumptions: (assumptions) =>
     set((state) => ({
       project: { ...state.project, assumptions }
+    })),
+
+  setOutOfScope: (outOfScope) =>
+    set((state) => ({
+      project: { ...state.project, outOfScope }
     })),
 
   loadProject: (project) =>

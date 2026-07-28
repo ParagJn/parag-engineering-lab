@@ -85,6 +85,7 @@ export function Planner() {
   const setCustomer = useProjectStore((s) => s.setCustomer);
   const setStartDate = useProjectStore((s) => s.setStartDate);
   const setAssumptions = useProjectStore((s) => s.setAssumptions);
+  const setOutOfScope = useProjectStore((s) => s.setOutOfScope);
   const loadProject = useProjectStore((s) => s.loadProject);
 
   // Task store hooks
@@ -320,7 +321,7 @@ export function Planner() {
   // Excel Export triggering
   const handleExportExcel = async () => {
     try {
-      await exportProjectToExcel(project, tasks, weeks, project.assumptions);
+      await exportProjectToExcel(project, tasks, weeks, project.assumptions, project.outOfScope);
       setSnackbarSeverity('success');
       setSnackbarMessage('Excel sheet generated successfully!');
       setSnackbarOpen(true);
@@ -854,21 +855,35 @@ export function Planner() {
           </CardContent>
         </Card>
 
-        {/* Assumptions Text Area */}
+        {/* Assumptions & Out of Scope Card */}
         <Card sx={{ boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
           <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-            <TextField
-              label="Assumptions & Notes"
-              value={project.assumptions || ''}
-              onChange={(e) => setAssumptions(e.target.value)}
-              placeholder="Enter project assumptions, constraints, risks, or notes here. These will be exported below the schedule in Excel."
-              multiline
-              minRows={2}
-              maxRows={6}
-              fullWidth
-              size="small"
-              sx={{ '& .MuiInputBase-root': { fontSize: '0.875rem' } }}
-            />
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
+              <TextField
+                label="Assumptions & Notes"
+                value={project.assumptions || ''}
+                onChange={(e) => setAssumptions(e.target.value)}
+                placeholder="Enter project assumptions, constraints, or notes here. These will be exported below the schedule in Excel."
+                multiline
+                minRows={2}
+                maxRows={6}
+                fullWidth
+                size="small"
+                sx={{ flex: 1, '& .MuiInputBase-root': { fontSize: '0.875rem' } }}
+              />
+              <TextField
+                label="Out of Scope & Exclusions"
+                value={project.outOfScope || ''}
+                onChange={(e) => setOutOfScope(e.target.value)}
+                placeholder="Enter out of scope items, exclusions, or boundaries here. These will be exported below the schedule in Excel."
+                multiline
+                minRows={2}
+                maxRows={6}
+                fullWidth
+                size="small"
+                sx={{ flex: 1, '& .MuiInputBase-root': { fontSize: '0.875rem' } }}
+              />
+            </Box>
           </CardContent>
         </Card>
 

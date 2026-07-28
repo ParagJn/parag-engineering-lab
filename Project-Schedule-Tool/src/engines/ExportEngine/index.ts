@@ -29,7 +29,8 @@ export async function exportProjectToExcel(
   project: Project,
   tasks: Task[],
   weeks: Week[],
-  assumptions?: string
+  assumptions?: string,
+  outOfScope?: string
 ): Promise<void> {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Project Schedule', {
@@ -397,6 +398,33 @@ export async function exportProjectToExcel(
       cell.font = { name: fontName, size: 11, color: { argb: 'FF333333' } };
       cell.alignment = { wrapText: true, vertical: 'top' };
       worksheet.mergeCells(rowIdx, 7, rowIdx, 13);
+      currentRow = rowIdx;
+    });
+  }
+
+  // Out of Scope Section (below assumptions or task rows)
+  if (outOfScope && outOfScope.trim()) {
+    const outOfScopeStartRow = currentRow + 2; // Leave a blank row gap
+
+    // Title
+    const titleCell = worksheet.getCell(outOfScopeStartRow, 7); // Column G
+    titleCell.value = 'Out of Scope & Exclusions';
+    titleCell.font = { name: fontName, size: 13, bold: true, color: { argb: 'FFC00000' } }; // Dark red header for exclusions
+    worksheet.mergeCells(outOfScopeStartRow, 7, outOfScopeStartRow, 13);
+    titleCell.border = {
+      bottom: { style: 'medium', color: { argb: 'FFC00000' } }
+    };
+
+    // Write each out of scope line
+    const lines = outOfScope.split('\n').filter((l: string) => l.trim().length > 0);
+    lines.forEach((line: string, idx: number) => {
+      const rowIdx = outOfScopeStartRow + 1 + idx;
+      const cell = worksheet.getCell(rowIdx, 7);
+      cell.value = line.trim();
+      cell.font = { name: fontName, size: 11, color: { argb: 'FF333333' } };
+      cell.alignment = { wrapText: true, vertical: 'top' };
+      worksheet.mergeCells(rowIdx, 7, rowIdx, 13);
+      currentRow = rowIdx;
     });
   }
 
