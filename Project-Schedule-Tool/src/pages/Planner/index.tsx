@@ -371,6 +371,42 @@ export function Planner() {
         cellEditor: 'agTextCellEditor'
       },
       {
+        headerName: 'Sub-Act',
+        field: 'subActivitiesCol',
+        width: 75,
+        editable: false,
+        sortable: false,
+        cellStyle: { textAlign: 'center' },
+        cellRenderer: (params: any) => {
+          const task = params.data as Task;
+          const hasSubActs = task.subActivities && task.subActivities.length > 0;
+          return (
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+              <IconButton
+                size="small"
+                color={hasSubActs ? 'primary' : 'default'}
+                onClick={() => handleOpenSubActivities(task)}
+                sx={{ py: 0.5, position: 'relative' }}
+                title="Manage Sub-Activities"
+              >
+                <ListAltIcon fontSize="small" />
+                {hasSubActs && (
+                  <Box sx={{
+                    position: 'absolute', top: 2, right: 2,
+                    bgcolor: '#4285F4', color: '#fff',
+                    borderRadius: '50%', width: 14, height: 14,
+                    fontSize: '9px', fontWeight: 'bold',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    {task.subActivities!.length}
+                  </Box>
+                )}
+              </IconButton>
+            </Box>
+          );
+        }
+      },
+      {
         headerName: 'Est. Hours',
         field: 'estimatedHours',
         width: 100,
@@ -463,42 +499,18 @@ export function Planner() {
       {
         headerName: '',
         field: 'actions',
-        width: 90,
+        width: 60,
         editable: false,
         cellRenderer: (params: any) => {
-          const task = params.data as Task;
-          const hasSubActs = task.subActivities && task.subActivities.length > 0;
           return (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
-              <IconButton
-                size="small"
-                color={hasSubActs ? 'primary' : 'default'}
-                onClick={() => handleOpenSubActivities(task)}
-                sx={{ py: 0.5, position: 'relative' }}
-                title="Sub-Activities"
-              >
-                <ListAltIcon fontSize="small" />
-                {hasSubActs && (
-                  <Box sx={{
-                    position: 'absolute', top: 0, right: 0,
-                    bgcolor: '#4285F4', color: '#fff',
-                    borderRadius: '50%', width: 14, height: 14,
-                    fontSize: '9px', fontWeight: 'bold',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center'
-                  }}>
-                    {task.subActivities!.length}
-                  </Box>
-                )}
-              </IconButton>
-              <IconButton
-                size="small"
-                color="error"
-                onClick={() => deleteTask(params.data.id)}
-                sx={{ py: 0.5 }}
-              >
-                <DeleteIcon fontSize="small" />
-              </IconButton>
-            </Box>
+            <IconButton
+              size="small"
+              color="error"
+              onClick={() => deleteTask(params.data.id)}
+              sx={{ py: 0.5 }}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
           );
         }
       }
