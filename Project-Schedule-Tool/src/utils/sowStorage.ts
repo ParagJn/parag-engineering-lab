@@ -40,6 +40,32 @@ export async function saveSoWDraft(draft: SoWDraft): Promise<void> {
 }
 
 /**
+ * Load existing SoW draft from the drafts folder via backend API
+ */
+export async function loadSoWDraft(projectName: string): Promise<SoWDraft | null> {
+  try {
+    const response = await fetch(`http://localhost:8000/load/sow-draft/${encodeURIComponent(projectName)}`);
+
+    if (!response.ok) {
+      throw new Error(`Failed to load SoW draft: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    
+    if (result.success && result.exists) {
+      console.log(`✓ ${result.message}`);
+      return result.draft;
+    } else {
+      console.log(`ℹ No existing SoW draft found for: ${projectName}`);
+      return null;
+    }
+  } catch (error) {
+    console.error('Error loading SoW draft:', error);
+    return null;
+  }
+}
+
+/**
  * Parse markdown content into structured sections for rendering
  */
 export interface SoWSection {

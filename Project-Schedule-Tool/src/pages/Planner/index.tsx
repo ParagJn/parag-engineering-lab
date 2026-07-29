@@ -57,7 +57,7 @@ import { sowApi } from '../../services/api/sowApi';
 import type { SoWGenerationResponse } from '../../services/api/sowApi';
 import { SoWModal } from '../../components/SoWModal';
 import { exportSoWToWord } from '../../utils/wordExport';
-import { saveSoWDraft } from '../../utils/sowStorage';
+import { saveSoWDraft, loadSoWDraft } from '../../utils/sowStorage';
 import type { SoWDraft } from '../../utils/sowStorage';
 
 // Curated list of premium colors for the task bars
@@ -112,7 +112,7 @@ export function Planner() {
   const [customPlanName, setCustomPlanName] = useState(project.name);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'info' | 'error'>('success');
+  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'info' | 'error' | 'warning'>('success');
   const [lastDraftSavedTime, setLastDraftSavedTime] = useState<string | null>(null);
   const [timelineMode, setTimelineMode] = useState<'weekly' | 'weekday'>('weekly');
 
@@ -129,6 +129,24 @@ export function Planner() {
   const [sowError, setSowError] = useState<string | undefined>(undefined);
   const [sowNeedsMoreInfo, setSowNeedsMoreInfo] = useState(false);
   const [sowQuestions, setSowQuestions] = useState<string[]>([]);
+
+  // Load existing SoW draft when project name changes
+  useEffect(() => {
+    const loadExistingSoW = async () => {
+      if (project.name) {
+        const existingDraft = await loadSoWDraft(project.name);
+        if (existingDraft && existingDraft.sow_content) {
+          setSowContent(existingDraft.sow_content);
+          console.log('✓ Loaded existing SoW draft for:', project.name);
+        } else {
+          // Clear content if no draft exists
+          setSowContent('');
+        }
+      }
+    };
+    
+    loadExistingSoW();
+  }, [project.name]);
 
   const handleOpenSubActivities = (task: Task) => {
     setSubActTaskId(task.id);
@@ -256,7 +274,18 @@ export function Planner() {
     const now = new Date();
     const currentProj = latestDataRef.current.project;
     const currentTasks = latestDataRef.current.tasks;
-    const cleanProjectName = (currentProj.name || 'Untitled').trim().replace(/[^a-zA-Z0-9-_]/g, '_') || 'Untitled';
+    
+    // Skip saving if project name is empty or default
+    if (!currentProj.name || currentProj.name.trim() === '' || currentProj.name === 'New Project Schedule') {
+      if (!isAutoSave) {
+        setSnackbarSeverity('warning');
+        setSnackbarMessage('Please enter a unique project name before saving.');
+        setSnackbarOpen(true);
+      }
+      return;
+    }
+    
+    const cleanProjectName = currentProj.name.trim().replace(/[^a-zA-Z0-9-_]/g, '_');
     const filename = `${cleanProjectName}_draft.json`;
 
     const dataToSave = {
@@ -355,6 +384,22 @@ export function Planner() {
       return;
     }
 
+    // Validate project name before generating SoW
+    if (!project.name || project.name.trim() === '' || project.name === 'New Project Schedule') {
+      setSnackbarSeverity('warning');
+      setSnackbarMessage('Please enter a unique project name before generating the SoW.');
+      setSnackbarOpen(true);
+      return;
+    }
+
+    // Validate customer before generating SoW
+    if (!project.customer || project.customer.trim() === '' || project.customer === 'Acme Corp') {
+      setSnackbarSeverity('warning');
+      setSnackbarMessage('Please enter a customer name before generating the SoW.');
+      setSnackbarOpen(true);
+      return;
+    }
+
     // Otherwise, generate new SoW
     setSowModalOpen(true);
     setSowLoading(true);
@@ -406,6 +451,22 @@ export function Planner() {
   };
 
   const handleRegenerateSoW = async () => {
+    // Validate project name before regenerating SoW
+    if (!project.name || project.name.trim() === '' || project.name === 'New Project Schedule') {
+      setSnackbarSeverity('warning');
+      setSnackbarMessage('Please enter a unique project name before regenerating the SoW.');
+      setSnackbarOpen(true);
+      return;
+    }
+
+    // Validate customer before regenerating SoW
+    if (!project.customer || project.customer.trim() === '' || project.customer === 'Acme Corp') {
+      setSnackbarSeverity('warning');
+      setSnackbarMessage('Please enter a customer name before regenerating the SoW.');
+      setSnackbarOpen(true);
+      return;
+    }
+
     setSowLoading(true);
     setSowError(undefined);
     setSowContent('');

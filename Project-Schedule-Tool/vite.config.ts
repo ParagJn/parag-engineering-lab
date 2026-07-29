@@ -51,7 +51,7 @@ export default defineConfig({
               }
               const files = fs.readdirSync(draftsDir);
               const draftsList = files
-                .filter(file => file.endsWith('.json'))
+                .filter(file => file.endsWith('.json') && !file.startsWith('SoW-Draft-'))
                 .map(file => {
                   try {
                     const filePath = path.join(draftsDir, file);

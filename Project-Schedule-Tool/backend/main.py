@@ -721,6 +721,53 @@ async def save_sow_draft(request: SoWDraftSaveRequest):
         raise HTTPException(status_code=500, detail=f"Failed to save SoW draft: {str(e)}")
 
 
+# Load SoW Draft endpoint
+@app.get("/load/sow-draft/{project_name}")
+async def load_sow_draft(project_name: str):
+    """
+    Load existing SoW draft from the drafts folder by project name.
+    """
+    try:
+        # Get the drafts folder path
+        backend_dir = Path(__file__).parent
+        project_root = backend_dir.parent
+        drafts_dir = project_root / "drafts"
+        
+        # Sanitize project name for filename
+        sanitized_name = project_name.replace(' ', '_').replace('/', '_').replace('\\', '_')
+        filename = f"SoW-Draft-{sanitized_name}.json"
+        filepath = drafts_dir / filename
+        
+        # Check if file exists
+        if not filepath.exists():
+            return {
+                "success": False,
+                "exists": False,
+                "message": f"No SoW draft found for project: {project_name}"
+            }
+        
+        # Read the file
+        with open(filepath, 'r', encoding='utf-8') as f:
+            draft_data = json.load(f)
+        
+        logger.info(f"SoW draft loaded: {filepath}")
+        
+        return {
+            "success": True,
+            "exists": True,
+            "draft": draft_data,
+            "filename": filename,
+            "message": f"SoW draft loaded successfully from drafts/{filename}"
+        }
+        
+    except json.JSONDecodeError as e:
+        logger.error(f"Error parsing SoW draft JSON: {e}")
+        raise HTTPException(status_code=500, detail=f"Invalid JSON in SoW draft file: {str(e)}")
+    except Exception as e:
+        logger.error(f"Error loading SoW draft: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to load SoW draft: {str(e)}")
+
+
 if __name__ == "__main__":
     import uvicorn
     
