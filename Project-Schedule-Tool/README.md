@@ -28,12 +28,27 @@ A professional, high-performance web application designed to create, manage, and
 * **Gantt Renderings**: Merges weekly cells and formats them with matching colors and FTE labels.
 * **Page Layout Setup**: Configured with landscape orientation, fit-to-width print properties, auto-fit columns, borders, and frozen panes.
 
+### 5. AI-Powered Intelligence (Backend)
+* **Universal LLM Integration**: Support for multiple AI providers (SAP AI Core, OpenAI, Google Gemini, Azure, Anthropic)
+* **Task Analysis**: AI-powered task breakdown, effort estimation, and dependency identification
+* **Project Optimization**: Intelligent suggestions for resource allocation and timeline optimization
+* **Natural Language Queries**: Ask questions about your project in plain English
+* **RESTful API**: Clean, well-documented FastAPI endpoints for frontend integration
+* **Automatic Token Management**: OAuth 2.0 token caching and refresh for seamless authentication
+
 ---
 
 ## 📂 Project Architecture
 
 ```
 Project-Schedule-Tool/
+├── backend/                      # AI-powered FastAPI backend
+│   ├── main.py                   # FastAPI application and endpoints
+│   ├── llm_client.py             # Universal LLM client (reusable)
+│   ├── config.json               # Multi-provider model configuration
+│   ├── requirements.txt          # Python dependencies
+│   ├── .env                      # Environment variables (not in git)
+│   └── README.md                 # Backend documentation
 ├── src/
 │   ├── app/                      # Providers, Router, and Theme Overrides
 │   ├── engines/
@@ -44,11 +59,12 @@ Project-Schedule-Tool/
 │   │   ├── Dashboard/            # Project hub & saved plans manager
 │   │   └── Planner/              # Interactive split grid workspace
 │   ├── services/
-│   │   ├── api/                  # Future API connection placeholders
+│   │   ├── api/                  # API integration with backend
 │   │   └── storage/              # localStorage persistence utility
 │   ├── state/                    # Zustand stores for project metadata and tasks
 │   ├── index.css                 # Styling baseline and AG Grid theme overrides
 │   └── main.tsx                  # App entry point
+├── start.sh                      # Unified startup script (backend + frontend)
 ├── package.json
 └── tsconfig.json
 ```
@@ -58,24 +74,68 @@ Project-Schedule-Tool/
 ## 🚀 Getting Started
 
 ### Prerequisites
-Make sure you have Node.js (v18+) and npm installed.
+* **Node.js** (v18+) and npm
+* **Python** 3.9+ (for AI-powered backend features)
+* **Virtual Environment** at `/Users/paragjain/dev-works/myenv` (or update path in start.sh)
 
 ### Installation
 1. Navigate to the project folder:
    ```bash
    cd Project-Schedule-Tool
    ```
-2. Install dependencies:
+2. Install frontend dependencies:
    ```bash
    npm install
    ```
+3. Install backend dependencies:
+   ```bash
+   cd backend
+   source /Users/paragjain/dev-works/myenv/bin/activate
+   pip install -r requirements.txt
+   cd ..
+   ```
+4. Configure backend environment:
+   ```bash
+   cd backend
+   cp .env.example .env
+   # Edit .env and add your API credentials
+   cd ..
+   ```
 
-### Running Locally
-Start the local Vite development server:
+### Running the Application
+
+#### Quick Start - Both Services (Recommended)
+Start both backend and frontend with a single command:
+```bash
+./start.sh
+```
+
+This will:
+- ✅ Check all prerequisites
+- ✅ Install missing dependencies
+- ✅ Start the FastAPI backend at [http://localhost:8000](http://localhost:8000)
+- ✅ Start the React frontend at [http://localhost:5173](http://localhost:5173)
+- ✅ Handle graceful shutdown with Ctrl+C
+
+Access:
+- **Frontend App**: [http://localhost:5173](http://localhost:5173)
+- **Backend API**: [http://localhost:8000](http://localhost:8000)
+- **API Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+#### Frontend Only
+Start just the Vite development server:
 ```bash
 npm run dev
 ```
 Open [http://localhost:5173/](http://localhost:5173/) in your web browser.
+
+#### Backend Only
+Start just the FastAPI backend:
+```bash
+cd backend
+source /Users/paragjain/dev-works/myenv/bin/activate
+python main.py
+```
 
 ### Building for Production
 Compile the production bundle:

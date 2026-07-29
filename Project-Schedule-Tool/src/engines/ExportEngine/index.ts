@@ -29,6 +29,7 @@ export async function exportProjectToExcel(
   project: Project,
   tasks: Task[],
   weeks: Week[],
+  background?: string,
   assumptions?: string,
   outOfScope?: string
 ): Promise<void> {
@@ -425,6 +426,70 @@ export async function exportProjectToExcel(
       cell.alignment = { wrapText: true, vertical: 'top' };
       worksheet.mergeCells(rowIdx, 7, rowIdx, 13);
       currentRow = rowIdx;
+    });
+  }
+
+  // Create Background worksheet if background text exists
+  if (background && background.trim()) {
+    const backgroundSheet = workbook.addWorksheet('Background');
+    
+    // Set column widths
+    backgroundSheet.getColumn(1).width = 3;  // Margin
+    backgroundSheet.getColumn(2).width = 80; // Content
+    backgroundSheet.getColumn(3).width = 3;  // Margin
+    
+    // Page Setup
+    backgroundSheet.pageSetup = {
+      orientation: 'portrait',
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
+      paperSize: 9, // A4
+      margins: {
+        left: 0.75,
+        right: 0.75,
+        top: 1.0,
+        bottom: 1.0,
+        header: 0.3,
+        footer: 0.3
+      }
+    };
+
+    // Header
+    backgroundSheet.headerFooter = {
+      oddHeader: `&L&"Aptos Narrow,Bold"&12${project.name} - Project Background&R&"Aptos Narrow"&10Customer: ${project.customer}`,
+      oddFooter: `&L&"Aptos Narrow,Italic"&9[Company Logo/Name Placeholder]&R&"Aptos Narrow"&9Page &P of &N`
+    };
+
+    // Title
+    const titleCell = backgroundSheet.getCell('B2');
+    titleCell.value = 'Project Background';
+    titleCell.font = { name: fontName, size: 16, bold: true, color: { argb: 'FF1F497D' } };
+    backgroundSheet.mergeCells('B2:B2');
+
+    // Subtitle with project info
+    const subtitleCell = backgroundSheet.getCell('B3');
+    subtitleCell.value = `${project.name} - ${project.customer}`;
+    subtitleCell.font = { name: fontName, size: 12, italic: true, color: { argb: 'FF595959' } };
+    backgroundSheet.mergeCells('B3:B3');
+
+    // Divider
+    const dividerCell = backgroundSheet.getCell('B4');
+    dividerCell.border = {
+      bottom: { style: 'medium', color: { argb: 'FF366092' } }
+    };
+
+    // Background content starting from row 6
+    const backgroundLines = background.split('\n');
+    let currentBackgroundRow = 6;
+
+    backgroundLines.forEach((line: string) => {
+      const cell = backgroundSheet.getCell(currentBackgroundRow, 2);
+      cell.value = line;
+      cell.font = { name: fontName, size: 11, color: { argb: 'FF333333' } };
+      cell.alignment = { wrapText: true, vertical: 'top' };
+      
+      currentBackgroundRow++;
     });
   }
 

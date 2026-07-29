@@ -25,3 +25,6 @@ dist-ssr
 
 # Drafts directory
 drafts/
+
+# en files
+.env

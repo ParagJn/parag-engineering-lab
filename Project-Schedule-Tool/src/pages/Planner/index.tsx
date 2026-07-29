@@ -44,7 +44,8 @@ import {
   UploadFile as UploadFileIcon,
   Refresh as RefreshIcon,
   ListAlt as ListAltIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  Description as DescriptionIcon
 } from '@mui/icons-material';
 
 import { useProjectStore } from '../../state/projectStore';
@@ -52,6 +53,12 @@ import { useTaskStore } from '../../state/taskStore';
 import { exportProjectToExcel } from '../../engines/ExportEngine';
 import { storage } from '../../services/storage';
 import type { Task } from '../../models/Task';
+import { sowApi } from '../../services/api/sowApi';
+import type { SoWGenerationResponse } from '../../services/api/sowApi';
+import { SoWModal } from '../../components/SoWModal';
+import { exportSoWToWord } from '../../utils/wordExport';
+import { saveSoWDraft } from '../../utils/sowStorage';
+import type { SoWDraft } from '../../utils/sowStorage';
 
 // Curated list of premium colors for the task bars
 const PRESET_COLORS = [
@@ -84,6 +91,7 @@ export function Planner() {
   const setProjectName = useProjectStore((s) => s.setProjectName);
   const setCustomer = useProjectStore((s) => s.setCustomer);
   const setStartDate = useProjectStore((s) => s.setStartDate);
+  const setBackground = useProjectStore((s) => s.setBackground);
   const setAssumptions = useProjectStore((s) => s.setAssumptions);
   const setOutOfScope = useProjectStore((s) => s.setOutOfScope);
   const loadProject = useProjectStore((s) => s.loadProject);
@@ -113,6 +121,14 @@ export function Planner() {
   const [subActTaskId, setSubActTaskId] = useState<string | null>(null);
   const [subActTaskName, setSubActTaskName] = useState('');
   const [subActItems, setSubActItems] = useState<string[]>([]);
+
+  // SoW Generation Modal state
+  const [sowModalOpen, setSowModalOpen] = useState(false);
+  const [sowLoading, setSowLoading] = useState(false);
+  const [sowContent, setSowContent] = useState('');
+  const [sowError, setSowError] = useState<string | undefined>(undefined);
+  const [sowNeedsMoreInfo, setSowNeedsMoreInfo] = useState(false);
+  const [sowQuestions, setSowQuestions] = useState<string[]>([]);
 
   const handleOpenSubActivities = (task: Task) => {
     setSubActTaskId(task.id);
@@ -321,13 +337,183 @@ export function Planner() {
   // Excel Export triggering
   const handleExportExcel = async () => {
     try {
-      await exportProjectToExcel(project, tasks, weeks, project.assumptions, project.outOfScope);
+      await exportProjectToExcel(project, tasks, weeks, project.background, project.assumptions, project.outOfScope);
       setSnackbarSeverity('success');
       setSnackbarMessage('Excel sheet generated successfully!');
       setSnackbarOpen(true);
     } catch (err) {
       alert('Failed to export Excel file.');
       console.error(err);
+    }
+  };
+
+  // SoW Generation handlers
+  const handleGenerateSoW = async () => {
+    // If SoW already exists, just open the modal to view it
+    if (sowContent) {
+      setSowModalOpen(true);
+      return;
+    }
+
+    // Otherwise, generate new SoW
+    setSowModalOpen(true);
+    setSowLoading(true);
+    setSowError(undefined);
+    setSowContent('');
+    setSowNeedsMoreInfo(false);
+    setSowQuestions([]);
+
+    try {
+      const response: SoWGenerationResponse = await sowApi.generateSoW({
+        project_name: project.name,
+        customer: project.customer,
+        background: project.background,
+        assumptions: project.assumptions,
+        out_of_scope: project.outOfScope,
+      });
+
+      if (response.success && response.sow_content) {
+        setSowContent(response.sow_content);
+        
+        // Save to JSON file in drafts folder
+        const draft: SoWDraft = {
+          project_name: project.name,
+          customer: project.customer,
+          background: project.background || '',
+          assumptions: project.assumptions,
+          out_of_scope: project.outOfScope,
+          sow_content: response.sow_content,
+          timestamp: response.timestamp,
+          version: '1.0'
+        };
+        await saveSoWDraft(draft);
+        
+        setSnackbarSeverity('success');
+        setSnackbarMessage('SoW generated and saved to drafts/');
+        setSnackbarOpen(true);
+      } else if (response.needs_more_info && response.questions) {
+        setSowNeedsMoreInfo(true);
+        setSowQuestions(response.questions);
+      } else if (response.error) {
+        setSowError(response.error);
+      }
+    } catch (error) {
+      console.error('SoW generation error:', error);
+      setSowError('Failed to generate Statement of Work. Please check your backend connection.');
+    } finally {
+      setSowLoading(false);
+    }
+  };
+
+  const handleRegenerateSoW = async () => {
+    setSowLoading(true);
+    setSowError(undefined);
+    setSowContent('');
+    setSowNeedsMoreInfo(false);
+    setSowQuestions([]);
+
+    try {
+      const response: SoWGenerationResponse = await sowApi.generateSoW({
+        project_name: project.name,
+        customer: project.customer,
+        background: project.background,
+        assumptions: project.assumptions,
+        out_of_scope: project.outOfScope,
+      });
+
+      if (response.success && response.sow_content) {
+        setSowContent(response.sow_content);
+        
+        // Save to JSON file in drafts folder
+        const draft: SoWDraft = {
+          project_name: project.name,
+          customer: project.customer,
+          background: project.background || '',
+          assumptions: project.assumptions,
+          out_of_scope: project.outOfScope,
+          sow_content: response.sow_content,
+          timestamp: response.timestamp,
+          version: '1.0'
+        };
+        await saveSoWDraft(draft);
+        
+        setSnackbarSeverity('success');
+        setSnackbarMessage('SoW regenerated and saved to drafts/');
+        setSnackbarOpen(true);
+      } else if (response.needs_more_info && response.questions) {
+        setSowNeedsMoreInfo(true);
+        setSowQuestions(response.questions);
+      } else if (response.error) {
+        setSowError(response.error);
+      }
+    } catch (error) {
+      console.error('SoW regeneration error:', error);
+      setSowError('Failed to regenerate Statement of Work. Please check your backend connection.');
+    } finally {
+      setSowLoading(false);
+    }
+  };
+
+  const handleRegenerateWithMoreInfo = async (additionalInfo: string) => {
+    setSowLoading(true);
+    setSowError(undefined);
+    setSowNeedsMoreInfo(false);
+
+    try {
+      // Append additional info to background
+      const updatedBackground = project.background
+        ? `${project.background}\n\nAdditional Information:\n${additionalInfo}`
+        : additionalInfo;
+
+      const response: SoWGenerationResponse = await sowApi.generateSoW({
+        project_name: project.name,
+        customer: project.customer,
+        background: updatedBackground,
+        assumptions: project.assumptions,
+        out_of_scope: project.outOfScope,
+      });
+
+      if (response.success && response.sow_content) {
+        setSowContent(response.sow_content);
+        
+        // Save to JSON file
+        const draft: SoWDraft = {
+          project_name: project.name,
+          customer: project.customer,
+          background: updatedBackground,
+          assumptions: project.assumptions,
+          out_of_scope: project.outOfScope,
+          sow_content: response.sow_content,
+          timestamp: response.timestamp,
+          version: '1.0'
+        };
+        await saveSoWDraft(draft);
+        
+        setSnackbarSeverity('success');
+        setSnackbarMessage('SoW generated with additional information!');
+        setSnackbarOpen(true);
+      } else if (response.error) {
+        setSowError(response.error);
+      }
+    } catch (error) {
+      console.error('SoW regeneration error:', error);
+      setSowError('Failed to regenerate Statement of Work.');
+    } finally {
+      setSowLoading(false);
+    }
+  };
+
+  const handleExportSoWToWord = async (content: string) => {
+    try {
+      await exportSoWToWord(content, project.name);
+      setSnackbarSeverity('success');
+      setSnackbarMessage('Statement of Work exported to Word successfully!');
+      setSnackbarOpen(true);
+    } catch (error) {
+      console.error('Word export error:', error);
+      setSnackbarSeverity('error');
+      setSnackbarMessage('Failed to export to Word. Please try again.');
+      setSnackbarOpen(true);
     }
   };
 
@@ -808,6 +994,15 @@ export function Planner() {
               Save Plan
             </Button>
             <Button
+              variant="outlined"
+              startIcon={<DescriptionIcon />}
+              size="small"
+              onClick={handleGenerateSoW}
+              color="secondary"
+            >
+              {sowContent ? 'View SoW Draft' : 'SoW Draft'}
+            </Button>
+            <Button
               variant="contained"
               color="primary"
               startIcon={<DownloadIcon />}
@@ -852,6 +1047,24 @@ export function Planner() {
                 sx={{ width: 180 }}
               />
             </Box>
+          </CardContent>
+        </Card>
+
+        {/* Project Background Card */}
+        <Card sx={{ boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+          <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+            <TextField
+              label="Project Background"
+              value={project.background || ''}
+              onChange={(e) => setBackground(e.target.value)}
+              placeholder="Enter project background, context, objectives, or business case here. This will be exported to a separate 'Background' worksheet in Excel."
+              multiline
+              minRows={3}
+              maxRows={8}
+              fullWidth
+              size="small"
+              sx={{ '& .MuiInputBase-root': { fontSize: '0.875rem' } }}
+            />
           </CardContent>
         </Card>
 
@@ -1113,7 +1326,21 @@ export function Planner() {
         </DialogActions>
       </Dialog>
 
-      {/* 6. Notifications Toast */}
+      {/* 6. SoW Generation Modal */}
+      <SoWModal
+        open={sowModalOpen}
+        onClose={() => setSowModalOpen(false)}
+        sowContent={sowContent}
+        loading={sowLoading}
+        error={sowError}
+        needsMoreInfo={sowNeedsMoreInfo}
+        questions={sowQuestions}
+        onRegenerate={handleRegenerateSoW}
+        onRegenerateWithMoreInfo={handleRegenerateWithMoreInfo}
+        onExportToWord={handleExportSoWToWord}
+      />
+
+      {/* 7. Notifications Toast */}
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={4000}
