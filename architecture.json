@@ -1,0 +1,689 @@
+{
+  "nodes": [
+    {
+      "id": "gemini",
+      "label": "Google Gemini",
+      "type": "ai",
+      "description": "Gemini 2.0/2.5 Pro \u2014 enrichment, research, article generation, CV extraction, magazine curation, data lineage.",
+      "tech": [
+        "Gemini 2.0 Flash",
+        "Gemini 2.5 Pro"
+      ]
+    },
+    {
+      "id": "claude",
+      "label": "Anthropic Claude",
+      "type": "ai",
+      "description": "Claude Sonnet/Opus \u2014 article review, CV generation, procurement negotiations, interview eval, SoW generation, NL-to-SQL ReAct agent.",
+      "tech": [
+        "Claude Sonnet 4",
+        "Claude Opus"
+      ]
+    },
+    {
+      "id": "openai",
+      "label": "OpenAI GPT",
+      "type": "ai",
+      "description": "GPT-4/GPT-5.4 \u2014 interview question generation and evaluation via SAP AI Core; strategy synthesis via Azure OpenAI.",
+      "tech": [
+        "GPT-4",
+        "GPT-5.4",
+        "GPT-5.3 Codex"
+      ]
+    },
+    {
+      "id": "sap",
+      "label": "SAP AI Core",
+      "type": "integration",
+      "description": "Enterprise AI gateway \u2014 OAuth 2.0 routing to Gemini 2.5 Pro, Claude Opus, and GPT-4.",
+      "tech": [
+        "OAuth 2.0",
+        "httpx",
+        "Token cache"
+      ]
+    },
+    {
+      "id": "azure",
+      "label": "Azure OpenAI",
+      "type": "integration",
+      "description": "Azure-hosted GPT-5.4 and GPT-5.3 Codex. Used by Strategy-Analyzer and File-Compare.",
+      "tech": [
+        "GPT-5.4",
+        "GPT-5.3 Codex",
+        "Vision API"
+      ]
+    },
+    {
+      "id": "procurement",
+      "label": "Agentic Procurement",
+      "type": "project",
+      "description": "Multi-agent procurement simulator. Buyer (Gemini) and Supplier (Claude) negotiate through a 6-step lifecycle with HITL governance.",
+      "tech": [
+        "FastAPI",
+        "React 19",
+        "TypeScript",
+        "Tailwind v4",
+        "JSON DB"
+      ]
+    },
+    {
+      "id": "strategist",
+      "label": "Post Strategist",
+      "type": "project",
+      "description": "Multi-agent social media strategy generator. Gemini and Claude run in parallel for 8 operations with unified synthesis.",
+      "tech": [
+        "FastAPI",
+        "React 18",
+        "asyncio",
+        "Tailwind CSS"
+      ]
+    },
+    {
+      "id": "articles",
+      "label": "Article Generator",
+      "type": "project",
+      "description": "Article generation with auto-retry quality loop. Gemini writes; Claude scores 1-10. Auto-retries below threshold. Blog/LinkedIn/Instagram/X. SSE streaming.",
+      "tech": [
+        "FastAPI",
+        "React 18",
+        "SSE",
+        "asyncio"
+      ]
+    },
+    {
+      "id": "interview",
+      "label": "Interview Coach",
+      "type": "project",
+      "description": "3-agent interview platform (GPT-4 + Gemini + Claude via SAP AI Core). Generates 6 tailored questions, evaluates answers in parallel.",
+      "tech": [
+        "FastAPI",
+        "React 18",
+        "Recharts",
+        "SAP AI Core"
+      ]
+    },
+    {
+      "id": "profile1",
+      "label": "Profile Generator",
+      "type": "project",
+      "description": "CV generation: PDF/DOCX + links \u2192 Gemini JSON profile \u2192 Claude HTML CV + LinkedIn copy \u2192 Playwright PDF.",
+      "tech": [
+        "FastAPI",
+        "React 18",
+        "pdfplumber",
+        "Playwright"
+      ]
+    },
+    {
+      "id": "profile2",
+      "label": "Profile Gen V2",
+      "type": "project",
+      "description": "Advanced CV rebuild: ATS optimization scoring, 2-stage AI pipeline (Gemini research + Claude CV gen), 5 output formats.",
+      "tech": [
+        "FastAPI",
+        "React 18",
+        "google-genai",
+        "Anthropic SDK"
+      ]
+    },
+    {
+      "id": "schedule",
+      "label": "Project Schedule Tool",
+      "type": "project",
+      "description": "AI scheduling workspace. Dual-grid (metadata + Gantt). Claude generates SoW docs. ExcelJS exports with live formulas. Critical path engine.",
+      "tech": [
+        "FastAPI",
+        "React 19",
+        "Material-UI v9",
+        "AG Grid",
+        "ExcelJS"
+      ]
+    },
+    {
+      "id": "chatdb",
+      "label": "Chat With Database",
+      "type": "project",
+      "description": "Natural language SQL interface to PostgreSQL/MySQL. LangGraph ReAct agent (Claude) with 3 DB tools. Session-based engine registry.",
+      "tech": [
+        "FastAPI",
+        "React 19",
+        "LangGraph",
+        "SQLAlchemy"
+      ]
+    },
+    {
+      "id": "magazine",
+      "label": "Daily Articles Pages",
+      "type": "project",
+      "description": "AI tech magazine: 10 RSS feeds \u2192 Gemini enrichment \u2192 Claude editorial curation \u2192 10 visual spread styles. PDF export, email delivery.",
+      "tech": [
+        "FastAPI",
+        "React 19",
+        "feedparser",
+        "Playwright",
+        "SAP AI Core"
+      ]
+    },
+    {
+      "id": "energy",
+      "label": "Energy Dashboard",
+      "type": "project",
+      "description": "Enterprise AI data platform for utilities. ETL pipeline visualization (5 stages), quality management across 7 datasets (35k records), AI lineage tracing.",
+      "tech": [
+        "FastAPI",
+        "React 19",
+        "TypeScript",
+        "Axios",
+        "SAP AI Core"
+      ]
+    },
+    {
+      "id": "filecomp",
+      "label": "File Compare",
+      "type": "project",
+      "description": "Document comparison (PDF/DOCX/images). Heuristic diffing + Azure AI section-by-section reports. Image OCR via vision API.",
+      "tech": [
+        "Streamlit",
+        "Azure OpenAI",
+        "pypdf",
+        "python-docx"
+      ]
+    },
+    {
+      "id": "strategy",
+      "label": "Strategy Analyzer",
+      "type": "project",
+      "description": "4-agent strategy analysis: Claude (Strategist), Gemini (Cost Challenger), GPT-5.3 (Validator), GPT-5.4 (Synthesizer). Extended thinking mode.",
+      "tech": [
+        "FastAPI",
+        "React 18",
+        "Pillow",
+        "SAP AI Core",
+        "Azure OpenAI"
+      ]
+    },
+    {
+      "id": "talentflow",
+      "label": "TalentFlow",
+      "type": "project",
+      "description": "Recruiting platform: regex JD parser \u2192 deterministic candidate generation \u2192 outreach drafting. SQLite Kanban pipeline.",
+      "tech": [
+        "Python CGI",
+        "Vanilla JS",
+        "SQLite",
+        "Chart.js"
+      ]
+    },
+    {
+      "id": "md2docx",
+      "label": "md-to-docx",
+      "type": "project",
+      "description": "Markdown to Word converter. markdown-it-py token tree \u2192 DocxBuilder. Mermaid diagrams rendered via mermaid.ink \u2192 embedded PNG.",
+      "tech": [
+        "Streamlit",
+        "python-docx",
+        "markdown-it-py",
+        "Pillow"
+      ]
+    },
+    {
+      "id": "skillsgen",
+      "label": "Skills Generator",
+      "type": "project",
+      "description": "AI skill definition generator for Claude/Gemini/Azure. Converts NL \u2192 SKILL.md. Auto-syncs to .claude/skills/ for Claude Code CLI.",
+      "tech": [
+        "FastAPI",
+        "Vanilla JS",
+        "Anthropic SDK",
+        "google-genai"
+      ]
+    },
+    {
+      "id": "docproc",
+      "label": "Document Processor",
+      "type": "project",
+      "description": "DOCX vectorization for RAG. Hierarchical chunking with heading breadcrumbs. Optional Azure vision enrichment. Milvus-ready VectorRecords.",
+      "tech": [
+        "FastAPI",
+        "React 18",
+        "python-docx",
+        "Pillow",
+        "Azure OpenAI"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "gemini",
+      "to": "sap",
+      "label": "routed via"
+    },
+    {
+      "from": "claude",
+      "to": "sap",
+      "label": "routed via"
+    },
+    {
+      "from": "openai",
+      "to": "sap",
+      "label": "routed via"
+    },
+    {
+      "from": "openai",
+      "to": "azure",
+      "label": "routed via"
+    },
+    {
+      "from": "procurement",
+      "to": "gemini",
+      "label": "Buyer Agent"
+    },
+    {
+      "from": "procurement",
+      "to": "claude",
+      "label": "Supplier Agent"
+    },
+    {
+      "from": "strategist",
+      "to": "gemini",
+      "label": "parallel"
+    },
+    {
+      "from": "strategist",
+      "to": "claude",
+      "label": "parallel"
+    },
+    {
+      "from": "articles",
+      "to": "gemini",
+      "label": "writes"
+    },
+    {
+      "from": "articles",
+      "to": "claude",
+      "label": "reviews"
+    },
+    {
+      "from": "interview",
+      "to": "sap",
+      "label": "3 agents"
+    },
+    {
+      "from": "profile1",
+      "to": "sap",
+      "label": "Gemini+Claude"
+    },
+    {
+      "from": "profile2",
+      "to": "gemini",
+      "label": "research"
+    },
+    {
+      "from": "profile2",
+      "to": "claude",
+      "label": "CV gen"
+    },
+    {
+      "from": "schedule",
+      "to": "sap",
+      "label": "Claude SoW"
+    },
+    {
+      "from": "chatdb",
+      "to": "claude",
+      "label": "ReAct agent"
+    },
+    {
+      "from": "magazine",
+      "to": "gemini",
+      "label": "enrichment"
+    },
+    {
+      "from": "magazine",
+      "to": "sap",
+      "label": "Claude curation"
+    },
+    {
+      "from": "energy",
+      "to": "sap",
+      "label": "Gemini lineage"
+    },
+    {
+      "from": "filecomp",
+      "to": "azure",
+      "label": "compare+vision"
+    },
+    {
+      "from": "strategy",
+      "to": "sap",
+      "label": "Claude+Gemini"
+    },
+    {
+      "from": "strategy",
+      "to": "azure",
+      "label": "GPT-5.4+5.3"
+    },
+    {
+      "from": "skillsgen",
+      "to": "claude",
+      "label": "Anthropic"
+    },
+    {
+      "from": "skillsgen",
+      "to": "gemini",
+      "label": "Gemini"
+    },
+    {
+      "from": "skillsgen",
+      "to": "azure",
+      "label": "Azure GPT"
+    },
+    {
+      "from": "docproc",
+      "to": "azure",
+      "label": "vision OCR"
+    }
+  ],
+  "flows": [
+    {
+      "id": "f1",
+      "name": "Procurement Negotiation",
+      "project": "Agentic Procurement",
+      "description": "6-step HITL negotiation: AI Buyer (Gemini) vs AI Supplier (Claude)",
+      "steps": [
+        {
+          "node": "procurement",
+          "action": "Human drafts Material Request Quote \u2014 selects SKUs, quantities, desired prices"
+        },
+        {
+          "node": "gemini",
+          "action": "Gemini Buyer Agent proposes counter-offer with 3-5% volume discounts per SKU"
+        },
+        {
+          "node": "claude",
+          "action": "Claude Supplier Agent generates fulfillment proposal, reviews discounts SKU-by-SKU"
+        },
+        {
+          "node": "procurement",
+          "action": "Human toggles SKU accept/decline. WorkflowEngine generates contracts, decrements inventory."
+        },
+        {
+          "node": "gemini",
+          "action": "Gemini compiles markdown negotiation report for AI Auditor chatbot"
+        }
+      ]
+    },
+    {
+      "id": "f2",
+      "name": "Article Quality Loop",
+      "project": "Article Generator",
+      "description": "Gemini writes \u2192 Claude scores 1-10 \u2192 auto-retry below threshold",
+      "steps": [
+        {
+          "node": "articles",
+          "action": "User submits URLs, selects platform (Blog/LinkedIn/Instagram/X) and content mode"
+        },
+        {
+          "node": "gemini",
+          "action": "Gemini researches URLs and drafts platform-specific article via SSE stream"
+        },
+        {
+          "node": "claude",
+          "action": "Claude reviews: score 1-10, summary + improvement suggestions"
+        },
+        {
+          "node": "gemini",
+          "action": "If score < 7: Gemini regenerates with Claude feedback (max 2 retries)"
+        },
+        {
+          "node": "articles",
+          "action": "Final article saved. SSE done event with final score and attempt count."
+        }
+      ]
+    },
+    {
+      "id": "f3",
+      "name": "CV Generation Pipeline",
+      "project": "Profile Generator V2",
+      "description": "Evidence-grounded 2-stage AI CV with ATS optimization",
+      "steps": [
+        {
+          "node": "profile2",
+          "action": "User uploads resume (PDF/DOCX), pastes profile links, enters target role + JD"
+        },
+        {
+          "node": "gemini",
+          "action": "Gemini 2.5 Pro analyzes all evidence \u2192 research_summary + ats_keywords JSON"
+        },
+        {
+          "node": "claude",
+          "action": "Claude Opus generates professional CV Markdown from evidence + Gemini profile"
+        },
+        {
+          "node": "profile2",
+          "action": "ATS Optimizer scores CV vs job description (0-100), identifies missing keywords"
+        },
+        {
+          "node": "profile2",
+          "action": "5 formats: HTML CV, Markdown, JSON profile, ATS report, research summary"
+        }
+      ]
+    },
+    {
+      "id": "f4",
+      "name": "Interview Coach Session",
+      "project": "Interview Coach",
+      "description": "3-agent parallel question generation and evaluation via SAP AI Core",
+      "steps": [
+        {
+          "node": "interview",
+          "action": "User enters company, job title, JD, experience, interview type"
+        },
+        {
+          "node": "openai",
+          "action": "GPT-4 analyzes company context, generates 6 base questions"
+        },
+        {
+          "node": "claude",
+          "action": "Claude refines Q1-3 in parallel with Gemini refining Q4-6"
+        },
+        {
+          "node": "openai",
+          "action": "All 3 agents evaluate each answer simultaneously (asyncio.gather)"
+        },
+        {
+          "node": "interview",
+          "action": "Consolidated feedback + per-agent scores. Session persisted as JSON."
+        }
+      ]
+    },
+    {
+      "id": "f5",
+      "name": "Strategy Multi-Agent Analysis",
+      "project": "Strategy Analyzer",
+      "description": "4 specialized AI agents analyze strategy documents in parallel",
+      "steps": [
+        {
+          "node": "strategy",
+          "action": "User uploads PDF/DOCX/PPTX, selects mode, optional extended thinking toggle"
+        },
+        {
+          "node": "claude",
+          "action": "Claude: Strategy Architect \u2014 deep structural analysis, 12K token thinking budget"
+        },
+        {
+          "node": "gemini",
+          "action": "Gemini: Cost Challenger \u2014 cost, implementation, turnaround perspective"
+        },
+        {
+          "node": "openai",
+          "action": "GPT-5.3: Validator \u2014 checklist, risk flags, missing evidence"
+        },
+        {
+          "node": "openai",
+          "action": "GPT-5.4: Synthesizer \u2014 final Markdown merging all 3 agent outputs"
+        }
+      ]
+    },
+    {
+      "id": "f6",
+      "name": "Daily Magazine Generation",
+      "project": "Daily Articles Pages",
+      "description": "RSS feeds \u2192 Gemini enrichment \u2192 Claude editorial curation \u2192 HTML magazine",
+      "steps": [
+        {
+          "node": "magazine",
+          "action": "User selects 1-5 tech sources (HN, TechCrunch, Wired) and clicks Generate"
+        },
+        {
+          "node": "gemini",
+          "action": "Gemini 2.0 Flash enriches each story: summary, key facts, applies_to_me, category"
+        },
+        {
+          "node": "claude",
+          "action": "Claude Sonnet 4 curates top 10: headlines, decks, body, pull quotes, 10 spread styles"
+        },
+        {
+          "node": "magazine",
+          "action": "HTML magazine rendered with TOC, 10 visual spreads, SEO metadata, JSON-LD"
+        },
+        {
+          "node": "magazine",
+          "action": "Playwright PDF export, SMTP email delivery + attachment, LinkedIn post generation"
+        }
+      ]
+    },
+    {
+      "id": "f7",
+      "name": "Energy Data Quality",
+      "project": "Energy Dashboard",
+      "description": "AI quality detection, lineage tracing, automated remediation across 35k records",
+      "steps": [
+        {
+          "node": "energy",
+          "action": "Data Quality Lab scans 7 datasets (35k records) for NULLs, outliers, schema violations"
+        },
+        {
+          "node": "gemini",
+          "action": "Gemini 2.5 Pro traces quarantined records through 5-stage ETL pipeline"
+        },
+        {
+          "node": "gemini",
+          "action": "SVG lineage diagram: Acquisition \u2192 Validation \u2192 Cleansing \u2192 Transformation \u2192 Lakehouse"
+        },
+        {
+          "node": "energy",
+          "action": "Auto-fix: normalize nulls, abs() negatives, fix invalid statuses \u2192 saved to processed/"
+        }
+      ]
+    },
+    {
+      "id": "f8",
+      "name": "NL-to-SQL Chat",
+      "project": "Chat With Database",
+      "description": "Natural language \u2192 LangGraph ReAct agent \u2192 SQL execution \u2192 markdown response",
+      "steps": [
+        {
+          "node": "chatdb",
+          "action": "User fills DB credentials (PostgreSQL/MySQL). SQLAlchemy engine stored in session registry."
+        },
+        {
+          "node": "claude",
+          "action": "LangGraph ReAct agent (claude-sonnet-4-6) instantiated with 3 database tools"
+        },
+        {
+          "node": "claude",
+          "action": "Agent: schema introspection \u2192 table definitions \u2192 SQL construction \u2192 execute"
+        },
+        {
+          "node": "chatdb",
+          "action": "Markdown response with syntax-highlighted SQL and formatted result tables"
+        }
+      ]
+    },
+    {
+      "id": "f9",
+      "name": "SoW Generation and Export",
+      "project": "Project Schedule Tool",
+      "description": "AI-powered Statement of Work from project context with Word/Excel export",
+      "steps": [
+        {
+          "node": "schedule",
+          "action": "User defines project, creates tasks in dual-grid Planner (metadata + Gantt timeline)"
+        },
+        {
+          "node": "schedule",
+          "action": "SchedulingEngine: topological sort, critical path, weekend-aware Gantt date calculations"
+        },
+        {
+          "node": "claude",
+          "action": "Claude 4.7 Opus generates SoW: Background, Scope, Deliverables, RACI Matrix"
+        },
+        {
+          "node": "schedule",
+          "action": "Export to Word (.docx) or Excel (.xlsx with live formulas, color-coded Gantt)"
+        },
+        {
+          "node": "schedule",
+          "action": "Auto-save every 2 min: project drafts + SoW drafts stored separately"
+        }
+      ]
+    },
+    {
+      "id": "f10",
+      "name": "Skill Generation and Deploy",
+      "project": "Skills Generator",
+      "description": "Natural language \u2192 SKILL.md \u2192 Claude Code CLI auto-sync + .zip download",
+      "steps": [
+        {
+          "node": "skillsgen",
+          "action": "User selects platform (Anthropic/Gemini/Azure) and describes skill in natural language"
+        },
+        {
+          "node": "claude",
+          "action": "Selected LLM generates SKILL.md: YAML frontmatter + markdown sections"
+        },
+        {
+          "node": "skillsgen",
+          "action": "If Anthropic: auto-synced to .claude/skills/ for Claude Code CLI integration"
+        },
+        {
+          "node": "skillsgen",
+          "action": "Second LLM call generates usage notes. Test cases generated and executed."
+        },
+        {
+          "node": "skillsgen",
+          "action": "Download as .zip (SKILL.md + README + LICENSE) for Claude.ai upload"
+        }
+      ]
+    },
+    {
+      "id": "f11",
+      "name": "DOCX Vectorization",
+      "project": "Document Processor",
+      "description": "DOCX hierarchical chunking pipeline producing Milvus-ready VectorRecords for RAG",
+      "steps": [
+        {
+          "node": "docproc",
+          "action": "User uploads .docx. python-docx extracts paragraphs with heading hierarchy (h1-h6)."
+        },
+        {
+          "node": "azure",
+          "action": "Optional: Azure OpenAI gpt-4o generates captions + OCR markdown for images"
+        },
+        {
+          "node": "docproc",
+          "action": "Hierarchical chunking: section-level (heading breadcrumbs) + paragraph-level"
+        },
+        {
+          "node": "docproc",
+          "action": "VectorRecords: embedding_text prefixed with breadcrumb path for semantic search"
+        },
+        {
+          "node": "docproc",
+          "action": "ProcessResponse: paragraphs + tables + images + chunks + Milvus-ready vector_records"
+        }
+      ]
+    }
+  ]
+}
