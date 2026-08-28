@@ -1,0 +1,17 @@
+# Backend requirements
+
+# FastAPI and server
+fastapi==0.115.12
+uvicorn[standard]==0.34.2
+python-multipart==0.0.20
+python-dotenv==1.0.1
+
+# Data validation
+pydantic==2.10.6
+
+# Document extraction
+PyPDF2==3.0.1
+python-docx==1.1.2
+
+# Optional dependencies
+certifi==2024.12.14
