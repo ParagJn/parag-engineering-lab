@@ -54,6 +54,16 @@
       ]
     },
     {
+      "id": "ibm",
+      "label": "IBM ICA",
+      "type": "ai",
+      "description": "IBM watsonx Code Assistant — Claude Sonnet 5 hosted on IBM infrastructure for internal AI chat.",
+      "tech": [
+        "Claude Sonnet 5",
+        "watsonx Code Assistant"
+      ]
+    },
+    {
       "id": "procurement",
       "label": "Agentic Procurement",
       "type": "project",
@@ -250,6 +260,19 @@
         "Pillow",
         "Azure OpenAI"
       ]
+    },
+    {
+      "id": "myownai",
+      "label": "My Own AI Assistant",
+      "type": "project",
+      "description": "Personal ChatGPT-like AI chat interface powered by IBM ICA. Session management, document uploads (PDF/DOCX/TXT/MD), conversation renaming. Internal use only.",
+      "tech": [
+        "FastAPI",
+        "React 18",
+        "TypeScript",
+        "IBM ICA Client",
+        "PyPDF2"
+      ]
     }
   ],
   "edges": [
@@ -382,6 +405,11 @@
       "from": "docproc",
       "to": "azure",
       "label": "vision OCR"
+    },
+    {
+      "from": "myownai",
+      "to": "ibm",
+      "label": "chat model"
     }
   ],
   "flows": [

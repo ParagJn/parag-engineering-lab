@@ -1039,6 +1039,7 @@
       { id: "gemini", label: "Google Gemini", type: "ai", color: "#7c5cd8", desc: "Gemini 2.0 Flash & 2.5 Pro: handles data extraction, RAG summarization, content calendar expansion, and lineage analysis.", tech: "Gemini 2.0 Flash · 2.5 Pro", dir: "https://github.com/ParagJn/parag-engineering-lab", x: 434, y: 70 },
       { id: "claude", label: "Anthropic Claude", type: "ai", color: "#7c5cd8", desc: "Claude 3.5 Sonnet & 4.7 Opus: executes procurement negotiations, article score loops, SoW text compilations, and LangGraph DB queries.", tech: "Claude Sonnet · Opus", dir: "https://github.com/ParagJn/parag-engineering-lab", x: 626, y: 70 },
       { id: "openai", label: "OpenAI GPT", type: "ai", color: "#7c5cd8", desc: "GPT-4 & GPT-5.4: powers core interview question banks and multi-agent report synthesizers.", tech: "GPT-4 · GPT-5.4", dir: "https://github.com/ParagJn/parag-engineering-lab", x: 818, y: 70 },
+      { id: "ibm_ica", label: "IBM ICA", type: "ai", color: "#7c5cd8", desc: "IBM watsonx Code Assistant: Claude Sonnet 5 hosted on IBM infrastructure for internal AI chat and document analysis.", tech: "Claude Sonnet 5 · watsonx", dir: "https://github.com/ParagJn/parag-engineering-lab", x: 1010, y: 70 },
       
       // ROW 2: Integrations
       { id: "sap_ai", label: "SAP AI Core", type: "integration", color: "#0ea5e9", desc: "Enterprise AI gateway providing isolated tenant routing, OAuth 2.0 credentials handshake, and model endpoint token caching.", tech: "OAuth 2.0 · httpx · Token Cache", dir: "https://github.com/ParagJn/parag-engineering-lab", x: 626, y: 190 },
@@ -1064,7 +1065,8 @@
       { id: "talent_flow", label: "TalentFlow", type: "utility", color: "#10b981", desc: "Recruiting panel prototype mapping candidate funnels deterministic-matching candidates via regex parsed CV details.", tech: "Vanilla JS · SQLite · Chart.js · Python CGI", dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/TalentFlow", x: 50, y: 550 },
       { id: "md_docx", label: "md-to-docx", type: "utility", color: "#10b981", desc: "Markdown compilation dashboard rendering token trees to docx files and loading Mermaid codes to inline PNG shapes.", tech: "Streamlit · python-docx · Pillow", dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/md-to-docx", x: 242, y: 550 },
       { id: "skills_gen", label: "Skills Generator", type: "utility", color: "#10b981", desc: "Builds versioned SKILL.md prompt files for AI engines, automatically syncing with Claude Code CLI config folders.", tech: "FastAPI · Vanilla JS · Anthropic SDK", dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/Skills-Generator", x: 434, y: 550 },
-      { id: "doc_processor", label: "Document Processor", type: "utility", color: "#10b981", desc: "Extracts paragraph hierarchy and captions images via Azure Vision, outputting records structured for Milvus vectors databases.", tech: "FastAPI · React 18 · Azure OpenAI", dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/document_processor", x: 626, y: 550 }
+      { id: "doc_processor", label: "Document Processor", type: "utility", color: "#10b981", desc: "Extracts paragraph hierarchy and captions images via Azure Vision, outputting records structured for Milvus vectors databases.", tech: "FastAPI · React 18 · Azure OpenAI", dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/document_processor", x: 626, y: 550 },
+      { id: "myownai", label: "My Own AI Assistant", type: "project", color: "#3b82f6", desc: "Personal ChatGPT-like interface powered by IBM ICA. Supports session management, document uploads, and conversation renaming. Internal use only.", tech: "FastAPI · React 18 · IBM ICA · PyPDF2", dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/My-Own-AI-Assistant", x: 818, y: 550 }
     ];
 
     const EDGES = [
@@ -1096,7 +1098,8 @@
       { source: "skills_gen", target: "gemini", color: "#10b981" },
       { source: "skills_gen", target: "claude", color: "#10b981" },
       { source: "skills_gen", target: "azure_openai", color: "#10b981" },
-      { source: "doc_processor", target: "azure_openai", color: "#10b981" }
+      { source: "doc_processor", target: "azure_openai", color: "#10b981" },
+      { source: "myownai", target: "ibm_ica", color: "#3b82f6" }
     ];
 
     const FLOWS = [
