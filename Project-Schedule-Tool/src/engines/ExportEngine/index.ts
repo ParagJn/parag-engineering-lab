@@ -1,5 +1,6 @@
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
+import dayjs from 'dayjs';
 import type { Project } from '../../models/Project';
 import type { Task } from '../../models/Task';
 import type { Week } from '../../models/Week';
@@ -23,6 +24,33 @@ function getColumnLetter(colIndex: number): string {
     temp = Math.floor((temp - modulo) / 26);
   }
   return letter;
+}
+
+// Helper: Calculate which days (Mon-Fri) are active for a task in a given week
+function calculateActiveDaysForWeek(task: Task, week: Week): boolean[] {
+  const startD = dayjs(task.calculatedStartDate);
+  const finishD = dayjs(task.calculatedFinishDate);
+  const weekFri = dayjs(week.fridayDate);
+  
+  const activeDays: boolean[] = [false, false, false, false, false];
+  
+  // Check each day of the week (Monday=0 to Friday=4)
+  for (let d = 0; d < 5; d++) {
+    const dayDate = weekFri.subtract(4 - d, 'day');
+    const isActive = (dayDate.isAfter(startD, 'day') || dayDate.isSame(startD, 'day')) &&
+      (dayDate.isBefore(finishD, 'day') || dayDate.isSame(finishD, 'day'));
+    if (isActive) {
+      activeDays[d] = true;
+    }
+  }
+  
+  return activeDays;
+}
+
+// Helper: Generate box string for active days (▪ for active, ▫ for inactive)
+// Using U+25AA and U+25AB small squares for clean rendering
+function generateDayBoxes(activeDays: boolean[]): string {
+  return activeDays.map(isActive => isActive ? '▪' : '▫').join(' ');
 }
 
 export async function exportProjectToExcel(
@@ -273,27 +301,11 @@ export async function exportProjectToExcel(
       worksheet.getCell(taskRowIdx, colIdx).border = thinBorder;
     });
 
-    // 8. Draw Timeline Task Color Bar
+    // 8. Draw Timeline Task Color Bar with 5-Box Daily Indicators
     const weekAss = task.weekAssignments || {};
     const activeWeeks = weeks.filter(w => (weekAss[w.fridayDate] || 0) > 0);
 
     if (activeWeeks.length > 0) {
-      // Find starting and ending week columns
-      const firstActiveWeek = activeWeeks[0];
-      const lastActiveWeek = activeWeeks[activeWeeks.length - 1];
-
-      const startCol = weeks.findIndex(w => w.fridayDate === firstActiveWeek.fridayDate) + startTimelineColIdx;
-      const endCol = weeks.findIndex(w => w.fridayDate === lastActiveWeek.fridayDate) + startTimelineColIdx;
-
-      // Merge active columns in this row
-      if (startCol < endCol) {
-        worksheet.mergeCells(taskRowIdx, startCol, taskRowIdx, endCol);
-      }
-
-      // Configure the merged cell representing the bar
-      const barCell = worksheet.getCell(taskRowIdx, startCol);
-      barCell.value = `${task.fte} FTE`;
-
       const barColorHex = hexToArgb(task.color, 'FF2196F3');
       const barFill = {
         type: 'pattern',
@@ -301,14 +313,6 @@ export async function exportProjectToExcel(
         fgColor: { argb: barColorHex }
       } as ExcelJS.Fill;
 
-      // Style all cells in the bar range to ensure fill and border are drawn nicely
-      for (let c = startCol; c <= endCol; c++) {
-        const cCell = worksheet.getCell(taskRowIdx, c);
-        cCell.fill = barFill;
-        cCell.border = thinBorder;
-      }
-
-      // Style the text inside the bar
       // Determine appropriate text color for contrast (simple luminance heuristic)
       const r = parseInt(barColorHex.substring(2, 4), 16);
       const g = parseInt(barColorHex.substring(4, 6), 16);
@@ -316,13 +320,31 @@ export async function exportProjectToExcel(
       const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
       const barTextColor = luminance > 0.6 ? 'FF000000' : 'FFFFFFFF'; // black for light background, white for dark
 
-      barCell.font = {
-        name: fontName,
-        size: 10,
-        bold: true,
-        color: { argb: barTextColor }
-      };
-      barCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      // For each active week, show the 5-box daily indicator
+      activeWeeks.forEach(week => {
+        const weekColIdx = weeks.findIndex(w => w.fridayDate === week.fridayDate) + startTimelineColIdx;
+        const weekCell = worksheet.getCell(taskRowIdx, weekColIdx);
+        
+        // Calculate which days are active for this week
+        const activeDays = calculateActiveDaysForWeek(task, week);
+        const boxString = generateDayBoxes(activeDays);
+        
+        // Set cell value to box pattern
+        weekCell.value = boxString;
+        
+        // Apply colored background fill
+        weekCell.fill = barFill;
+        weekCell.border = thinBorder;
+        
+        // Style the box characters
+        weekCell.font = {
+          name: fontName,
+          size: 10,
+          bold: true,
+          color: { argb: barTextColor }
+        };
+        weekCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      });
     }
 
     currentRow++;
