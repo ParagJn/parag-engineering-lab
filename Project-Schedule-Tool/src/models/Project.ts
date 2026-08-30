@@ -6,4 +6,5 @@ export interface Project {
   background?: string; // Free-text project background for the project
   assumptions?: string; // Free-text assumptions for the project
   outOfScope?: string; // Free-text out of scope / exclusions for the project
+  mawDeliverables?: string; // Free-text MAW deliverables for the project
 }

@@ -10,6 +10,7 @@ export interface SoWGenerationRequest {
   background?: string;
   assumptions?: string;
   out_of_scope?: string;
+  maw_deliverables?: string;
 }
 
 export interface SoWGenerationResponse {

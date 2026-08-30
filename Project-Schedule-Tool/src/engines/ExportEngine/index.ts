@@ -31,7 +31,8 @@ export async function exportProjectToExcel(
   weeks: Week[],
   background?: string,
   assumptions?: string,
-  outOfScope?: string
+  outOfScope?: string,
+  mawDeliverables?: string
 ): Promise<void> {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Project Schedule', {
@@ -490,6 +491,70 @@ export async function exportProjectToExcel(
       cell.alignment = { wrapText: true, vertical: 'top' };
       
       currentBackgroundRow++;
+    });
+  }
+
+  // Create MAW Deliverables worksheet if mawDeliverables text exists
+  if (mawDeliverables && mawDeliverables.trim()) {
+    const mawSheet = workbook.addWorksheet('MAW Deliverables');
+    
+    // Set column widths
+    mawSheet.getColumn(1).width = 3;  // Margin
+    mawSheet.getColumn(2).width = 80; // Content
+    mawSheet.getColumn(3).width = 3;  // Margin
+    
+    // Page Setup
+    mawSheet.pageSetup = {
+      orientation: 'portrait',
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
+      paperSize: 9, // A4
+      margins: {
+        left: 0.75,
+        right: 0.75,
+        top: 1.0,
+        bottom: 1.0,
+        header: 0.3,
+        footer: 0.3
+      }
+    };
+
+    // Header
+    mawSheet.headerFooter = {
+      oddHeader: `&L&"Aptos Narrow,Bold"&12${project.name} - MAW Deliverables&R&"Aptos Narrow"&10Customer: ${project.customer}`,
+      oddFooter: `&L&"Aptos Narrow,Italic"&9[Company Logo/Name Placeholder]&R&"Aptos Narrow"&9Page &P of &N`
+    };
+
+    // Title
+    const titleCell = mawSheet.getCell('B2');
+    titleCell.value = 'MAW Deliverables';
+    titleCell.font = { name: fontName, size: 16, bold: true, color: { argb: 'FF1F497D' } };
+    mawSheet.mergeCells('B2:B2');
+
+    // Subtitle with project info
+    const subtitleCell = mawSheet.getCell('B3');
+    subtitleCell.value = `${project.name} - ${project.customer}`;
+    subtitleCell.font = { name: fontName, size: 12, italic: true, color: { argb: 'FF595959' } };
+    mawSheet.mergeCells('B3:B3');
+
+    // Divider
+    const dividerCell = mawSheet.getCell('B4');
+    dividerCell.border = {
+      bottom: { style: 'medium', color: { argb: 'FF366092' } }
+    };
+
+    // MAW Deliverables content starting from row 6
+    const mawLines = mawDeliverables.split('\n');
+    let currentMawRow = 6;
+
+    mawLines.forEach((line: string) => {
+      const cell = mawSheet.getCell(currentMawRow, 2);
+      cell.value = line;
+      cell.font = { name: fontName, size: 11, color: { argb: 'FF333333' } };
+      cell.alignment = { wrapText: true, vertical: 'top' };
+      
+      currentMawRow++;
     });
   }
 

@@ -23,7 +23,8 @@ import {
   Schedule as ScheduleIcon,
   Delete as DeleteIcon,
   FolderOpen as FolderOpenIcon,
-  AccessTime as AccessTimeIcon
+  AccessTime as AccessTimeIcon,
+  Settings as SettingsIcon
 } from '@mui/icons-material';
 import { useProjectStore } from '../../state/projectStore';
 import { useTaskStore } from '../../state/taskStore';
@@ -157,6 +158,18 @@ export function Dashboard() {
       }}
     >
       <Container maxWidth="lg">
+        {/* Settings Button - Top Right */}
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+          <Button
+            variant="outlined"
+            startIcon={<SettingsIcon />}
+            onClick={() => navigate('/settings')}
+            sx={{ borderRadius: 2 }}
+          >
+            Settings
+          </Button>
+        </Box>
+
         {/* Welcome Section */}
         <Box sx={{ mb: 8, textAlign: 'center' }}>
           <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 1.5, mb: 2 }}>

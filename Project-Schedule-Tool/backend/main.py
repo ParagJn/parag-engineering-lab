@@ -115,6 +115,7 @@ class SoWGenerationRequest(BaseModel):
     background: Optional[str] = None
     assumptions: Optional[str] = None
     out_of_scope: Optional[str] = None
+    maw_deliverables: Optional[str] = None
 
 
 class SoWGenerationResponse(BaseModel):
@@ -468,6 +469,9 @@ ASSUMPTIONS:
 OUT OF SCOPE:
 {request.out_of_scope if request.out_of_scope else "Not provided"}
 
+MAW DELIVERABLES:
+{request.maw_deliverables if request.maw_deliverables else "Not provided"}
+
 TASK:
 First, analyze the provided information to determine if it's sufficient to create a professional SoW document.
 
@@ -495,15 +499,71 @@ If the information is sufficient, generate a comprehensive Statement of Work doc
    - Include areas like Development, Testing, Performance, Business Logic, etc.
    - Be specific about what is NOT included
 
+4. **Deliverables and Work Products**
+   - Analyze the MAW Deliverables provided and classify each item appropriately
+   - Consider the background, scope of work, and activities to make informed classifications
+   
+   **Deliverables**
+   - Present as a table with columns: Item | Description | Target Date/Phase
+   - Include formal outputs delivered to the client (e.g., Implementation Schedule, Final Report, Training Materials, Go-Live Support Plan)
+   - For each deliverable, provide a brief description and indicate when it will be delivered
+   
+   **Work Products**
+   - Present as a separate table with columns: Item | Description | Purpose
+   - Include internal or supporting documents used during project execution (e.g., Data Mapping Document, Technical Specifications, Test Scripts, Configuration Guides)
+   - For each work product, provide a brief description and explain its purpose in the project
+   
+   - If MAW Deliverables are not provided, create a comprehensive list based on the scope and background
+   - Ensure deliverables and work products align with the scope sections and key outcomes
+
+5. **Risks**
+   - Identify and document project risks based on the scope and background
+   - Present as a table with columns: Risk Category | Description | Impact | Mitigation Strategy
+   - Include risks such as: Technical, Schedule, Resource, Integration, Stakeholder, etc.
+   - For each risk, assess impact as High/Medium/Low
+   - Provide concrete mitigation strategies
+
+6. **Dependencies**
+   - Document project dependencies and prerequisites
+   - Present as a table with columns: Dependency Type | Description | Owner | Status
+   - Include dependencies such as: Technical, Data, Infrastructure, Team/Resource, External Systems, etc.
+   - Specify who owns each dependency (IBM, Client, or Third-party)
+   - Indicate status as Required, Optional, or Critical
+
+7. **RACI Matrix**
+   - Define roles and responsibilities for key project activities
+   - Present as a table with columns: Activity/Task | IBM | Client
+   - Use standard RACI notation:
+     * R = Responsible (does the work)
+     * A = Accountable (final approval)
+     * C = Consulted (provides input)
+     * I = Informed (kept updated)
+   - Include activities such as:
+     * Project Planning & Kick-off
+     * Requirements Gathering
+     * Solution Design
+     * Development/Implementation
+     * Testing & Quality Assurance
+     * User Acceptance Testing (UAT)
+     * Deployment & Go-Live
+     * Training & Knowledge Transfer
+     * Documentation
+     * Project Sign-off
+   - Ensure clear accountability for each activity
+
 IMPORTANT GUIDELINES:
 - Write in a professional, formal business tone
 - Be specific and detailed - avoid vague statements
 - Use bullet points for clarity
 - Include technical details where appropriate
-- Base your content on the provided background, assumptions, and out-of-scope information
+- Base your content on the provided background, assumptions, out-of-scope information, and MAW deliverables
+- When classifying deliverables vs. work products, consider:
+  * Deliverables are formal outputs given to the client or used for project governance
+  * Work Products are intermediate artifacts created during project execution
 - Make realistic inferences when specific details are not provided, but stay aligned with the given context
 - If assumptions are provided, incorporate them naturally into the scope or note them separately
 - Format the output in Markdown with proper headers (##, ###) and formatting (**bold**, bullet points)
+- Use tables with proper markdown syntax (| column | column |) for structured information
 
 Generate the SoW document now."""
 
@@ -766,6 +826,136 @@ async def load_sow_draft(project_name: str):
     except Exception as e:
         logger.error(f"Error loading SoW draft: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to load SoW draft: {str(e)}")
+
+
+# Configuration Management Endpoints
+
+class ProviderConfig(BaseModel):
+    provider: str = Field(..., description="Provider name: anthropic, openai, or google_gemini")
+    api_key: str = Field(..., description="API key for the provider")
+    enabled: bool = Field(default=True, description="Enable this provider")
+
+
+@app.get("/config/providers")
+async def get_provider_config():
+    """
+    Get current provider configuration status.
+    """
+    try:
+        backend_dir = Path(__file__).parent
+        config_path = backend_dir / "config.json"
+        
+        if not config_path.exists():
+            raise HTTPException(status_code=404, detail="Config file not found")
+        
+        with open(config_path, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        
+        # Extract provider status
+        providers = {}
+        for provider_key in ['anthropic', 'openai', 'google_gemini']:
+            if provider_key in config.get('models', {}):
+                provider_data = config['models'][provider_key]
+                providers[provider_key] = {
+                    'enabled': provider_data.get('enabled', False),
+                    'provider': provider_data.get('provider', ''),
+                    'has_api_key': bool(os.getenv(provider_data.get('auth', {}).get('api_key_env', '')))
+                }
+        
+        return {
+            "success": True,
+            "providers": providers,
+            "default_provider": config.get('settings', {}).get('default_provider', 'sap_ai_core')
+        }
+        
+    except Exception as e:
+        logger.error(f"Error reading config: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to read configuration: {str(e)}")
+
+
+@app.post("/config/update-provider")
+async def update_provider_config(config_data: ProviderConfig):
+    """
+    Update provider configuration with API key.
+    Updates both config.json and .env file.
+    """
+    try:
+        backend_dir = Path(__file__).parent
+        config_path = backend_dir / "config.json"
+        env_path = backend_dir / ".env"
+        
+        # Validate provider
+        valid_providers = {
+            'anthropic': 'ANTHROPIC_API_KEY',
+            'openai': 'OPENAI_API_KEY',
+            'google_gemini': 'GOOGLE_API_KEY'
+        }
+        
+        if config_data.provider not in valid_providers:
+            raise HTTPException(status_code=400, detail=f"Invalid provider. Must be one of: {', '.join(valid_providers.keys())}")
+        
+        # Update config.json
+        with open(config_path, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        
+        provider_key = config_data.provider
+        if provider_key not in config.get('models', {}):
+            raise HTTPException(status_code=404, detail=f"Provider {provider_key} not found in config")
+        
+        # Enable the provider
+        config['models'][provider_key]['enabled'] = config_data.enabled
+        
+        # If this is being enabled, also enable the first model
+        if config_data.enabled and config['models'][provider_key].get('models'):
+            config['models'][provider_key]['models'][0]['enabled'] = True
+        
+        # Save updated config
+        with open(config_path, 'w', encoding='utf-8') as f:
+            json.dump(config, f, indent=2)
+        
+        # Update or create .env file
+        env_key = valid_providers[config_data.provider]
+        env_lines = []
+        key_found = False
+        
+        if env_path.exists():
+            with open(env_path, 'r', encoding='utf-8') as f:
+                env_lines = f.readlines()
+            
+            # Update existing key
+            for i, line in enumerate(env_lines):
+                if line.strip().startswith(f"{env_key}="):
+                    env_lines[i] = f"{env_key}={config_data.api_key}\n"
+                    key_found = True
+                    break
+        
+        # Add key if not found
+        if not key_found:
+            env_lines.append(f"{env_key}={config_data.api_key}\n")
+        
+        # Write .env file
+        with open(env_path, 'w', encoding='utf-8') as f:
+            f.writelines(env_lines)
+        
+        # Update environment variable in current process
+        os.environ[env_key] = config_data.api_key
+        
+        logger.info(f"Updated configuration for provider: {config_data.provider}")
+        
+        return {
+            "success": True,
+            "message": f"Successfully updated {config_data.provider} configuration",
+            "provider": config_data.provider,
+            "enabled": config_data.enabled,
+            "restart_required": True
+        }
+        
+    except json.JSONDecodeError as e:
+        logger.error(f"Error parsing config JSON: {e}")
+        raise HTTPException(status_code=500, detail=f"Invalid JSON in config file: {str(e)}")
+    except Exception as e:
+        logger.error(f"Error updating config: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to update configuration: {str(e)}")
 
 
 if __name__ == "__main__":

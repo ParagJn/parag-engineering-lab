@@ -8,6 +8,7 @@ export interface SoWDraft {
   background: string;
   assumptions?: string;
   out_of_scope?: string;
+  maw_deliverables?: string;
   sow_content: string;
   timestamp: string;
   version: string;

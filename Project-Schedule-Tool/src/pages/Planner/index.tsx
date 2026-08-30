@@ -16,7 +16,6 @@ import {
   Box,
   Button,
   Card,
-  CardContent,
   TextField,
   Typography,
   IconButton,
@@ -32,7 +31,10 @@ import {
   InputLabel,
   Slide,
   Chip,
-  Divider
+  Divider,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
 } from '@mui/material';
 import type { TransitionProps } from '@mui/material/transitions';
 import {
@@ -45,7 +47,9 @@ import {
   Refresh as RefreshIcon,
   ListAlt as ListAltIcon,
   Close as CloseIcon,
-  Description as DescriptionIcon
+  Description as DescriptionIcon,
+  Settings as SettingsIcon,
+  ExpandMore as ExpandMoreIcon
 } from '@mui/icons-material';
 
 import { useProjectStore } from '../../state/projectStore';
@@ -94,6 +98,7 @@ export function Planner() {
   const setBackground = useProjectStore((s) => s.setBackground);
   const setAssumptions = useProjectStore((s) => s.setAssumptions);
   const setOutOfScope = useProjectStore((s) => s.setOutOfScope);
+  const setMawDeliverables = useProjectStore((s) => s.setMawDeliverables);
   const loadProject = useProjectStore((s) => s.loadProject);
 
   // Task store hooks
@@ -129,6 +134,26 @@ export function Planner() {
   const [sowError, setSowError] = useState<string | undefined>(undefined);
   const [sowNeedsMoreInfo, setSowNeedsMoreInfo] = useState(false);
   const [sowQuestions, setSowQuestions] = useState<string[]>([]);
+
+  // Accordion expansion state
+  const [expandedAccordions, setExpandedAccordions] = useState<{
+    details: boolean;
+    background: boolean;
+    assumptions: boolean;
+    maw: boolean;
+  }>({
+    details: true,
+    background: false,
+    assumptions: false,
+    maw: false
+  });
+
+  const handleAccordionChange = (panel: keyof typeof expandedAccordions) => (
+    _event: React.SyntheticEvent,
+    isExpanded: boolean
+  ) => {
+    setExpandedAccordions(prev => ({ ...prev, [panel]: isExpanded }));
+  };
 
   // Load existing SoW draft when project name changes
   useEffect(() => {
@@ -366,7 +391,7 @@ export function Planner() {
   // Excel Export triggering
   const handleExportExcel = async () => {
     try {
-      await exportProjectToExcel(project, tasks, weeks, project.background, project.assumptions, project.outOfScope);
+      await exportProjectToExcel(project, tasks, weeks, project.background, project.assumptions, project.outOfScope, project.mawDeliverables);
       setSnackbarSeverity('success');
       setSnackbarMessage('Excel sheet generated successfully!');
       setSnackbarOpen(true);
@@ -415,6 +440,7 @@ export function Planner() {
         background: project.background,
         assumptions: project.assumptions,
         out_of_scope: project.outOfScope,
+        maw_deliverables: project.mawDeliverables,
       });
 
       if (response.success && response.sow_content) {
@@ -427,6 +453,7 @@ export function Planner() {
           background: project.background || '',
           assumptions: project.assumptions,
           out_of_scope: project.outOfScope,
+          maw_deliverables: project.mawDeliverables,
           sow_content: response.sow_content,
           timestamp: response.timestamp,
           version: '1.0'
@@ -480,6 +507,7 @@ export function Planner() {
         background: project.background,
         assumptions: project.assumptions,
         out_of_scope: project.outOfScope,
+        maw_deliverables: project.mawDeliverables,
       });
 
       if (response.success && response.sow_content) {
@@ -492,6 +520,7 @@ export function Planner() {
           background: project.background || '',
           assumptions: project.assumptions,
           out_of_scope: project.outOfScope,
+          maw_deliverables: project.mawDeliverables,
           sow_content: response.sow_content,
           timestamp: response.timestamp,
           version: '1.0'
@@ -532,6 +561,7 @@ export function Planner() {
         background: updatedBackground,
         assumptions: project.assumptions,
         out_of_scope: project.outOfScope,
+        maw_deliverables: project.mawDeliverables,
       });
 
       if (response.success && response.sow_content) {
@@ -544,6 +574,7 @@ export function Planner() {
           background: updatedBackground,
           assumptions: project.assumptions,
           out_of_scope: project.outOfScope,
+          maw_deliverables: project.mawDeliverables,
           sow_content: response.sow_content,
           timestamp: response.timestamp,
           version: '1.0'
@@ -860,57 +891,45 @@ export function Planner() {
         const weekFri = dayjs(week.fridayDate);
 
         // Find active working days of the week (Monday=0 to Friday=4)
-        let firstActiveIdx = -1;
-        let lastActiveIdx = -1;
+        const activeDays: boolean[] = [false, false, false, false, false];
+        let activeDayCount = 0;
 
         for (let d = 0; d < 5; d++) {
           const dayDate = weekFri.subtract(4 - d, 'day');
           const isActive = (dayDate.isAfter(startD, 'day') || dayDate.isSame(startD, 'day')) &&
             (dayDate.isBefore(finishD, 'day') || dayDate.isSame(finishD, 'day'));
           if (isActive) {
-            if (firstActiveIdx === -1) firstActiveIdx = d;
-            lastActiveIdx = d;
+            activeDays[d] = true;
+            activeDayCount++;
           }
         }
 
-        if (firstActiveIdx === -1) return null;
+        if (activeDayCount === 0) return null;
 
-        const pctStart = firstActiveIdx * 20;
-        const pctEnd = (lastActiveIdx + 1) * 20;
-
-        // Contrast calculation for text color
         const color = task.color || '#2196F3';
-        const r = parseInt(color.substring(1, 3), 16) || 0;
-        const g = parseInt(color.substring(3, 5), 16) || 0;
-        const b = parseInt(color.substring(5, 7), 16) || 0;
-        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-        const textColor = luminance > 0.6 ? '#000000' : '#ffffff';
 
         return (
-          <Box sx={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center' }}>
-            <Box
-              sx={{
-                position: 'absolute',
-                left: `${pctStart}%`,
-                width: `${pctEnd - pctStart}%`,
-                height: '24px',
-                bgcolor: color,
-                color: textColor,
-                fontWeight: 'bold',
-                fontSize: '11px',
-                borderRadius: '4px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                overflow: 'hidden',
-                whiteSpace: 'nowrap',
-                textOverflow: 'ellipsis',
-                px: 0.5
-              }}
-            >
-              {task.fte} FTE
-            </Box>
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            height: '100%',
+            gap: '2px'
+          }}>
+            {activeDays.map((isActive, index) => (
+              <Box
+                key={index}
+                sx={{
+                  width: '10px',
+                  height: '10px',
+                  borderRadius: '2px',
+                  backgroundColor: isActive ? color : 'transparent',
+                  border: isActive ? 'none' : '1px solid #e0e0e0',
+                  boxShadow: isActive ? '0 1px 2px rgba(0,0,0,0.15)' : 'none',
+                  transition: 'all 0.2s ease'
+                }}
+              />
+            ))}
           </Box>
         );
       }
@@ -1072,6 +1091,14 @@ export function Planner() {
             >
               Export Excel
             </Button>
+            <Button
+              variant="outlined"
+              startIcon={<SettingsIcon />}
+              size="small"
+              onClick={() => navigate('/settings')}
+            >
+              Settings
+            </Button>
           </Box>
         </Box>
       </Box>
@@ -1079,8 +1106,17 @@ export function Planner() {
       {/* Main Workspace Body */}
       <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', p: 3, gap: 2 }}>
         {/* 2. Project Details Banner (Compact, full width) */}
-        <Card sx={{ boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-          <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+        <Accordion 
+          expanded={expandedAccordions.details} 
+          onChange={handleAccordionChange('details')}
+          sx={{ boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
+        >
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography variant="subtitle1" sx={{ fontWeight: '600' }}>
+              Project Details
+            </Typography>
+          </AccordionSummary>
+          <AccordionDetails>
             <Box sx={{ display: 'flex', flexDirection: 'row', gap: 3, alignItems: 'center' }}>
               <TextField
                 label="Project Name"
@@ -1108,12 +1144,21 @@ export function Planner() {
                 sx={{ width: 180 }}
               />
             </Box>
-          </CardContent>
-        </Card>
+          </AccordionDetails>
+        </Accordion>
 
         {/* Project Background Card */}
-        <Card sx={{ boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-          <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+        <Accordion 
+          expanded={expandedAccordions.background} 
+          onChange={handleAccordionChange('background')}
+          sx={{ boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
+        >
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography variant="subtitle1" sx={{ fontWeight: '600' }}>
+              Project Background
+            </Typography>
+          </AccordionSummary>
+          <AccordionDetails>
             <TextField
               label="Project Background"
               value={project.background || ''}
@@ -1126,12 +1171,21 @@ export function Planner() {
               size="small"
               sx={{ '& .MuiInputBase-root': { fontSize: '0.875rem' } }}
             />
-          </CardContent>
-        </Card>
+          </AccordionDetails>
+        </Accordion>
 
         {/* Assumptions & Out of Scope Card */}
-        <Card sx={{ boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-          <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+        <Accordion 
+          expanded={expandedAccordions.assumptions} 
+          onChange={handleAccordionChange('assumptions')}
+          sx={{ boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
+        >
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography variant="subtitle1" sx={{ fontWeight: '600' }}>
+              Assumptions & Out of Scope
+            </Typography>
+          </AccordionSummary>
+          <AccordionDetails>
             <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
               <TextField
                 label="Assumptions & Notes"
@@ -1158,8 +1212,35 @@ export function Planner() {
                 sx={{ flex: 1, '& .MuiInputBase-root': { fontSize: '0.875rem' } }}
               />
             </Box>
-          </CardContent>
-        </Card>
+          </AccordionDetails>
+        </Accordion>
+
+        {/* MAW Deliverables Card */}
+        <Accordion 
+          expanded={expandedAccordions.maw} 
+          onChange={handleAccordionChange('maw')}
+          sx={{ boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
+        >
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography variant="subtitle1" sx={{ fontWeight: '600' }}>
+              MAW Deliverables
+            </Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <TextField
+              label="MAW Deliverables"
+              value={project.mawDeliverables || ''}
+              onChange={(e) => setMawDeliverables(e.target.value)}
+              placeholder="Enter MAW deliverables for this project. These will be exported to a separate Excel sheet."
+              multiline
+              minRows={3}
+              maxRows={8}
+              fullWidth
+              size="small"
+              sx={{ '& .MuiInputBase-root': { fontSize: '0.875rem' } }}
+            />
+          </AccordionDetails>
+        </Accordion>
 
         {/* 3. Split Screen task list and timeline */}
         <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 2, overflow: 'hidden' }}>

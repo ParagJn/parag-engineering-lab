@@ -10,6 +10,7 @@ interface ProjectState {
   setBackground: (background: string) => void;
   setAssumptions: (assumptions: string) => void;
   setOutOfScope: (outOfScope: string) => void;
+  setMawDeliverables: (mawDeliverables: string) => void;
   loadProject: (project: Project) => void;
   resetProject: () => void;
 }
@@ -52,6 +53,11 @@ export const useProjectStore = create<ProjectState>((set) => ({
   setOutOfScope: (outOfScope) =>
     set((state) => ({
       project: { ...state.project, outOfScope }
+    })),
+
+  setMawDeliverables: (mawDeliverables) =>
+    set((state) => ({
+      project: { ...state.project, mawDeliverables }
     })),
 
   loadProject: (project) =>
