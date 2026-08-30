@@ -1,0 +1,4 @@
+{
+  "ai_provider": "sap",
+  "_comment": "Valid values: 'sap' for SAP AI Core or 'ibm_ica' for IBM ICA"
+}

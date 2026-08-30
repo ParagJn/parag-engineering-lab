@@ -68,3 +68,6 @@ Thumbs.db
 cache/
 temp/
 tmp/
+
+# User Settings (keep local preferences)
+settings.json

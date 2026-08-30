@@ -17,8 +17,13 @@ import json
 import os
 from pathlib import Path
 from datetime import datetime
+from dotenv import load_dotenv
 
 from llm_client import UniversalLLMClient, LLMClientError
+from ibm_ica_client import IBMICAClient, IBMICAError
+
+# Load environment variables
+load_dotenv()
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -43,8 +48,42 @@ logging.basicConfig(
 )
 logger = logging.getLogger("ProjectScheduleAPI")
 
-# Global LLM client instance
+# Global LLM client instances
 llm_client: Optional[UniversalLLMClient] = None
+ibm_ica_client: Optional[IBMICAClient] = None
+
+# Settings file path
+SETTINGS_FILE = Path("settings.json")
+
+# Default settings
+DEFAULT_SETTINGS = {
+    "ai_provider": "sap"  # "sap" or "ibm_ica"
+}
+
+def load_settings() -> Dict[str, Any]:
+    """Load settings from file or return defaults"""
+    if SETTINGS_FILE.exists():
+        try:
+            with open(SETTINGS_FILE, 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error(f"Failed to load settings: {e}")
+    return DEFAULT_SETTINGS.copy()
+
+def save_settings(settings: Dict[str, Any]) -> bool:
+    """Save settings to file"""
+    try:
+        with open(SETTINGS_FILE, 'w') as f:
+            json.dump(settings, f, indent=2)
+        return True
+    except Exception as e:
+        logger.error(f"Failed to save settings: {e}")
+        return False
+
+def get_active_provider() -> str:
+    """Get the currently selected AI provider"""
+    settings = load_settings()
+    return settings.get("ai_provider", "sap")
 
 
 # Pydantic Models for Request/Response
@@ -141,15 +180,41 @@ def get_llm_client() -> UniversalLLMClient:
 @app.on_event("startup")
 async def startup_event():
     """Initialize services on startup"""
-    global llm_client
+    global llm_client, ibm_ica_client
+    
+    # Initialize SAP AI Core client
     try:
         llm_client = UniversalLLMClient(config_path="config.json")
-        logger.info("✅ LLM Client initialized successfully")
+        logger.info("✅ SAP AI Core LLM Client initialized successfully")
         logger.info(f"Available models: {len(llm_client.list_available_models())}")
     except Exception as e:
-        logger.error(f"❌ Failed to initialize LLM client: {e}")
-        # Don't fail startup, but log the error
+        logger.error(f"❌ Failed to initialize SAP LLM client: {e}")
         llm_client = None
+    
+    # Initialize IBM ICA client
+    try:
+        ibm_endpoint = os.getenv("IBM_ICA_ENDPOINT")
+        ibm_api_key = os.getenv("IBM_ICA_API_KEY")
+        ibm_model_id = os.getenv("IBM_ICA_MODEL_ID", "claude-sonnet-5")
+        
+        if ibm_endpoint and ibm_api_key:
+            ibm_ica_client = IBMICAClient(
+                endpoint=ibm_endpoint,
+                api_key=ibm_api_key,
+                model_id=ibm_model_id
+            )
+            logger.info("✅ IBM ICA Client initialized successfully")
+            logger.info(f"IBM ICA Model: {ibm_model_id}")
+        else:
+            logger.warning("⚠️  IBM ICA credentials not found in environment")
+            ibm_ica_client = None
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize IBM ICA client: {e}")
+        ibm_ica_client = None
+    
+    # Log active provider
+    active_provider = get_active_provider()
+    logger.info(f"Active AI Provider: {active_provider.upper()}")
 
 
 # Shutdown event
@@ -180,6 +245,62 @@ async def root():
         "docs": "/docs",
         "health": "/health"
     }
+
+
+# Settings endpoints
+class ProviderSettingsRequest(BaseModel):
+    """Request to update provider settings"""
+    ai_provider: str = Field(..., description="AI provider: 'sap' or 'ibm_ica'")
+
+
+class ProviderSettingsResponse(BaseModel):
+    """Response for provider settings"""
+    success: bool
+    ai_provider: str
+    sap_available: bool
+    ibm_ica_available: bool
+    message: Optional[str] = None
+
+
+@app.get("/settings/provider", response_model=ProviderSettingsResponse)
+async def get_provider_settings():
+    """Get current provider settings"""
+    settings = load_settings()
+    return ProviderSettingsResponse(
+        success=True,
+        ai_provider=settings.get("ai_provider", "sap"),
+        sap_available=llm_client is not None,
+        ibm_ica_available=ibm_ica_client is not None
+    )
+
+
+@app.post("/settings/provider", response_model=ProviderSettingsResponse)
+async def update_provider_settings(request: ProviderSettingsRequest):
+    """Update provider settings"""
+    if request.ai_provider not in ["sap", "ibm_ica"]:
+        raise HTTPException(status_code=400, detail="Invalid provider. Must be 'sap' or 'ibm_ica'")
+    
+    # Check if the requested provider is available
+    if request.ai_provider == "sap" and llm_client is None:
+        raise HTTPException(status_code=503, detail="SAP AI Core client not available")
+    
+    if request.ai_provider == "ibm_ica" and ibm_ica_client is None:
+        raise HTTPException(status_code=503, detail="IBM ICA client not available")
+    
+    settings = load_settings()
+    settings["ai_provider"] = request.ai_provider
+    
+    if save_settings(settings):
+        logger.info(f"Provider switched to: {request.ai_provider.upper()}")
+        return ProviderSettingsResponse(
+            success=True,
+            ai_provider=request.ai_provider,
+            sap_available=llm_client is not None,
+            ibm_ica_available=ibm_ica_client is not None,
+            message=f"Provider successfully switched to {request.ai_provider.upper()}"
+        )
+    else:
+        raise HTTPException(status_code=500, detail="Failed to save settings")
 
 
 # List available models
@@ -421,11 +542,94 @@ Provide a clear, concise, and actionable answer based on project management best
         }
 
 
+# Provider wrapper for AI generation
+def generate_with_active_provider(prompt: str, max_tokens: int = 25000) -> str:
+    """
+    Generate content using the currently selected provider.
+    
+    Returns the generated text content.
+    Raises HTTPException if provider is not available.
+    """
+    active_provider = get_active_provider()
+    
+    if active_provider == "ibm_ica":
+        if ibm_ica_client is None:
+            raise HTTPException(
+                status_code=503, 
+                detail="IBM ICA client not initialized. Check environment variables."
+            )
+        
+        try:
+            logger.info("Generating content with IBM ICA...")
+            messages = [{"role": "user", "content": prompt}]
+            result = ibm_ica_client.chat(messages=messages, max_tokens=max_tokens)
+            logger.info(f"IBM ICA generation completed. Tokens: {result.get('total_tokens', 'unknown')}")
+            return result.get("text", "")
+        except IBMICAError as e:
+            logger.error(f"IBM ICA generation failed: {e}")
+            raise HTTPException(status_code=500, detail=f"IBM ICA generation failed: {str(e)}")
+    
+    else:  # default to SAP
+        if llm_client is None:
+            raise HTTPException(
+                status_code=503, 
+                detail="SAP AI Core client not initialized. Check configuration."
+            )
+        
+        try:
+            logger.info("Generating content with SAP AI Core...")
+            response = llm_client.generate(prompt=prompt, max_tokens=max_tokens)
+            
+            # Extract content from SAP AI Core orchestration response
+            content = ""
+            
+            if isinstance(response, dict):
+                # SAP AI Core returns: final_result.choices[0].message.content
+                if 'final_result' in response:
+                    final = response['final_result']
+                    if isinstance(final, dict) and 'choices' in final:
+                        choices = final['choices']
+                        if isinstance(choices, list) and len(choices) > 0:
+                            choice = choices[0]
+                            if isinstance(choice, dict) and 'message' in choice:
+                                message = choice['message']
+                                if isinstance(message, dict):
+                                    content = message.get('content', '')
+                                    if content:
+                                        logger.info("✓ Extracted content from final_result.choices[0].message.content")
+                
+                # Fallback: try orchestration_result.choices[0].message.content
+                if not content and 'orchestration_result' in response:
+                    orch = response['orchestration_result']
+                    if isinstance(orch, dict) and 'choices' in orch:
+                        choices = orch['choices']
+                        if isinstance(choices, list) and len(choices) > 0:
+                            choice = choices[0]
+                            if isinstance(choice, dict) and 'message' in choice:
+                                message = choice['message']
+                                if isinstance(message, dict):
+                                    content = message.get('content', '')
+                
+                # Last fallback: try content field directly
+                if not content:
+                    content = response.get('content', '')
+            
+            if not content:
+                logger.warning("Could not extract content from SAP response")
+                content = str(response)
+            
+            logger.info(f"SAP AI Core generation completed. Length: {len(content)}")
+            return content
+            
+        except LLMClientError as e:
+            logger.error(f"SAP generation failed: {e}")
+            raise HTTPException(status_code=500, detail=f"SAP generation failed: {str(e)}")
+
+
 # Statement of Work generation endpoint
 @app.post("/generate/sow", response_model=SoWGenerationResponse)
 async def generate_sow(
-    request: SoWGenerationRequest,
-    client: UniversalLLMClient = Depends(get_llm_client)
+    request: SoWGenerationRequest
 ):
     """
     Generate a professional Statement of Work (SoW) document.
@@ -567,98 +771,8 @@ IMPORTANT GUIDELINES:
 
 Generate the SoW document now."""
 
-        response = client.generate(prompt=prompt, max_tokens=25000)
-        
-        # Extract content from SAP AI Core orchestration response
-        content = ""
-        
-        if isinstance(response, dict):
-            # SAP AI Core returns: final_result.choices[0].message.content
-            if 'final_result' in response:
-                final = response['final_result']
-                if isinstance(final, dict) and 'choices' in final:
-                    choices = final['choices']
-                    if isinstance(choices, list) and len(choices) > 0:
-                        choice = choices[0]
-                        if isinstance(choice, dict) and 'message' in choice:
-                            message = choice['message']
-                            if isinstance(message, dict):
-                                content = message.get('content', '')
-                                if content:
-                                    logger.info("✓ Extracted content from final_result.choices[0].message.content")
-            
-            # Fallback: try orchestration_result.choices[0].message.content
-            if not content and 'orchestration_result' in response:
-                orch = response['orchestration_result']
-                if isinstance(orch, dict) and 'choices' in orch:
-                    choices = orch['choices']
-                    if isinstance(choices, list) and len(choices) > 0:
-                        choice = choices[0]
-                        if isinstance(choice, dict) and 'message' in choice:
-                            message = choice['message']
-                            if isinstance(message, dict):
-                                content = message.get('content', '')
-                                if content:
-                                    logger.info("✓ Extracted content from orchestration_result.choices[0].message.content")
-            
-            # Fallback: try module_results.llm
-            if not content and 'module_results' in response:
-                modules = response['module_results']
-                if isinstance(modules, dict) and 'llm' in modules:
-                    llm_result = modules['llm']
-                    if isinstance(llm_result, dict):
-                        # Try choices array first
-                        if 'choices' in llm_result:
-                            choices = llm_result['choices']
-                            if isinstance(choices, list) and len(choices) > 0:
-                                choice = choices[0]
-                                if isinstance(choice, dict) and 'message' in choice:
-                                    content = choice['message'].get('content', '')
-                                    if content:
-                                        logger.info("✓ Extracted content from module_results.llm.choices[0].message.content")
-                        # Try direct content field
-                        if not content:
-                            content = llm_result.get('content', '') or llm_result.get('text', '')
-                            if content:
-                                logger.info("✓ Extracted content from module_results.llm.content")
-            
-            # Fallback: standard OpenAI format
-            if not content and 'choices' in response:
-                choices = response['choices']
-                if isinstance(choices, list) and len(choices) > 0:
-                    choice = choices[0]
-                    if isinstance(choice, dict):
-                        if 'message' in choice:
-                            content = choice['message'].get('content', '')
-                            if content:
-                                logger.info("✓ Extracted content from choices[0].message.content")
-                        elif 'text' in choice:
-                            content = choice['text']
-                            if content:
-                                logger.info("✓ Extracted content from choices[0].text")
-            
-            # Fallback: try direct content field
-            if not content and 'content' in response:
-                content_field = response['content']
-                if isinstance(content_field, list) and len(content_field) > 0:
-                    content = content_field[0].get('text', '') if isinstance(content_field[0], dict) else str(content_field[0])
-                else:
-                    content = str(content_field)
-                if content:
-                    logger.info("✓ Extracted content from direct content field")
-            
-            # Last resort: convert entire response to string
-            if not content:
-                logger.warning("⚠ Could not extract content from standard fields, using str(response)")
-                logger.warning(f"Response keys: {list(response.keys())}")
-                content = str(response)
-        
-        elif isinstance(response, str):
-            content = response
-            logger.info("✓ Response is already a string")
-        else:
-            content = str(response)
-            logger.warning("⚠ Response is not dict or str, converting to string")
+        # Use the provider wrapper to generate content
+        content = generate_with_active_provider(prompt=prompt, max_tokens=25000)
         
         # Clean up the content
         content = content.strip()
@@ -669,8 +783,6 @@ Generate the SoW document now."""
             content = content.replace('\\n\\n', '\n\n').replace('\\n', '\n')
         
         logger.info(f"Final content length: {len(content)} chars")
-        logger.info(f"First 300 chars: {content[:300]}")
-        logger.info(f"Last 200 chars: ...{content[-200:]}")
         
         # Check if the response indicates we need more information
         # Try to parse as JSON to check for "sufficient": false

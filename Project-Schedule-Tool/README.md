@@ -7,7 +7,10 @@ A professional, AI-powered web application designed to create, manage, and visua
 ## 🌟 Key Features
 
 ### 1. AI-Powered Statement of Work (SoW) Generation ✨ NEW
-* **Intelligent Document Creation**: Generate professional SoW documents using Claude 4.7 Opus via SAP AI Core
+* **Dual AI Provider Support**: Switch between SAP AI Core (Claude 4.7 Opus) and IBM ICA (Claude Sonnet 5) via Settings page 🆕
+* **Provider Persistence**: Selected provider preference saved locally and remembered across sessions
+* **Real-Time Provider Status**: Settings UI shows availability status for each configured provider
+* **Intelligent Document Creation**: Generate professional SoW documents using enterprise-grade AI models
 * **Context-Aware Analysis**: AI analyzes your project background, assumptions, and scope to create comprehensive work statements
 * **Smart Content Validation**: System requests additional information if initial context is insufficient
 * **Professional Formatting**: Auto-generates structured sections including Background, Scope, Deliverables, and Out-of-Scope items
@@ -50,8 +53,12 @@ A professional, AI-powered web application designed to create, manage, and visua
 * **Resource Allocation**: Clear FTE (Full-Time Equivalent) displays per task and week
 
 ### 6. Enterprise-Grade AI Backend
-* **SAP AI Core Integration**: Production-ready integration with SAP's AI orchestration platform
-* **Multi-Model Support**: Architecture supports OpenAI, Google Gemini, Azure OpenAI, and Anthropic (configured for Claude)
+* **Dual Provider Architecture**: Switch between SAP AI Core and IBM ICA providers at runtime 🆕
+* **SAP AI Core Integration**: Production-ready integration with SAP's AI orchestration platform (Claude 4.7 Opus)
+* **IBM ICA Integration**: IBM watsonx Code Assistant support (Claude Sonnet 5, Gemini models) 🆕
+* **Provider Settings API**: RESTful endpoints for provider selection and status checking 🆕
+* **Settings Persistence**: Provider preference stored in `backend/settings.json` and survives restarts 🆕
+* **Multi-Model Support**: Architecture supports OpenAI, Google Gemini, Azure OpenAI, and Anthropic
 * **OAuth 2.0 Authentication**: Automatic token management, caching, and refresh for SAP AI Core
 * **Orchestration API**: Uses SAP AI Core orchestration format v2 for advanced prompt engineering
 * **RESTful API**: Clean, well-documented FastAPI endpoints at `http://localhost:8000`
@@ -166,6 +173,11 @@ SAP_AI_CORE_CLIENT_SECRET=your-client-secret
 SAP_AI_CORE_RESOURCE_GROUP=your-resource-group
 SAP_AI_CORE_API_BASE=https://api.ai.your-region.aws.ml.hana.ondemand.com/v2
 
+# IBM ICA Configuration (NEW - Optional)
+IBM_ICA_API_KEY=your-ibm-ica-api-key
+IBM_ICA_MODEL_ID=claude-sonnet-5
+IBM_ICA_ENDPOINT=https://api.nextgen-beta.ica.ibm.com/ica
+
 # Optional: Other LLM Providers
 OPENAI_API_KEY=your-openai-key
 ANTHROPIC_API_KEY=your-anthropic-key
@@ -229,6 +241,18 @@ python main.py
 ---
 
 ## 💡 Usage Guide
+
+### Selecting Your AI Provider 🆕
+1. Navigate to **Settings** page from the top navigation
+2. Locate the **"AI Provider Selection"** section
+3. Choose between:
+   - **SAP AI Core (Claude 4.7 Opus)**: Enterprise SAP integration
+   - **IBM ICA (Claude Sonnet 5)**: IBM watsonx Code Assistant
+4. Provider availability status shown with colored chips:
+   - 🟢 **Available**: Provider is configured and ready
+   - 🔴 **Not Available**: Check `.env` configuration
+5. Selected provider is automatically saved to `backend/settings.json`
+6. All SoW generation uses the selected provider until changed
 
 ### Creating a New Project
 1. Click **"New Project"** on the Dashboard
@@ -316,6 +340,38 @@ Expected response:
 
 ## 📡 API Endpoints
 
+### Provider Settings API 🆕
+**GET** `/settings/provider`
+- **Description**: Get current AI provider and availability status
+- **Response**:
+  ```json
+  {
+    "success": true,
+    "ai_provider": "sap",
+    "sap_available": true,
+    "ibm_ica_available": true
+  }
+  ```
+
+**POST** `/settings/provider`
+- **Description**: Switch AI provider (sap or ibm_ica)
+- **Request Body**:
+  ```json
+  {
+    "ai_provider": "ibm_ica"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "success": true,
+    "ai_provider": "ibm_ica",
+    "sap_available": true,
+    "ibm_ica_available": true,
+    "message": "Provider successfully switched to IBM_ICA"
+  }
+  ```
+
 ### SoW Generation API ✨ NEW
 **POST** `/generate/sow`
 - **Description**: Generate Statement of Work using AI
@@ -375,8 +431,10 @@ Full API documentation available at [http://localhost:8000/docs](http://localhos
 - **FastAPI** - Modern async API framework
 - **Uvicorn** - ASGI server
 - **SAP AI Core** - Enterprise AI orchestration
-- **Claude 4.7 Opus** - Advanced language model
-- **OAuth 2.0** - Authentication
+- **IBM ICA** - IBM watsonx Code Assistant 🆕
+- **Claude 4.7 Opus** - SAP AI Core model
+- **Claude Sonnet 5** - IBM ICA model 🆕
+- **OAuth 2.0** - SAP authentication
 
 ---
 
@@ -426,10 +484,14 @@ npm install
 
 ### SoW Generation Errors
 1. Check backend logs in terminal
-2. Verify SAP AI Core credentials in `.env`
-3. Check `backend/config.json` for correct deployment_id
-4. Ensure `log_requests: true` in config.json to see API calls
-5. Validate project name and customer are not empty/default
+2. Verify active provider credentials in `.env`:
+   - SAP AI Core: `SAP_AI_CORE_*` variables
+   - IBM ICA: `IBM_ICA_API_KEY`, `IBM_ICA_MODEL_ID`, `IBM_ICA_ENDPOINT`
+3. Check current provider selection in Settings page
+4. Review `backend/settings.json` for active provider
+5. For SAP: Check `backend/config.json` for correct deployment_id
+6. Ensure `log_requests: true` in config.json to see API calls
+7. Validate project name and customer are not empty/default
 
 ### Build Errors
 ```bash
@@ -457,7 +519,10 @@ This is an internal project. For questions or contributions, contact the develop
 ## 🎯 Roadmap
 
 ### Completed Features ✅
-- ✅ AI-powered SoW generation with Claude 4.7 Opus
+- ✅ Dual AI provider support (SAP AI Core + IBM ICA)
+- ✅ Provider selection UI with real-time availability status
+- ✅ Provider preference persistence across sessions
+- ✅ AI-powered SoW generation with Claude models
 - ✅ Word document export for SoW
 - ✅ Auto-save with validation
 - ✅ Separate SoW and project draft storage

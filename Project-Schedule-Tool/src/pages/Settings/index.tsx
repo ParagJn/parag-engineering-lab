@@ -14,7 +14,11 @@ import {
   CircularProgress,
   IconButton,
   InputAdornment,
-  Chip
+  Chip,
+  Radio,
+  RadioGroup,
+  FormControl,
+  FormLabel
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -40,6 +44,14 @@ interface ProvidersConfig {
 export function Settings() {
   const navigate = useNavigate();
   
+  // AI Provider Selection State (SAP vs IBM ICA)
+  const [selectedProvider, setSelectedProvider] = useState<'sap' | 'ibm_ica'>('sap');
+  const [providerSwitchLoading, setProviderSwitchLoading] = useState(false);
+  const [providerSwitchSuccess, setProviderSwitchSuccess] = useState(false);
+  const [providerError, setProviderError] = useState<string | null>(null);
+  const [sapAvailable, setSapAvailable] = useState(false);
+  const [ibmIcaAvailable, setIbmIcaAvailable] = useState(false);
+  
   // AI Provider Configuration State
   const [providers, setProviders] = useState<ProvidersConfig>({});
   const [apiKeys, setApiKeys] = useState({
@@ -59,8 +71,66 @@ export function Settings() {
 
   // Load current configuration on mount
   useEffect(() => {
+    loadProviderSettings();
     loadConfiguration();
   }, []);
+
+  const loadProviderSettings = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/settings/provider');
+      
+      if (!response.ok) {
+        throw new Error('Failed to load provider settings');
+      }
+      
+      const data = await response.json();
+      if (data.success) {
+        setSelectedProvider(data.ai_provider);
+        setSapAvailable(data.sap_available);
+        setIbmIcaAvailable(data.ibm_ica_available);
+      }
+    } catch (err: any) {
+      console.error('Error loading provider settings:', err);
+      setProviderError('Could not load provider settings');
+    }
+  };
+
+  const handleProviderChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newProvider = event.target.value as 'sap' | 'ibm_ica';
+    
+    setProviderSwitchLoading(true);
+    setProviderError(null);
+    setProviderSwitchSuccess(false);
+    
+    try {
+      const response = await fetch('http://localhost:8000/settings/provider', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ai_provider: newProvider
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to update provider');
+      }
+      
+      const data = await response.json();
+      if (data.success) {
+        setSelectedProvider(newProvider);
+        setProviderSwitchSuccess(true);
+        setTimeout(() => setProviderSwitchSuccess(false), 5000);
+      }
+    } catch (err: any) {
+      console.error('Error updating provider:', err);
+      setProviderError(err.message || 'Failed to switch provider');
+    } finally {
+      setProviderSwitchLoading(false);
+    }
+  };
 
   const loadConfiguration = async () => {
     try {
@@ -198,6 +268,99 @@ export function Settings() {
       <form onSubmit={handleSave}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           
+          {/* AI Provider Selection Section */}
+          <Card>
+            <CardContent sx={{ p: 4 }}>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: '700', mb: 1 }}>
+                AI Provider Selection
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Choose which AI service to use for SoW generation and intelligent features.
+              </Typography>
+
+              {providerError && (
+                <Alert severity="error" sx={{ mb: 3 }} onClose={() => setProviderError(null)}>
+                  {providerError}
+                </Alert>
+              )}
+
+              {providerSwitchSuccess && (
+                <Alert severity="success" sx={{ mb: 3 }} onClose={() => setProviderSwitchSuccess(false)}>
+                  Provider successfully switched! The new provider will be used for all AI operations.
+                </Alert>
+              )}
+
+              <FormControl component="fieldset" disabled={providerSwitchLoading}>
+                <FormLabel component="legend" sx={{ mb: 2, fontWeight: '600' }}>
+                  Active AI Provider
+                </FormLabel>
+                <RadioGroup
+                  value={selectedProvider}
+                  onChange={handleProviderChange}
+                >
+                  <FormControlLabel
+                    value="sap"
+                    control={<Radio />}
+                    label={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="body1" sx={{ fontWeight: '600' }}>
+                          SAP AI Core (Claude 4.7 Opus)
+                        </Typography>
+                        {sapAvailable ? (
+                          <Chip label="Available" size="small" color="success" />
+                        ) : (
+                          <Chip label="Not Available" size="small" color="error" />
+                        )}
+                      </Box>
+                    }
+                    disabled={!sapAvailable}
+                    sx={{ mb: 2, p: 2, border: '1px solid', borderColor: selectedProvider === 'sap' ? 'primary.main' : 'divider', borderRadius: 1 }}
+                  />
+                  <Box sx={{ ml: 4, mb: 2 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Enterprise-grade AI powered by SAP Business Technology Platform with Claude 4.7 Opus model.
+                      Requires SAP credentials configured in backend.
+                    </Typography>
+                  </Box>
+
+                  <FormControlLabel
+                    value="ibm_ica"
+                    control={<Radio />}
+                    label={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="body1" sx={{ fontWeight: '600' }}>
+                          IBM ICA (Claude Sonnet 5)
+                        </Typography>
+                        {ibmIcaAvailable ? (
+                          <Chip label="Available" size="small" color="success" />
+                        ) : (
+                          <Chip label="Not Available" size="small" color="error" />
+                        )}
+                      </Box>
+                    }
+                    disabled={!ibmIcaAvailable}
+                    sx={{ mb: 2, p: 2, border: '1px solid', borderColor: selectedProvider === 'ibm_ica' ? 'primary.main' : 'divider', borderRadius: 1 }}
+                  />
+                  <Box sx={{ ml: 4, mb: 2 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      IBM ICA (watsonx Code Assistant) with Claude Sonnet 5 or Gemini models.
+                      Requires IBM_ICA_API_KEY and IBM_ICA_ENDPOINT configured in backend .env file.
+                    </Typography>
+                  </Box>
+                </RadioGroup>
+              </FormControl>
+
+              {providerSwitchLoading && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 2 }}>
+                  <CircularProgress size={20} />
+                  <Typography variant="body2" color="text.secondary">
+                    Switching provider...
+                  </Typography>
+                </Box>
+              )}
+            </CardContent>
+          </Card>
+
           {/* AI Models Configuration Section */}
           <Card>
             <CardContent sx={{ p: 4 }}>
