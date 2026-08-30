@@ -736,7 +736,25 @@ export function Planner() {
         field: 'calculatedStartDate',
         width: 130,
         editable: true,
-        cellEditor: 'agDateCellEditor',
+        cellEditor: 'agTextCellEditor',
+        cellEditorParams: {
+          maxLength: 10
+        },
+        valueFormatter: (params: any) => {
+          // Display format: YYYY-MM-DD
+          return params.value || '';
+        },
+        valueParser: (params: any) => {
+          // Parse the edited value
+          const strVal = String(params.newValue || '').trim();
+          if (strVal === '') return params.oldValue;
+          
+          const parsed = dayjs(strVal);
+          if (parsed.isValid()) {
+            return parsed.format('YYYY-MM-DD');
+          }
+          return params.oldValue; // Keep old value if invalid
+        },
         cellStyle: (params: any) => {
           const hasManual = !!params.data?.manualStartDate;
           return {
