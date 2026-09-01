@@ -113,7 +113,10 @@ export function calculateSchedule(
     const fte = Math.max(0.1, task.fte || 1.0);
     const days = hours / 8;
     const weeks = days / 5;
-    const effectiveDurationDays = days / fte; // Total working days spanned
+    const effectiveDurationDays =
+      task.durationMode === 'fixed-duration'
+        ? days        // FTE doesn't compress duration — task spans its natural day count
+        : days / fte; // effort-driven (default): more FTE → shorter calendar span
 
     // Determine start date
     let startDate = projectStartDate;

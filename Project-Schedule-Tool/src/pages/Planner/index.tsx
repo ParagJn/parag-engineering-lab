@@ -86,6 +86,122 @@ const SlideTransition = React.forwardRef(function Transition(
   return <Slide direction="up" ref={ref} {...props} />;
 });
 
+// Hover-reveal action bar that appears on the left of a grid row
+interface RowActionBarProps {
+  taskId: string;
+  onInsertAbove: (id: string) => void;
+  onInsertBelow: (id: string) => void;
+  onDelete: (id: string) => void;
+}
+
+function RowActionBar({ taskId, onInsertAbove, onInsertBelow, onDelete }: RowActionBarProps) {
+  const [hovered, setHovered] = React.useState(false);
+
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+        width: '100%',
+        position: 'relative',
+      }}
+    >
+      {/* Hover trigger dot — always visible, subtle */}
+      <div style={{
+        width: 6,
+        height: 6,
+        borderRadius: '50%',
+        background: hovered ? 'transparent' : '#cbd5e1',
+        transition: 'background 0.15s ease',
+      }} />
+
+      {/* Floating pill toolbar — slides in on hover */}
+      <div
+        style={{
+          position: 'absolute',
+          right: 0,
+          top: '50%',
+          transform: hovered
+            ? 'translateY(-50%) translateX(0) scale(1)'
+            : 'translateY(-50%) translateX(4px) scale(0.92)',
+          opacity: hovered ? 1 : 0,
+          pointerEvents: hovered ? 'auto' : 'none',
+          transition: 'opacity 0.15s ease, transform 0.15s ease',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+          background: '#fff',
+          border: '1px solid #e2e8f0',
+          borderRadius: 20,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+          padding: '2px 4px',
+          zIndex: 100,
+        }}
+      >
+        <button
+          title="Insert task above"
+          onClick={(e) => { e.stopPropagation(); onInsertAbove(taskId); }}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 22, height: 22, borderRadius: '50%', padding: 0,
+            color: '#3b82f6',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.background = '#eff6ff')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M4 11h7V4h2v7h7v2h-7v7h-2v-7H4z" opacity="0.3"/>
+            <path d="M11 4h2v7h7v2h-7v7h-2v-7H4v-2h7z"/>
+            <path d="M7 2h10v2H7zM6 1h12v1H6z" opacity="0.5"/>
+          </svg>
+        </button>
+
+        <button
+          title="Insert task below"
+          onClick={(e) => { e.stopPropagation(); onInsertBelow(taskId); }}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 22, height: 22, borderRadius: '50%', padding: 0,
+            color: '#3b82f6',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.background = '#eff6ff')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M11 4h2v7h7v2h-7v7h-2v-7H4v-2h7z"/>
+            <path d="M7 20h10v2H7zM6 22h12v1H6z" opacity="0.5"/>
+          </svg>
+        </button>
+
+        <div style={{ width: 1, height: 14, background: '#e2e8f0' }} />
+
+        <button
+          title="Delete task"
+          onClick={(e) => { e.stopPropagation(); onDelete(taskId); }}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 22, height: 22, borderRadius: '50%', padding: 0,
+            color: '#ef4444',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.background = '#fef2f2')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function Planner() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -106,6 +222,8 @@ export function Planner() {
   const weeks = useTaskStore((s) => s.weeks);
   const minWeeksToShow = useTaskStore((s) => s.minWeeksToShow);
   const addTask = useTaskStore((s) => s.addTask);
+  const insertTaskAbove = useTaskStore((s) => s.insertTaskAbove);
+  const insertTaskBelow = useTaskStore((s) => s.insertTaskBelow);
   const deleteTask = useTaskStore((s) => s.deleteTask);
   const updateTask = useTaskStore((s) => s.updateTask);
   const setTasks = useTaskStore((s) => s.setTasks);
@@ -724,6 +842,54 @@ export function Planner() {
         cellStyle: { textAlign: 'center' }
       },
       {
+        headerName: 'Man Days',
+        field: 'manDays',
+        width: 95,
+        editable: false,
+        sortable: false,
+        valueGetter: (params: any) => {
+          const hours = params.data?.estimatedHours || 0;
+          const fte = params.data?.fte || 1;
+          return Math.round((hours / 8) * fte);
+        },
+        cellStyle: { textAlign: 'center', color: '#92400e', fontWeight: '600', backgroundColor: '#fffbeb' }
+      },
+      {
+        headerName: 'Mode',
+        field: 'durationMode',
+        width: 110,
+        editable: true,
+        cellEditor: 'agSelectCellEditor',
+        cellEditorParams: { values: ['effort-driven', 'fixed-duration'] },
+        cellRenderer: (params: any) => {
+          const mode: string = params.value || 'effort-driven';
+          const isFixed = mode === 'fixed-duration';
+          return (
+            <Box sx={{
+              display: 'flex', alignItems: 'center', height: '100%', px: 0.5
+            }}>
+              <Box sx={{
+                display: 'inline-flex', alignItems: 'center', gap: 0.5,
+                bgcolor: isFixed ? '#f1f5f9' : '#eff6ff',
+                color: isFixed ? '#64748b' : '#2563eb',
+                border: `1px solid ${isFixed ? '#cbd5e1' : '#bfdbfe'}`,
+                borderRadius: '12px',
+                px: 1, py: '2px',
+                fontSize: '11px', fontWeight: 600, lineHeight: 1.4,
+                cursor: 'pointer',
+                userSelect: 'none',
+              }}
+                title={isFixed
+                  ? 'Fixed Duration: FTE does not compress the task timeline'
+                  : 'Effort Driven: more FTE = shorter calendar duration'}
+              >
+                {isFixed ? '📌 Fixed' : '⚡ Effort'}
+              </Box>
+            </Box>
+          );
+        }
+      },
+      {
         headerName: 'Dependency',
         field: 'dependency',
         width: 100,
@@ -796,23 +962,38 @@ export function Planner() {
       {
         headerName: '',
         field: 'actions',
-        width: 60,
+        width: 52,
         editable: false,
+        sortable: false,
+        cellStyle: { padding: 0, overflow: 'visible' },
         cellRenderer: (params: any) => {
-          return (
-            <IconButton
-              size="small"
-              color="error"
-              onClick={() => deleteTask(params.data.id)}
-              sx={{ py: 0.5 }}
-            >
-              <DeleteIcon fontSize="small" />
-            </IconButton>
-          );
+          const taskId = params.data?.id;
+          if (!taskId) return null;
+          return <RowActionBar
+            taskId={taskId}
+            onInsertAbove={(id) => {
+              insertTaskAbove(id);
+              setSnackbarSeverity('success');
+              setSnackbarMessage('New task inserted above');
+              setSnackbarOpen(true);
+            }}
+            onInsertBelow={(id) => {
+              insertTaskBelow(id);
+              setSnackbarSeverity('success');
+              setSnackbarMessage('New task inserted below');
+              setSnackbarOpen(true);
+            }}
+            onDelete={(id) => {
+              deleteTask(id);
+              setSnackbarSeverity('info');
+              setSnackbarMessage('Task deleted');
+              setSnackbarOpen(true);
+            }}
+          />;
         }
       }
     ] as ColDef[];
-  }, [deleteTask]);
+  }, [deleteTask, insertTaskAbove, insertTaskBelow]);
 
   // Define column definitions for Right Timeline Grid (60%)
   const rightColumnDefs = useMemo<ColDef[]>(() => {
@@ -863,6 +1044,13 @@ export function Planner() {
               const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
               const textColor = luminance > 0.6 ? '#000000' : '#ffffff';
 
+              // Chain icon on first active day (= calculatedStartDate) if task has dependencies
+              const hasDeps = task.dependency && task.dependency.trim() !== '';
+              const isFirstActiveDay = hasDeps && cellDate.isSame(dayjs(taskStart), 'day');
+              const depTooltip = hasDeps
+                ? `Depends on: Task${task.dependency.includes(',') ? 's' : ''} ${task.dependency}`
+                : '';
+
               return (
                 <Box sx={{
                   width: '100%',
@@ -876,8 +1064,27 @@ export function Planner() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-                  mt: '4px'
+                  mt: '4px',
+                  position: 'relative',
                 }}>
+                  {isFirstActiveDay && (
+                    <Box
+                      component="span"
+                      title={depTooltip}
+                      sx={{
+                        position: 'absolute',
+                        left: '3px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        fontSize: '11px',
+                        lineHeight: 1,
+                        cursor: 'help',
+                        filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.25))',
+                      }}
+                    >
+                      🔗
+                    </Box>
+                  )}
                   ●
                 </Box>
               );
@@ -926,14 +1133,44 @@ export function Planner() {
 
         const color = task.color || '#2196F3';
 
+        // Detect first active week: the week that contains calculatedStartDate
+        const hasDeps = task.dependency && task.dependency.trim() !== '';
+        const weekMonday = weekFri.subtract(4, 'day');
+        const isFirstActiveWeek = hasDeps &&
+          (startD.isAfter(weekMonday, 'day') || startD.isSame(weekMonday, 'day')) &&
+          (startD.isBefore(weekFri, 'day') || startD.isSame(weekFri, 'day'));
+        const depTooltip = hasDeps
+          ? `Depends on: Task${task.dependency.includes(',') ? 's' : ''} ${task.dependency}`
+          : '';
+
         return (
           <Box sx={{ 
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center',
             height: '100%',
-            gap: '2px'
+            gap: '2px',
+            position: 'relative',
           }}>
+            {isFirstActiveWeek && (
+              <Box
+                component="span"
+                title={depTooltip}
+                sx={{
+                  position: 'absolute',
+                  left: 0,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  fontSize: '12px',
+                  lineHeight: 1,
+                  zIndex: 2,
+                  cursor: 'help',
+                  filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.2))',
+                }}
+              >
+                🔗
+              </Box>
+            )}
             {activeDays.map((isActive, index) => (
               <Box
                 key={index}

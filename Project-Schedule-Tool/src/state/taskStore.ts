@@ -10,6 +10,8 @@ interface TaskState {
   weeks: Week[];
   minWeeksToShow: number;
   addTask: () => void;
+  insertTaskAbove: (targetId: string) => void;
+  insertTaskBelow: (targetId: string) => void;
   deleteTask: (id: string) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
   setTasks: (tasks: Task[]) => void;
@@ -27,6 +29,7 @@ const initialTasks: Task[] = [
     estimatedDays: 5,
     estimatedWeeks: 1,
     fte: 1,
+    durationMode: 'effort-driven',
     dependency: '',
     color: '#FFEB3B', // Yellow
     status: 'planned'
@@ -39,6 +42,7 @@ const initialTasks: Task[] = [
     estimatedDays: 20,
     estimatedWeeks: 4,
     fte: 1,
+    durationMode: 'effort-driven',
     dependency: '1',
     color: '#2196F3', // Blue
     status: 'planned'
@@ -51,6 +55,7 @@ const initialTasks: Task[] = [
     estimatedDays: 7.5,
     estimatedWeeks: 1.5,
     fte: 1,
+    durationMode: 'effort-driven',
     dependency: '1',
     color: '#4CAF50', // Green
     status: 'planned'
@@ -63,6 +68,7 @@ const initialTasks: Task[] = [
     estimatedDays: 10,
     estimatedWeeks: 2,
     fte: 2,
+    durationMode: 'effort-driven',
     dependency: '2',
     color: '#FF9800', // Orange
     status: 'planned'
@@ -85,12 +91,85 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       estimatedDays: 5,
       estimatedWeeks: 1,
       fte: 1,
+      durationMode: 'effort-driven',
       dependency: '',
       color: '#9C27B0', // Purple default
       status: 'planned'
     };
 
     const updatedTasks = [...currentTasks, newTask];
+    set({ tasks: updatedTasks });
+    get().recalculate();
+  },
+
+  insertTaskAbove: (targetId: string) => {
+    const currentTasks = get().tasks;
+    const targetIndex = currentTasks.findIndex((t) => t.id === targetId);
+    
+    if (targetIndex === -1) return;
+    
+    const newTask: Task = {
+      id: crypto.randomUUID(),
+      index: targetIndex + 1, // Will be renumbered below
+      activity: `New Task`,
+      estimatedHours: 40,
+      estimatedDays: 5,
+      estimatedWeeks: 1,
+      fte: 1,
+      durationMode: 'effort-driven',
+      dependency: '',
+      color: '#9C27B0', // Purple default
+      status: 'planned'
+    };
+
+    // Insert the new task before the target
+    const updatedTasks = [
+      ...currentTasks.slice(0, targetIndex),
+      newTask,
+      ...currentTasks.slice(targetIndex)
+    ];
+
+    // Re-adjust all indexes
+    updatedTasks.forEach((t, i) => {
+      t.index = i + 1;
+    });
+
+    set({ tasks: updatedTasks });
+    get().recalculate();
+  },
+
+  insertTaskBelow: (targetId: string) => {
+    const currentTasks = get().tasks;
+    const targetIndex = currentTasks.findIndex((t) => t.id === targetId);
+    
+    if (targetIndex === -1) return;
+    
+    const newTask: Task = {
+      id: crypto.randomUUID(),
+      index: targetIndex + 2, // Will be renumbered below
+      activity: `New Task`,
+      estimatedHours: 40,
+      estimatedDays: 5,
+      estimatedWeeks: 1,
+      fte: 1,
+      durationMode: 'effort-driven',
+      dependency: '',
+      color: '#9C27B0', // Purple default
+      status: 'planned'
+    };
+
+    // Insert the new task after the target
+    const updatedTasks = [
+      ...currentTasks.slice(0, targetIndex + 1),
+      newTask,
+      ...currentTasks.slice(targetIndex + 1)
+    ];
+
+    // Re-adjust all indexes
+    updatedTasks.forEach((t, i) => {
+      t.index = i + 1;
+    });
+
     set({ tasks: updatedTasks });
     get().recalculate();
   },

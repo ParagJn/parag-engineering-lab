@@ -96,17 +96,20 @@ export async function exportProjectToExcel(
     worksheet.getColumn(c).width = 3;
   }
 
-  // Set metadata columns G-M
+  // Set metadata columns G-P
   worksheet.getColumn(7).width = 8;    // G: Index
   worksheet.getColumn(8).width = 32;   // H: Activity/Task
   worksheet.getColumn(9).width = 13;   // I: Est. Hours
   worksheet.getColumn(10).width = 13;  // J: Est. Days
   worksheet.getColumn(11).width = 13;  // K: Est. Weeks
-  worksheet.getColumn(12).width = 8;    // L: FTE
-  worksheet.getColumn(13).width = 13;  // M: Dependency
+  worksheet.getColumn(12).width = 8;   // L: FTE
+  worksheet.getColumn(13).width = 12;  // M: Man Days
+  worksheet.getColumn(14).width = 16;  // N: Mode
+  worksheet.getColumn(15).width = 18;  // O: Dep. Link
+  worksheet.getColumn(16).width = 13;  // P: Dependency (raw)
 
-  // Set timeline columns N onwards
-  const startTimelineColIdx = 14; // Col N is 14
+  // Set timeline columns Q onwards
+  const startTimelineColIdx = 17; // Col Q is 17
   weeks.forEach((_, idx) => {
     worksheet.getColumn(startTimelineColIdx + idx).width = 12;
   });
@@ -160,12 +163,12 @@ export async function exportProjectToExcel(
   startDateCell.numFmt = 'yyyy-mm-dd';
   startDateCell.alignment = { horizontal: 'left' };
 
-  // Week Ending Dates Merged Header (Col N to last week column)
+  // Week Ending Dates Merged Header (Col Q to last week column)
   const lastWeekColIdx = startTimelineColIdx + weeks.length - 1;
   const lastWeekColLetter = getColumnLetter(lastWeekColIdx);
-  const weekEndingRange = `N4:${lastWeekColLetter}4`;
+  const weekEndingRange = `Q4:${lastWeekColLetter}4`;
   worksheet.mergeCells(weekEndingRange);
-  const weekEndingHeaderCell = worksheet.getCell('N4');
+  const weekEndingHeaderCell = worksheet.getCell('Q4');
   weekEndingHeaderCell.value = 'Week Ending Dates';
   weekEndingHeaderCell.font = { name: fontName, size: 11, bold: true, color: { argb: 'FF1F497D' } };
   weekEndingHeaderCell.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -200,13 +203,16 @@ export async function exportProjectToExcel(
 
   // 6. Row 7: Grid Column Headers
   const gridHeaders = [
-    { col: 7, val: 'Index' },
-    { col: 8, val: 'Activity/Task' },
-    { col: 9, val: 'Est. Hours' },
+    { col: 7,  val: 'Index' },
+    { col: 8,  val: 'Activity/Task' },
+    { col: 9,  val: 'Est. Hours' },
     { col: 10, val: 'Est. Days' },
     { col: 11, val: 'Est Weeks' },
     { col: 12, val: 'FTE' },
-    { col: 13, val: 'Dependency' }
+    { col: 13, val: 'Man Days' },
+    { col: 14, val: 'Mode' },
+    { col: 15, val: 'Dep. Link' },
+    { col: 16, val: 'Dependency' }
   ];
 
   gridHeaders.forEach(h => {
@@ -281,17 +287,52 @@ export async function exportProjectToExcel(
     fteCell.alignment = { horizontal: 'center' };
     fteCell.border = thinBorder;
 
-    // Col M: Dependency
-    const depCell = worksheet.getCell(taskRowIdx, 13);
+    // Col M: Man Days (=ROUND(J{row}*L{row},0)  — Est.Days × FTE)
+    const manDaysCell = worksheet.getCell(taskRowIdx, 13);
+    manDaysCell.value = { formula: `=ROUND(J${taskRowIdx}*L${taskRowIdx},0)` };
+    manDaysCell.font = { name: fontName, size: 11, bold: true, color: { argb: 'FF92400E' } };
+    manDaysCell.numFmt = '#,##0';
+    manDaysCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    manDaysCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFBEB' } } as ExcelJS.Fill;
+    manDaysCell.border = thinBorder;
+
+    // Col N: Mode (duration mode badge)
+    const modeCell = worksheet.getCell(taskRowIdx, 14);
+    const isFixed = task.durationMode === 'fixed-duration';
+    modeCell.value = isFixed ? '📌 Fixed Duration' : '⚡ Effort Driven';
+    modeCell.font = {
+      name: fontName, size: 10, bold: true,
+      color: { argb: isFixed ? 'FF64748B' : 'FF2563EB' }
+    };
+    modeCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    modeCell.border = thinBorder;
+
+    // Col O: Dep. Link (dependency chain indicator)
+    const depLinkCell = worksheet.getCell(taskRowIdx, 15);
+    const hasDeps = task.dependency && task.dependency.trim() !== '';
+    if (hasDeps) {
+      const depNums = task.dependency.split(',').map((s: string) => s.trim()).filter(Boolean);
+      depLinkCell.value = `🔗 Task ${depNums.join(', ')}`;
+      depLinkCell.font = { name: fontName, size: 10, bold: true, color: { argb: 'FF1D4ED8' } };
+    } else {
+      depLinkCell.value = null;
+    }
+    depLinkCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    depLinkCell.border = thinBorder;
+
+    // Col P: Dependency (raw index string)
+    const depCell = worksheet.getCell(taskRowIdx, 16);
     depCell.value = task.dependency || null;
     depCell.font = defaultFont;
     depCell.alignment = { horizontal: 'center' };
     depCell.border = thinBorder;
 
-    // Apply alternating row shading to the task metadata columns G-M
+    // Apply alternating row shading to the task metadata columns G-P (skip M=ManDays which has its own fill)
     if (taskIdx % 2 === 1) {
-      for (let colIdx = 7; colIdx <= 13; colIdx++) {
-        worksheet.getCell(taskRowIdx, colIdx).fill = alternateRowFill;
+      for (let colIdx = 7; colIdx <= 16; colIdx++) {
+        if (colIdx !== 13) { // skip Man Days column — it has its own amber fill
+          worksheet.getCell(taskRowIdx, colIdx).fill = alternateRowFill;
+        }
       }
     }
 
@@ -375,7 +416,7 @@ export async function exportProjectToExcel(
         fgColor: { argb: 'FFF9FAFB' }
       } as ExcelJS.Fill;
 
-      for (let colIdx = 7; colIdx <= 13; colIdx++) {
+      for (let colIdx = 7; colIdx <= 16; colIdx++) {
         worksheet.getCell(subRowIdx, colIdx).fill = subActFill;
         if (colIdx > 8) {
           worksheet.getCell(subRowIdx, colIdx).border = thinBorder;
@@ -386,19 +427,19 @@ export async function exportProjectToExcel(
     });
   });
 
-  // Freeze Panes (Freeze columns A-M, and rows 1-7)
+  // Freeze Panes (Freeze columns A-P, and rows 1-7)
   worksheet.views = [
     {
       state: 'frozen',
-      xSplit: 13, // freeze columns A-M (columns 1 to 13)
+      xSplit: 16, // freeze columns A-P (columns 1 to 16)
       ySplit: 7,  // freeze rows 1-7
-      topLeftCell: 'N8',
-      activeCell: 'N8'
+      topLeftCell: 'Q8',
+      activeCell: 'Q8'
     }
   ];
 
-  // Auto-Filter on Columns G-M
-  worksheet.autoFilter = `G7:M7`;
+  // Auto-Filter on Columns G-P
+  worksheet.autoFilter = `G7:P7`;
 
   // Assumptions Section (below task rows)
   if (assumptions && assumptions.trim()) {
@@ -408,7 +449,7 @@ export async function exportProjectToExcel(
     const titleCell = worksheet.getCell(assumptionsStartRow, 7); // Column G
     titleCell.value = 'Assumptions & Notes';
     titleCell.font = { name: fontName, size: 13, bold: true, color: { argb: 'FF1F497D' } };
-    worksheet.mergeCells(assumptionsStartRow, 7, assumptionsStartRow, 13);
+    worksheet.mergeCells(assumptionsStartRow, 7, assumptionsStartRow, 16);
     titleCell.border = {
       bottom: { style: 'medium', color: { argb: 'FF366092' } }
     };
@@ -421,7 +462,7 @@ export async function exportProjectToExcel(
       cell.value = line.trim();
       cell.font = { name: fontName, size: 11, color: { argb: 'FF333333' } };
       cell.alignment = { wrapText: true, vertical: 'top' };
-      worksheet.mergeCells(rowIdx, 7, rowIdx, 13);
+      worksheet.mergeCells(rowIdx, 7, rowIdx, 16);
       currentRow = rowIdx;
     });
   }
@@ -434,7 +475,7 @@ export async function exportProjectToExcel(
     const titleCell = worksheet.getCell(outOfScopeStartRow, 7); // Column G
     titleCell.value = 'Out of Scope & Exclusions';
     titleCell.font = { name: fontName, size: 13, bold: true, color: { argb: 'FFC00000' } }; // Dark red header for exclusions
-    worksheet.mergeCells(outOfScopeStartRow, 7, outOfScopeStartRow, 13);
+    worksheet.mergeCells(outOfScopeStartRow, 7, outOfScopeStartRow, 16);
     titleCell.border = {
       bottom: { style: 'medium', color: { argb: 'FFC00000' } }
     };
@@ -447,7 +488,7 @@ export async function exportProjectToExcel(
       cell.value = line.trim();
       cell.font = { name: fontName, size: 11, color: { argb: 'FF333333' } };
       cell.alignment = { wrapText: true, vertical: 'top' };
-      worksheet.mergeCells(rowIdx, 7, rowIdx, 13);
+      worksheet.mergeCells(rowIdx, 7, rowIdx, 16);
       currentRow = rowIdx;
     });
   }
