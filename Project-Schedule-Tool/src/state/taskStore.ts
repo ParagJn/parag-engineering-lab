@@ -1,14 +1,23 @@
 import { create } from 'zustand';
 import type { Task } from '../models/Task';
 import type { Week } from '../models/Week';
+import type { HolidayEntry } from '../models/Holiday';
 import { calculateSchedule } from '../engines/SchedulingEngine';
 import { useProjectStore } from './projectStore';
 
+export interface HolidayInfo {
+  name: string;
+  region: 'vic' | 'india';
+}
 
 interface TaskState {
   tasks: Task[];
   weeks: Week[];
   minWeeksToShow: number;
+  vicHolidays: HolidayEntry[];
+  indiaHolidays: HolidayEntry[];
+  vicHolidaysEnabled: boolean;
+  indiaHolidaysEnabled: boolean;
   addTask: () => void;
   insertTaskAbove: (targetId: string) => void;
   insertTaskBelow: (targetId: string) => void;
@@ -16,11 +25,16 @@ interface TaskState {
   updateTask: (id: string, updates: Partial<Task>) => void;
   setTasks: (tasks: Task[]) => void;
   clearTasks: () => void;
+  resetTasks: () => void;
   recalculate: (startDate?: string) => void;
   setMinWeeksToShow: (num: number) => void;
+  setRegionHolidays: (region: 'vic' | 'india', holidays: HolidayEntry[]) => void;
+  toggleHolidayRegion: (region: 'vic' | 'india') => void;
+  getActiveHolidayMap: () => Record<string, HolidayInfo>;
 }
 
-const initialTasks: Task[] = [
+function createInitialTasks(): Task[] {
+  return [
   {
     id: 'task-1',
     index: 1,
@@ -73,12 +87,17 @@ const initialTasks: Task[] = [
     color: '#FF9800', // Orange
     status: 'planned'
   }
-];
+  ];
+}
 
 export const useTaskStore = create<TaskState>((set, get) => ({
   tasks: [],
   weeks: [],
   minWeeksToShow: 52, // Default to 52 weeks (1 year) for a spacious planning timeline
+  vicHolidays: [],
+  indiaHolidays: [],
+  vicHolidaysEnabled: false,
+  indiaHolidaysEnabled: false,
 
   addTask: () => {
     const currentTasks = get().tasks;
@@ -212,17 +231,57 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     set({ tasks: [], weeks: [] });
   },
 
+  resetTasks: () => {
+    set({
+      tasks: createInitialTasks(),
+      vicHolidaysEnabled: false,
+      indiaHolidaysEnabled: false
+    });
+    get().recalculate();
+  },
+
   recalculate: (startDate) => {
     // We fetch start date from projectStore if not supplied
     const suggestedStartDateStr = startDate || useProjectStore.getState().project.suggestedStartDate || new Date().toISOString().split('T')[0];
 
-    const { tasks, weeks } = calculateSchedule(get().tasks, suggestedStartDateStr, get().minWeeksToShow || 52);
+    const holidayMap = get().getActiveHolidayMap();
+    const holidayDates = new Set(Object.keys(holidayMap));
+
+    const { tasks, weeks } = calculateSchedule(get().tasks, suggestedStartDateStr, get().minWeeksToShow || 52, holidayDates);
     set({ tasks, weeks });
   },
 
   setMinWeeksToShow: (num) => {
     set({ minWeeksToShow: Math.max(1, num) });
     get().recalculate();
+  },
+
+  setRegionHolidays: (region, holidays) => {
+    if (region === 'vic') {
+      set({ vicHolidays: holidays });
+    } else {
+      set({ indiaHolidays: holidays });
+    }
+  },
+
+  toggleHolidayRegion: (region) => {
+    if (region === 'vic') {
+      set({ vicHolidaysEnabled: !get().vicHolidaysEnabled });
+    } else {
+      set({ indiaHolidaysEnabled: !get().indiaHolidaysEnabled });
+    }
+    get().recalculate();
+  },
+
+  getActiveHolidayMap: () => {
+    const map: Record<string, HolidayInfo> = {};
+    if (get().vicHolidaysEnabled) {
+      get().vicHolidays.forEach(h => { map[h.date] = { name: h.name, region: 'vic' }; });
+    }
+    if (get().indiaHolidaysEnabled) {
+      get().indiaHolidays.forEach(h => { map[h.date] = { name: h.name, region: 'india' }; });
+    }
+    return map;
   }
 }));
 
@@ -238,7 +297,7 @@ useProjectStore.subscribe((state) => {
 
 // Run initial calculation to generate weeks list and update default tasks
 setTimeout(() => {
-  useTaskStore.setState({ tasks: initialTasks });
+  useTaskStore.setState({ tasks: createInitialTasks() });
   useTaskStore.getState().recalculate();
 }, 0);
 

@@ -2,28 +2,29 @@ import dayjs from 'dayjs';
 import type { Task } from '../../models/Task';
 import type { Week } from '../../models/Week';
 
-// Helper: Check if a date is a working day (Monday - Friday)
-export function isWorkingDay(date: dayjs.Dayjs): boolean {
+// Helper: Check if a date is a working day (Monday - Friday, and not a holiday)
+export function isWorkingDay(date: dayjs.Dayjs, holidayDates: Set<string> = new Set()): boolean {
   const day = date.day();
-  return day !== 0 && day !== 6; // 0 = Sunday, 6 = Saturday
+  if (day === 0 || day === 6) return false; // 0 = Sunday, 6 = Saturday
+  return !holidayDates.has(date.format('YYYY-MM-DD'));
 }
 
-// Helper: Move a date to the next working day if it falls on a weekend
-export function moveToWorkingDay(date: dayjs.Dayjs): dayjs.Dayjs {
+// Helper: Move a date to the next working day if it falls on a weekend or holiday
+export function moveToWorkingDay(date: dayjs.Dayjs, holidayDates: Set<string> = new Set()): dayjs.Dayjs {
   let current = date;
-  while (!isWorkingDay(current)) {
+  while (!isWorkingDay(current, holidayDates)) {
     current = current.add(1, 'day');
   }
   return current;
 }
 
-// Helper: Add N working days to a start date
-export function addWorkingDays(startDate: dayjs.Dayjs, days: number): dayjs.Dayjs {
-  let current = moveToWorkingDay(startDate);
+// Helper: Add N working days to a start date (skipping weekends and holidays)
+export function addWorkingDays(startDate: dayjs.Dayjs, days: number, holidayDates: Set<string> = new Set()): dayjs.Dayjs {
+  let current = moveToWorkingDay(startDate, holidayDates);
   let remaining = days;
   while (remaining > 0) {
     current = current.add(1, 'day');
-    if (isWorkingDay(current)) {
+    if (isWorkingDay(current, holidayDates)) {
       remaining--;
     }
   }
@@ -57,14 +58,15 @@ export interface SchedulingResult {
 export function calculateSchedule(
   tasks: Task[],
   suggestedStartDateStr: string,
-  minWeeksToShow = 10
+  minWeeksToShow = 10,
+  holidayDates: Set<string> = new Set()
 ): SchedulingResult {
   if (tasks.length === 0) {
     return { tasks: [], weeks: [] };
   }
 
   // 1. Initial parse of start date
-  const projectStartDate = moveToWorkingDay(dayjs(suggestedStartDateStr));
+  const projectStartDate = moveToWorkingDay(dayjs(suggestedStartDateStr), holidayDates);
   const week1Friday = getFridayOfWeek(projectStartDate);
 
   // 2. Map tasks by their index for fast lookup
@@ -148,14 +150,17 @@ export function calculateSchedule(
 
     // Manual start date override if specified and valid
     if (task.manualStartDate && dayjs(task.manualStartDate).isValid()) {
-      startDate = moveToWorkingDay(dayjs(task.manualStartDate));
+      startDate = dayjs(task.manualStartDate);
     }
+
+    // Ensure the start date itself isn't a weekend/holiday (e.g. dependency-driven Monday, or manual override)
+    startDate = moveToWorkingDay(startDate, holidayDates);
 
     // Calculate finish date
     let finishDate = startDate;
     if (effectiveDurationDays > 0) {
       const daysToSpan = Math.ceil(effectiveDurationDays);
-      finishDate = addWorkingDays(startDate, daysToSpan - 1);
+      finishDate = addWorkingDays(startDate, daysToSpan - 1, holidayDates);
     }
 
     const calculatedTask: Task = {
@@ -204,7 +209,11 @@ export function calculateSchedule(
     const startStr = task.calculatedStartDate!;
     const hours = task.estimatedHours || 0;
     const fte = task.fte || 1.0;
-    const totalWorkingDays = hours / (8 * fte);
+    const days = hours / 8;
+    // Must mirror the duration logic used to derive calculatedFinishDate above,
+    // otherwise fixed-duration tasks with FTE > 1 span more calendar days than
+    // get allocated here, leaving later weeks with 0 allocation (Gantt bar cuts short).
+    const totalWorkingDays = task.durationMode === 'fixed-duration' ? days : days / fte;
 
     if (totalWorkingDays <= 0) {
       task.weekAssignments = {};
@@ -219,7 +228,7 @@ export function calculateSchedule(
     const segments: { dateStr: string; portion: number }[] = [];
 
     for (let k = 0; k < totalSegments; k++) {
-      const segDate = addWorkingDays(start, k);
+      const segDate = addWorkingDays(start, k, holidayDates);
       const portion = (k === totalSegments - 1) ? (totalWorkingDays - k) : 1.0;
       segments.push({
         dateStr: segDate.format('YYYY-MM-DD'),

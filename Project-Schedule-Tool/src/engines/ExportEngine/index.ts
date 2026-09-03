@@ -4,6 +4,7 @@ import dayjs from 'dayjs';
 import type { Project } from '../../models/Project';
 import type { Task } from '../../models/Task';
 import type { Week } from '../../models/Week';
+import type { HolidayEntry } from '../../models/Holiday';
 
 // Helper: Convert hex color to ARGB (hex without '#' prefixed by 'FF' for alpha)
 function hexToArgb(hex: string, defaultColor = 'FFCCCCCC'): string {
@@ -26,31 +27,35 @@ function getColumnLetter(colIndex: number): string {
   return letter;
 }
 
-// Helper: Calculate which days (Mon-Fri) are active for a task in a given week
-function calculateActiveDaysForWeek(task: Task, week: Week): boolean[] {
+type DayBoxState = 'active' | 'inactive' | 'holiday';
+
+// Helper: Calculate which days (Mon-Fri) are active for a task in a given week,
+// marking any active day that falls on a holiday separately so it renders as 'H'
+// (mirrors the on-screen Gantt behavior when a Vic/Ind holiday adjustment is applied)
+function calculateActiveDaysForWeek(task: Task, week: Week, holidayMap: Record<string, string> = {}): DayBoxState[] {
   const startD = dayjs(task.calculatedStartDate);
   const finishD = dayjs(task.calculatedFinishDate);
   const weekFri = dayjs(week.fridayDate);
-  
-  const activeDays: boolean[] = [false, false, false, false, false];
-  
+
+  const dayStates: DayBoxState[] = ['inactive', 'inactive', 'inactive', 'inactive', 'inactive'];
+
   // Check each day of the week (Monday=0 to Friday=4)
   for (let d = 0; d < 5; d++) {
     const dayDate = weekFri.subtract(4 - d, 'day');
     const isActive = (dayDate.isAfter(startD, 'day') || dayDate.isSame(startD, 'day')) &&
       (dayDate.isBefore(finishD, 'day') || dayDate.isSame(finishD, 'day'));
     if (isActive) {
-      activeDays[d] = true;
+      dayStates[d] = holidayMap[dayDate.format('YYYY-MM-DD')] ? 'holiday' : 'active';
     }
   }
-  
-  return activeDays;
+
+  return dayStates;
 }
 
-// Helper: Generate box string for active days (▪ for active, ▫ for inactive)
+// Helper: Generate box string for the day states (▪ active, ▫ inactive, H holiday)
 // Using U+25AA and U+25AB small squares for clean rendering
-function generateDayBoxes(activeDays: boolean[]): string {
-  return activeDays.map(isActive => isActive ? '▪' : '▫').join(' ');
+function generateDayBoxes(dayStates: DayBoxState[]): string {
+  return dayStates.map(state => state === 'holiday' ? 'H' : state === 'active' ? '▪' : '▫').join(' ');
 }
 
 export async function exportProjectToExcel(
@@ -60,7 +65,10 @@ export async function exportProjectToExcel(
   background?: string,
   assumptions?: string,
   outOfScope?: string,
-  mawDeliverables?: string
+  mawDeliverables?: string,
+  vicHolidays?: HolidayEntry[],
+  indiaHolidays?: HolidayEntry[],
+  activeHolidayMap?: Record<string, string>
 ): Promise<void> {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Project Schedule', {
@@ -366,24 +374,37 @@ export async function exportProjectToExcel(
         const weekColIdx = weeks.findIndex(w => w.fridayDate === week.fridayDate) + startTimelineColIdx;
         const weekCell = worksheet.getCell(taskRowIdx, weekColIdx);
         
-        // Calculate which days are active for this week
-        const activeDays = calculateActiveDaysForWeek(task, week);
-        const boxString = generateDayBoxes(activeDays);
-        
-        // Set cell value to box pattern
-        weekCell.value = boxString;
-        
+        // Calculate which days are active for this week (and which fall on an applied holiday)
+        const dayStates = calculateActiveDaysForWeek(task, week, activeHolidayMap);
+        const hasHoliday = dayStates.some(s => s === 'holiday');
+
+        if (hasHoliday) {
+          // Render as rich text so the 'H' holiday markers stand out in white
+          // against the task's own colored cell background
+          const baseFont = { name: fontName, size: 10, bold: true, color: { argb: barTextColor } };
+          const holidayFont = { name: fontName, size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+          const richText: { text: string; font: typeof baseFont }[] = [];
+          dayStates.forEach((state, idx) => {
+            if (idx > 0) richText.push({ text: ' ', font: baseFont });
+            richText.push({
+              text: state === 'holiday' ? 'H' : state === 'active' ? '▪' : '▫',
+              font: state === 'holiday' ? holidayFont : baseFont
+            });
+          });
+          weekCell.value = { richText };
+        } else {
+          weekCell.value = generateDayBoxes(dayStates);
+          weekCell.font = {
+            name: fontName,
+            size: 10,
+            bold: true,
+            color: { argb: barTextColor }
+          };
+        }
+
         // Apply colored background fill
         weekCell.fill = barFill;
         weekCell.border = thinBorder;
-        
-        // Style the box characters
-        weekCell.font = {
-          name: fontName,
-          size: 10,
-          bold: true,
-          color: { argb: barTextColor }
-        };
         weekCell.alignment = { horizontal: 'center', vertical: 'middle' };
       });
     }
@@ -491,6 +512,51 @@ export async function exportProjectToExcel(
       worksheet.mergeCells(rowIdx, 7, rowIdx, 16);
       currentRow = rowIdx;
     });
+  }
+
+  // Public Holidays Section (below out of scope / task rows)
+  if ((vicHolidays && vicHolidays.length > 0) || (indiaHolidays && indiaHolidays.length > 0)) {
+    const holidaysStartRow = currentRow + 2; // Leave a blank row gap
+
+    // Title
+    const titleCell = worksheet.getCell(holidaysStartRow, 7); // Column G
+    titleCell.value = 'Public Holidays';
+    titleCell.font = { name: fontName, size: 13, bold: true, color: { argb: 'FF1F497D' } };
+    worksheet.mergeCells(holidaysStartRow, 7, holidaysStartRow, 16);
+    titleCell.border = {
+      bottom: { style: 'medium', color: { argb: 'FF366092' } }
+    };
+
+    // Sub-headers: Vic Holidays in column G, Ind Holidays in column J
+    const subHeaderRow = holidaysStartRow + 1;
+    const vicHeaderCell = worksheet.getCell(subHeaderRow, 7);
+    vicHeaderCell.value = 'Vic Holidays';
+    vicHeaderCell.font = { name: fontName, size: 11, bold: true, color: { argb: 'FF92400E' } };
+
+    const indHeaderCell = worksheet.getCell(subHeaderRow, 10);
+    indHeaderCell.value = 'Ind Holidays';
+    indHeaderCell.font = { name: fontName, size: 11, bold: true, color: { argb: 'FF92400E' } };
+
+    const maxRows = Math.max(vicHolidays?.length || 0, indiaHolidays?.length || 0);
+    for (let i = 0; i < maxRows; i++) {
+      const rowIdx = subHeaderRow + 1 + i;
+
+      const vic = vicHolidays?.[i];
+      if (vic) {
+        const cell = worksheet.getCell(rowIdx, 7);
+        cell.value = `${vic.date} — ${vic.name}`;
+        cell.font = { name: fontName, size: 10, color: { argb: 'FF333333' } };
+      }
+
+      const ind = indiaHolidays?.[i];
+      if (ind) {
+        const cell = worksheet.getCell(rowIdx, 10);
+        cell.value = `${ind.date} — ${ind.name}`;
+        cell.font = { name: fontName, size: 10, color: { argb: 'FF333333' } };
+      }
+
+      currentRow = rowIdx;
+    }
   }
 
   // Create Background worksheet if background text exists

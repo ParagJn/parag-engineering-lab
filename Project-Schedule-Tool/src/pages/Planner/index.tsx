@@ -54,6 +54,7 @@ import {
 
 import { useProjectStore } from '../../state/projectStore';
 import { useTaskStore } from '../../state/taskStore';
+import type { HolidayInfo } from '../../state/taskStore';
 import { exportProjectToExcel } from '../../engines/ExportEngine';
 import { storage } from '../../services/storage';
 import type { Task } from '../../models/Task';
@@ -229,6 +230,14 @@ export function Planner() {
   const setTasks = useTaskStore((s) => s.setTasks);
   const recalculate = useTaskStore((s) => s.recalculate);
   const setMinWeeksToShow = useTaskStore((s) => s.setMinWeeksToShow);
+  const vicHolidaysEnabled = useTaskStore((s) => s.vicHolidaysEnabled);
+  const indiaHolidaysEnabled = useTaskStore((s) => s.indiaHolidaysEnabled);
+  const vicHolidaysList = useTaskStore((s) => s.vicHolidays);
+  const indiaHolidaysList = useTaskStore((s) => s.indiaHolidays);
+  const setRegionHolidays = useTaskStore((s) => s.setRegionHolidays);
+  const toggleHolidayRegion = useTaskStore((s) => s.toggleHolidayRegion);
+  const getActiveHolidayMap = useTaskStore((s) => s.getActiveHolidayMap);
+  const [holidayToggleLoading, setHolidayToggleLoading] = useState<'vic' | 'india' | null>(null);
 
   // Dialog and Snackbar states
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
@@ -238,6 +247,61 @@ export function Planner() {
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'info' | 'error' | 'warning'>('success');
   const [lastDraftSavedTime, setLastDraftSavedTime] = useState<string | null>(null);
   const [timelineMode, setTimelineMode] = useState<'weekly' | 'weekday'>('weekly');
+
+  // Resizable split between the left task grid and the right Gantt timeline
+  const [leftPanelWidth, setLeftPanelWidth] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('pst-split-width');
+      const val = saved ? parseFloat(saved) : NaN;
+      return !isNaN(val) && val >= 20 && val <= 75 ? val : 40;
+    } catch {
+      return 40;
+    }
+  });
+  const [isDraggingSplit, setIsDraggingSplit] = useState(false);
+  const splitRowRef = useRef<HTMLDivElement>(null);
+  const leftGridRef = useRef<HTMLDivElement>(null);
+  const rightGridRef = useRef<HTMLDivElement>(null);
+
+  const handleSplitDividerMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const container = splitRowRef.current;
+    if (!container) return;
+    const containerRect = container.getBoundingClientRect();
+    let latestPct = leftPanelWidth;
+    setIsDraggingSplit(true);
+
+    const applyWidth = (pct: number) => {
+      if (leftGridRef.current) leftGridRef.current.style.flexBasis = `calc(${pct}% - 4px)`;
+      if (rightGridRef.current) rightGridRef.current.style.flexBasis = `calc(${100 - pct}% - 4px)`;
+    };
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const offsetX = moveEvent.clientX - containerRect.left;
+      const pct = Math.min(75, Math.max(20, (offsetX / containerRect.width) * 100));
+      latestPct = pct;
+      applyWidth(pct);
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      setIsDraggingSplit(false);
+      setLeftPanelWidth(latestPct);
+      try {
+        localStorage.setItem('pst-split-width', String(latestPct));
+      } catch {
+        // ignore storage errors (e.g. private browsing)
+      }
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
 
   // Sub-Activities Modal state
   const [subActDialogOpen, setSubActDialogOpen] = useState(false);
@@ -506,10 +570,83 @@ export function Planner() {
     reader.readAsText(file);
   };
 
+  // Toggle Vic/India holiday adjustment — fetches the saved region JSON (from Settings) on enable
+  const handleToggleHolidayRegion = async (region: 'vic' | 'india') => {
+    const enabled = region === 'vic' ? vicHolidaysEnabled : indiaHolidaysEnabled;
+
+    if (!enabled) {
+      setHolidayToggleLoading(region);
+      try {
+        const backendRegion = region === 'vic' ? 'vic_australia' : 'india';
+        const response = await fetch(`http://localhost:8000/holidays/${backendRegion}`);
+        const data = await response.json();
+        const holidays = data.holidays || [];
+        setRegionHolidays(region, holidays);
+
+        if (holidays.length === 0) {
+          setSnackbarSeverity('warning');
+          setSnackbarMessage(`No saved holidays for ${region === 'vic' ? 'Victoria, Australia' : 'India'} yet. Add them in Settings first.`);
+          setSnackbarOpen(true);
+          setHolidayToggleLoading(null);
+          return;
+        }
+      } catch (err) {
+        console.error('Error loading holidays:', err);
+        setSnackbarSeverity('error');
+        setSnackbarMessage('Failed to load holidays from backend.');
+        setSnackbarOpen(true);
+        setHolidayToggleLoading(null);
+        return;
+      }
+      setHolidayToggleLoading(null);
+    }
+
+    toggleHolidayRegion(region);
+    setSnackbarSeverity('info');
+    setSnackbarMessage(
+      enabled
+        ? `${region === 'vic' ? 'Victoria, Australia' : 'India'} holiday adjustment turned off. Schedule recalculated.`
+        : `${region === 'vic' ? 'Victoria, Australia' : 'India'} holidays applied. Schedule adjusted around them.`
+    );
+    setSnackbarOpen(true);
+  };
+
   // Excel Export triggering
   const handleExportExcel = async () => {
     try {
-      await exportProjectToExcel(project, tasks, weeks, project.background, project.assumptions, project.outOfScope, project.mawDeliverables);
+      // Always pull the latest saved holiday lists for both regions so the export's
+      // Public Holidays section is complete regardless of which adjustment toggles are on.
+      let vicHolidaysForExport = vicHolidaysList;
+      let indiaHolidaysForExport = indiaHolidaysList;
+      try {
+        const [vicRes, indiaRes] = await Promise.all([
+          fetch('http://localhost:8000/holidays/vic_australia'),
+          fetch('http://localhost:8000/holidays/india')
+        ]);
+        const vicData = await vicRes.json();
+        const indiaData = await indiaRes.json();
+        vicHolidaysForExport = vicData.holidays || [];
+        indiaHolidaysForExport = indiaData.holidays || [];
+      } catch (fetchErr) {
+        console.error('Could not refresh holidays for export, using cached lists:', fetchErr);
+      }
+
+      const activeHolidayNameMap: Record<string, string> = Object.fromEntries(
+        Object.entries(activeHolidayMap).map(([date, info]) => [date, info.name])
+      );
+
+      await exportProjectToExcel(
+        project,
+        tasks,
+        weeks,
+        project.background,
+        project.assumptions,
+        project.outOfScope,
+        project.mawDeliverables,
+        vicHolidaysForExport,
+        indiaHolidaysForExport,
+        activeHolidayNameMap
+      );
       setSnackbarSeverity('success');
       setSnackbarMessage('Excel sheet generated successfully!');
       setSnackbarOpen(true);
@@ -996,6 +1133,9 @@ export function Planner() {
   }, [deleteTask, insertTaskAbove, insertTaskBelow]);
 
   // Define column definitions for Right Timeline Grid (60%)
+  // Combined map of date -> holiday name for whichever region toggles are currently enabled
+  const activeHolidayMap = useMemo(() => getActiveHolidayMap(), [vicHolidaysEnabled, indiaHolidaysEnabled, vicHolidaysList, indiaHolidaysList, getActiveHolidayMap]);
+
   const rightColumnDefs = useMemo<ColDef[]>(() => {
     if (timelineMode === 'weekday') {
       // Generate individual weekday columns from project start
@@ -1036,6 +1176,33 @@ export function Planner() {
                 (cellDate.isBefore(dayjs(taskFinish), 'day') || cellDate.isSame(dayjs(taskFinish), 'day'));
 
               if (!isActive) return null;
+
+              const holidayInfo = activeHolidayMap[capturedDate];
+              if (holidayInfo) {
+                const isVic = holidayInfo.region === 'vic';
+                return (
+                  <Box
+                    title={holidayInfo.name}
+                    sx={{
+                      width: '100%',
+                      height: '24px',
+                      bgcolor: isVic ? '#FEF3C7' : '#DBEAFE',
+                      border: isVic ? '1px solid #F59E0B' : '1px solid #3B82F6',
+                      color: isVic ? '#92400E' : '#1E3A8A',
+                      fontWeight: 'bold',
+                      fontSize: '11px',
+                      borderRadius: '3px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mt: '4px',
+                      cursor: 'help',
+                    }}
+                  >
+                    H
+                  </Box>
+                );
+              }
 
               const color = task.color || '#2196F3';
               const r = parseInt(color.substring(1, 3), 16) || 0;
@@ -1117,6 +1284,7 @@ export function Planner() {
 
         // Find active working days of the week (Monday=0 to Friday=4)
         const activeDays: boolean[] = [false, false, false, false, false];
+        const holidayDays: (HolidayInfo | null)[] = [null, null, null, null, null];
         let activeDayCount = 0;
 
         for (let d = 0; d < 5; d++) {
@@ -1126,6 +1294,8 @@ export function Planner() {
           if (isActive) {
             activeDays[d] = true;
             activeDayCount++;
+            const holidayInfo = activeHolidayMap[dayDate.format('YYYY-MM-DD')];
+            if (holidayInfo) holidayDays[d] = holidayInfo;
           }
         }
 
@@ -1172,24 +1342,46 @@ export function Planner() {
               </Box>
             )}
             {activeDays.map((isActive, index) => (
-              <Box
-                key={index}
-                sx={{
-                  width: '10px',
-                  height: '10px',
-                  borderRadius: '2px',
-                  backgroundColor: isActive ? color : 'transparent',
-                  border: isActive ? 'none' : '1px solid #e0e0e0',
-                  boxShadow: isActive ? '0 1px 2px rgba(0,0,0,0.15)' : 'none',
-                  transition: 'all 0.2s ease'
-                }}
-              />
+              holidayDays[index] ? (
+                <Box
+                  key={index}
+                  title={holidayDays[index]?.name}
+                  sx={{
+                    width: '10px',
+                    height: '10px',
+                    borderRadius: '2px',
+                    bgcolor: holidayDays[index]!.region === 'vic' ? '#FEF3C7' : '#DBEAFE',
+                    border: holidayDays[index]!.region === 'vic' ? '1px solid #F59E0B' : '1px solid #3B82F6',
+                    color: holidayDays[index]!.region === 'vic' ? '#92400E' : '#1E3A8A',
+                    fontSize: '7px',
+                    fontWeight: 'bold',
+                    lineHeight: '9px',
+                    textAlign: 'center',
+                    cursor: 'help',
+                  }}
+                >
+                  H
+                </Box>
+              ) : (
+                <Box
+                  key={index}
+                  sx={{
+                    width: '10px',
+                    height: '10px',
+                    borderRadius: '2px',
+                    backgroundColor: isActive ? color : 'transparent',
+                    border: isActive ? 'none' : '1px solid #e0e0e0',
+                    boxShadow: isActive ? '0 1px 2px rgba(0,0,0,0.15)' : 'none',
+                    transition: 'all 0.2s ease'
+                  }}
+                />
+              )
             ))}
           </Box>
         );
       }
     }));
-  }, [weeks, timelineMode, project.suggestedStartDate, minWeeksToShow]);
+  }, [weeks, timelineMode, project.suggestedStartDate, minWeeksToShow, activeHolidayMap]);
 
   // Inject multiline header and vertical scroll hiding CSS
   useEffect(() => {
@@ -1514,6 +1706,26 @@ export function Planner() {
                 Force Recalculate
               </Button>
               <Button
+                variant={vicHolidaysEnabled ? 'contained' : 'outlined'}
+                color="warning"
+                startIcon={holidayToggleLoading === 'vic' ? undefined : <span>🇦🇺</span>}
+                size="small"
+                disabled={holidayToggleLoading !== null}
+                onClick={() => handleToggleHolidayRegion('vic')}
+              >
+                {holidayToggleLoading === 'vic' ? 'Loading...' : 'Adjust Vic. Holidays'}
+              </Button>
+              <Button
+                variant={indiaHolidaysEnabled ? 'contained' : 'outlined'}
+                color="warning"
+                startIcon={holidayToggleLoading === 'india' ? undefined : <span>🇮🇳</span>}
+                size="small"
+                disabled={holidayToggleLoading !== null}
+                onClick={() => handleToggleHolidayRegion('india')}
+              >
+                {holidayToggleLoading === 'india' ? 'Loading...' : 'Adjust Ind. Holidays'}
+              </Button>
+              <Button
                 variant="contained"
                 startIcon={<AddIcon />}
                 size="small"
@@ -1524,17 +1736,17 @@ export function Planner() {
             </Box>
           </Box>
 
-          {/* Grids Split Layout (40/60) */}
-          <Box sx={{ display: 'flex', flexDirection: 'row', flexGrow: 1, overflow: 'hidden', gap: 2 }}>
+          {/* Grids Split Layout (resizable) */}
+          <Box ref={splitRowRef} sx={{ display: 'flex', flexDirection: 'row', flexGrow: 1, overflow: 'hidden' }}>
 
-            {/* Left Grid: Task Metadata (40%) */}
+            {/* Left Grid: Task Metadata */}
             <Box
+              ref={leftGridRef}
               id="grid-1"
               className="ag-theme-quartz"
               sx={{
-                flex: '0 0 40%',
-                height: '100%',
-                borderRight: '2px solid #e2e8f0'
+                flex: `0 0 calc(${leftPanelWidth}% - 4px)`,
+                height: '100%'
               }}
             >
               <AgGridReact
@@ -1551,12 +1763,52 @@ export function Planner() {
               />
             </Box>
 
-            {/* Right Grid: Gantt Weekly Timeline (60%) */}
+            {/* Draggable divider */}
             <Box
+              onMouseDown={handleSplitDividerMouseDown}
+              sx={{
+                width: '8px',
+                flex: '0 0 8px',
+                cursor: 'col-resize',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+                zIndex: 1,
+                '&:hover .split-divider-track': { bgcolor: '#3b82f6' },
+                '&:hover .split-divider-handle': { bgcolor: '#3b82f6', opacity: 1 }
+              }}
+            >
+              <Box
+                className="split-divider-track"
+                sx={{
+                  width: '2px',
+                  height: '100%',
+                  bgcolor: isDraggingSplit ? '#3b82f6' : '#e2e8f0',
+                  transition: 'background-color 0.15s ease'
+                }}
+              />
+              <Box
+                className="split-divider-handle"
+                sx={{
+                  position: 'absolute',
+                  width: 5,
+                  height: 44,
+                  borderRadius: 3,
+                  bgcolor: isDraggingSplit ? '#3b82f6' : '#cbd5e1',
+                  opacity: isDraggingSplit ? 1 : 0.9,
+                  transition: 'background-color 0.15s ease'
+                }}
+              />
+            </Box>
+
+            {/* Right Grid: Gantt Weekly Timeline */}
+            <Box
+              ref={rightGridRef}
               id="grid-2"
               className="ag-theme-quartz"
               sx={{
-                flex: '0 0 60%',
+                flex: `0 0 calc(${100 - leftPanelWidth}% - 4px)`,
                 height: '100%'
               }}
             >

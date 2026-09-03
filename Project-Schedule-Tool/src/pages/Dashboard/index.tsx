@@ -36,6 +36,7 @@ export function Dashboard() {
   const resetProject = useProjectStore((s) => s.resetProject);
   const loadProject = useProjectStore((s) => s.loadProject);
   const setTasks = useTaskStore((s) => s.setTasks);
+  const resetTasks = useTaskStore((s) => s.resetTasks);
 
   interface DraftPlan {
     filename: string;
@@ -105,6 +106,7 @@ export function Dashboard() {
 
   const handleNewProject = () => {
     resetProject();
+    resetTasks();
     navigate('/planner');
   };
 

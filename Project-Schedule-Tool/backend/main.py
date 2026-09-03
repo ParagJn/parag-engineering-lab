@@ -11,7 +11,7 @@ Date: 2026-07-29
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Literal
 import logging
 import json
 import os
@@ -1068,6 +1068,108 @@ async def update_provider_config(config_data: ProviderConfig):
     except Exception as e:
         logger.error(f"Error updating config: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to update configuration: {str(e)}")
+
+
+# Public Holidays endpoint
+HOLIDAYS_REGION_FILES = {
+    "vic_australia": "holidays_vic_australia.json",
+    "india": "holidays_india.json",
+}
+
+
+class HolidaysParseRequest(BaseModel):
+    """Request to parse pasted holiday text into a JSON file for a region"""
+    region: Literal["vic_australia", "india"]
+    raw_text: str
+
+
+@app.post("/holidays/parse")
+async def parse_holidays(request: HolidaysParseRequest):
+    """
+    Use the active AI provider to parse pasted holiday text (copied from a
+    webpage or spreadsheet) into structured holiday data for the current
+    year only, then overwrite the region's JSON file under backend/data/.
+    """
+    try:
+        if not request.raw_text.strip():
+            raise HTTPException(status_code=400, detail="No holiday text provided")
+
+        current_year = datetime.now().year
+        region_label = "Victoria, Australia" if request.region == "vic_australia" else "India"
+
+        prompt = f"""You are given raw text copied from a webpage or spreadsheet listing public holidays for {region_label}.
+
+Extract only the holidays that fall in the year {current_year}.
+
+Raw text:
+---
+{request.raw_text}
+---
+
+Return ONLY a JSON array (no markdown, no explanation) where each item has this shape:
+{{"date": "YYYY-MM-DD", "name": "Holiday Name"}}
+
+Sort the array by date ascending. If a holiday has no clear date or is not in {current_year}, omit it."""
+
+        content = generate_with_active_provider(prompt=prompt, max_tokens=4000)
+        content = content.strip()
+
+        start_idx = content.find('[')
+        end_idx = content.rfind(']') + 1
+        if start_idx == -1 or end_idx <= start_idx:
+            raise HTTPException(status_code=500, detail="AI response did not contain a JSON array")
+
+        json_str = content[start_idx:end_idx]
+        holidays = json.loads(json_str)
+
+        backend_dir = Path(__file__).parent
+        data_dir = backend_dir / "data"
+        data_dir.mkdir(exist_ok=True)
+
+        filepath = data_dir / HOLIDAYS_REGION_FILES[request.region]
+        holiday_data = {
+            "region": region_label,
+            "year": current_year,
+            "holidays": holidays,
+            "updated_at": datetime.now().isoformat()
+        }
+
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(holiday_data, f, indent=2, ensure_ascii=False)
+
+        logger.info(f"Holidays saved for {region_label}: {filepath} ({len(holidays)} entries)")
+
+        return {
+            "success": True,
+            "region": request.region,
+            "year": current_year,
+            "count": len(holidays),
+            "holidays": holidays
+        }
+
+    except json.JSONDecodeError as e:
+        logger.error(f"Error parsing holidays JSON from AI response: {e}")
+        raise HTTPException(status_code=500, detail=f"Could not parse AI response as JSON: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Holidays parse error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to parse holidays: {str(e)}")
+
+
+@app.get("/holidays/{region}")
+async def get_holidays(region: Literal["vic_australia", "india"]):
+    """Load the saved holidays JSON for a region, if it exists."""
+    backend_dir = Path(__file__).parent
+    filepath = backend_dir / "data" / HOLIDAYS_REGION_FILES[region]
+
+    if not filepath.exists():
+        return {"success": True, "region": region, "year": datetime.now().year, "holidays": []}
+
+    with open(filepath, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    return {"success": True, **data}
 
 
 if __name__ == "__main__":
