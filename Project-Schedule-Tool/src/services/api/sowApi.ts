@@ -4,6 +4,18 @@
 
 const API_BASE_URL = 'http://localhost:8000';
 
+export interface SoWTaskSummary {
+  index: number;
+  activity: string;
+  estimatedDays: number;
+  estimatedWeeks: number;
+  fte: number;
+  dependency: string;
+  subActivities?: string[];
+  calculatedStartDate?: string;
+  calculatedFinishDate?: string;
+}
+
 export interface SoWGenerationRequest {
   project_name: string;
   customer: string;
@@ -11,6 +23,7 @@ export interface SoWGenerationRequest {
   assumptions?: string;
   out_of_scope?: string;
   maw_deliverables?: string;
+  tasks?: SoWTaskSummary[];
 }
 
 export interface SoWGenerationResponse {

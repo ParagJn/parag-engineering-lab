@@ -17,6 +17,7 @@ import DownloadIcon from '@mui/icons-material/Download';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import SlideshowIcon from '@mui/icons-material/Slideshow';
 
 interface SoWModalProps {
   open: boolean;
@@ -29,6 +30,8 @@ interface SoWModalProps {
   onRegenerate?: () => void;
   onRegenerateWithMoreInfo?: (additionalInfo: string) => void;
   onExportToWord: (content: string) => void;
+  onGenerateISBD?: () => void;
+  isbdLoading?: boolean;
 }
 
 export const SoWModal: React.FC<SoWModalProps> = ({
@@ -42,6 +45,8 @@ export const SoWModal: React.FC<SoWModalProps> = ({
   onRegenerate,
   onRegenerateWithMoreInfo,
   onExportToWord,
+  onGenerateISBD,
+  isbdLoading,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(sowContent);
@@ -293,6 +298,16 @@ export const SoWModal: React.FC<SoWModalProps> = ({
             >
               Export to Word
             </Button>
+            {onGenerateISBD && (
+              <Button
+                variant="outlined"
+                startIcon={isbdLoading ? <CircularProgress size={16} /> : <SlideshowIcon />}
+                onClick={onGenerateISBD}
+                disabled={isbdLoading}
+              >
+                Generate ISBD Content
+              </Button>
+            )}
           </>
         )}
         <Button onClick={onClose} variant="outlined" color="inherit">

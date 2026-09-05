@@ -10,17 +10,26 @@ Date: 2026-07-29
 
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any, List, Literal
+import asyncio
 import logging
 import json
 import os
+import re
+import shutil
+import subprocess
+import tempfile
+import io
 from pathlib import Path
 from datetime import datetime
 from dotenv import load_dotenv
 
 from llm_client import UniversalLLMClient, LLMClientError
 from ibm_ica_client import IBMICAClient, IBMICAError
+from pptx import Presentation
+from pptx.util import Inches, Pt
 
 # Load environment variables
 load_dotenv()
@@ -155,6 +164,7 @@ class SoWGenerationRequest(BaseModel):
     assumptions: Optional[str] = None
     out_of_scope: Optional[str] = None
     maw_deliverables: Optional[str] = None
+    tasks: Optional[List[Dict[str, Any]]] = None
 
 
 class SoWGenerationResponse(BaseModel):
@@ -626,6 +636,145 @@ def generate_with_active_provider(prompt: str, max_tokens: int = 25000) -> str:
             raise HTTPException(status_code=500, detail=f"SAP generation failed: {str(e)}")
 
 
+# --- SoW generation: shared grounding + section prompts -------------------
+
+SOW_RULES_PREAMBLE = """You are an experienced business analyst drafting ONE section of a real \
+Statement of Work (SoW) for a paying client. Write like a human consultant editing their own \
+draft, not a template being auto-filled.
+
+Hard rules:
+- Only state facts that are directly supported by the information given below (the background, \
+assumptions, out-of-scope notes, deliverables notes, and the project schedule). Do not invent \
+specific numbers, counts, system names, dates, or details that are not given or directly \
+derivable from the schedule.
+- If the given information is genuinely silent on something, leave it out rather than writing \
+generic filler to fill space.
+- Do not pad length. Write only as much as the material actually supports - a short, accurate \
+section beats a long, generic one.
+- Vary sentence structure and word choice across bullets and paragraphs. Do not mechanically \
+repeat the same stock phrases (e.g. "leverage", "robust", "seamless", or "Key Outcomes" as a \
+heading on every block).
+- Format in Markdown only: use ## and ### headers, **bold**, bullet points, and | pipe | tables | \
+where a table is requested below. No preamble like "Here is the section" - output the section \
+content directly, starting with its heading.
+"""
+
+SOW_SECTION_TASKS: List[tuple] = [
+    (
+        "Background and Context",
+        """SECTION TASK: Write the "## Background and Context" section.
+- 1 to 4 paragraphs (only as many as the material supports) explaining the business context, \
+current state, and why this project is needed.
+- Base it strictly on the BACKGROUND text given below - do not introduce scope or deliverable \
+details here.""",
+    ),
+    (
+        "Scope and Out of Scope",
+        """SECTION TASK: Write the "## Scope" and "## Out of Scope" sections.
+
+For Scope:
+- Break the work into numbered subsections (### 1.1, ### 1.2, etc.) that map to logical groupings \
+of the PROJECT SCHEDULE tasks below (group related tasks together; do not invent scope areas that \
+have no corresponding task).
+- Each subsection: a short "Scope Overview" paragraph, then a "Scope of Work" bullet list of what \
+will actually be done (grounded in the matching tasks). Only add a "Key Outcomes" bullet list if \
+there is something concrete to state - skip it otherwise.
+
+For Out of Scope:
+- Present as a markdown table: | Scope Area | Details |
+- Base rows strictly on the OUT OF SCOPE text below. If nothing was provided, write a single-row \
+table noting that exclusions were not specified and should be confirmed with the client - do not \
+invent a full exclusions list from scratch.""",
+    ),
+    (
+        "Deliverables and Work Products",
+        """SECTION TASK: Write the "## Deliverables and Work Products" section.
+- "### Deliverables" table: | Item | Description | Target Date/Phase | - formal outputs given to \
+the client. Map these to the PROJECT SCHEDULE tasks and their dates/phases where possible.
+- "### Work Products" table: | Item | Description | Purpose | - internal/supporting artifacts \
+produced during execution.
+- Base both tables primarily on the MAW DELIVERABLES text and the PROJECT SCHEDULE below. If MAW \
+DELIVERABLES is "Not provided", derive the list directly from the schedule's tasks only - do not \
+invent deliverables unrelated to any task.""",
+    ),
+    (
+        "Risks and Dependencies",
+        """SECTION TASK: Write the "## Risks" and "## Dependencies" sections.
+
+For Risks:
+- Table: | Risk Category | Description | Impact | Mitigation Strategy |
+- Base risks on what the BACKGROUND, ASSUMPTIONS, and PROJECT SCHEDULE actually suggest (e.g. \
+tight dependency chains, tasks with no buffer, external dependencies mentioned in the text). \
+Impact is High/Medium/Low. Do not pad this out with a fixed catalog of generic risk categories - \
+include only risks the input actually supports.
+
+For Dependencies:
+- Table: | Dependency Type | Description | Owner | Status |
+- Base rows on dependencies stated in ASSUMPTIONS/BACKGROUND and on task-level dependency \
+relationships in the PROJECT SCHEDULE. Owner is IBM, Client, or Third-party; Status is Required, \
+Optional, or Critical.""",
+    ),
+    (
+        "RACI Matrix",
+        """SECTION TASK: Write the "## RACI Matrix" section.
+- Table: | Activity/Task | IBM | Client |
+- Use the PROJECT SCHEDULE task list below as the row source - one row per task/activity (group \
+very granular sub-activities under their parent task if there are many). Do not invent activities \
+that aren't in the schedule.
+- Use standard RACI letters (R/A/C/I), multiple letters per cell where appropriate.""",
+    ),
+]
+
+
+def _render_task_list(tasks: Optional[List[Dict[str, Any]]]) -> str:
+    """Render the Planner's task list into a compact, factual plain-text block."""
+    if not tasks:
+        return "Not provided."
+
+    lines: List[str] = []
+    for t in tasks:
+        index = t.get("index", "?")
+        activity = t.get("activity", "Untitled task")
+        days = t.get("estimatedDays", "?")
+        weeks = t.get("estimatedWeeks", "?")
+        fte = t.get("fte", "?")
+        dependency = t.get("dependency") or "None"
+        start = t.get("calculatedStartDate") or "TBD"
+        finish = t.get("calculatedFinishDate") or "TBD"
+        lines.append(
+            f"{index}. {activity} - {days} day(s), {weeks} week(s), FTE {fte}, "
+            f"depends on: {dependency}, {start} to {finish}"
+        )
+        for sub in (t.get("subActivities") or []):
+            lines.append(f"    - {sub}")
+
+    return "\n".join(lines)
+
+
+def _build_shared_sow_context(request: "SoWGenerationRequest") -> str:
+    """Build the grounding context block shared by every SoW section prompt."""
+    return f"""PROJECT INFORMATION:
+- Project Name: {request.project_name}
+- Customer: {request.customer}
+
+BACKGROUND:
+{request.background}
+
+ASSUMPTIONS:
+{request.assumptions if request.assumptions else "Not provided"}
+
+OUT OF SCOPE (as described by the user):
+{request.out_of_scope if request.out_of_scope else "Not provided"}
+
+MAW DELIVERABLES (as described by the user):
+{request.maw_deliverables if request.maw_deliverables else "Not provided"}
+
+PROJECT SCHEDULE (real tasks from the project plan - treat this as ground truth for scope, \
+deliverables, and RACI; do not invent tasks beyond this list):
+{_render_task_list(request.tasks)}
+"""
+
+
 # Statement of Work generation endpoint
 @app.post("/generate/sow", response_model=SoWGenerationResponse)
 async def generate_sow(
@@ -633,15 +782,12 @@ async def generate_sow(
 ):
     """
     Generate a professional Statement of Work (SoW) document.
-    
-    This endpoint analyzes the provided project information and generates
-    a comprehensive SoW document following industry best practices.
-    
-    The AI will:
-    1. Analyze the background, assumptions, and out-of-scope information
-    2. Determine if sufficient information is provided
-    3. Request additional details if needed
-    4. Generate a professional SoW document with proper sections
+
+    Generates the document as independent sections (Background, Scope & Out of
+    Scope, Deliverables, Risks & Dependencies, RACI), each grounded in the same
+    background/assumptions/out-of-scope/deliverables text plus the real Planner
+    task schedule. Sections are generated concurrently (one AI call per section,
+    dispatched in parallel) and stitched together in a fixed order.
     """
     try:
         # Check if we have at least background information
@@ -656,155 +802,36 @@ async def generate_sow(
                 ],
                 timestamp=datetime.now().isoformat()
             )
-        
-        # Build the prompt for SoW generation
-        prompt = f"""You are an expert business analyst and technical writer specializing in Statement of Work (SoW) documents.
 
-PROJECT INFORMATION:
-- Project Name: {request.project_name}
-- Customer: {request.customer}
+        shared_context = _build_shared_sow_context(request)
 
-BACKGROUND:
-{request.background}
+        section_prompts = [
+            (name, SOW_RULES_PREAMBLE + "\n" + shared_context + "\n" + task)
+            for name, task in SOW_SECTION_TASKS
+        ]
 
-ASSUMPTIONS:
-{request.assumptions if request.assumptions else "Not provided"}
+        logger.info(f"Generating {len(section_prompts)} SoW sections concurrently...")
+        loop = asyncio.get_running_loop()
+        results = await asyncio.gather(*[
+            loop.run_in_executor(None, generate_with_active_provider, prompt, 6000)
+            for _, prompt in section_prompts
+        ])
 
-OUT OF SCOPE:
-{request.out_of_scope if request.out_of_scope else "Not provided"}
+        cleaned_sections = []
+        for (name, _), content in zip(section_prompts, results):
+            content = content.strip()
+            # Replace escaped newlines with actual newlines if they exist as literal strings
+            if '\\n' in content:
+                content = content.replace('\\n\\n', '\n\n').replace('\\n', '\n')
+            if content:
+                cleaned_sections.append(content)
+            else:
+                logger.warning(f"SoW section '{name}' returned empty content")
 
-MAW DELIVERABLES:
-{request.maw_deliverables if request.maw_deliverables else "Not provided"}
+        content = "\n\n".join(cleaned_sections).strip()
 
-TASK:
-First, analyze the provided information to determine if it's sufficient to create a professional SoW document.
-
-If the information is insufficient, respond with a JSON object in this format:
-{{
-    "sufficient": false,
-    "questions": ["question 1", "question 2", ...]
-}}
-
-If the information is sufficient, generate a comprehensive Statement of Work document with the following sections:
-
-1. **Background and Context**
-   - Provide 2-4 paragraphs explaining the business context, current state, and why this project is needed
-   - Use the background information provided to create a compelling narrative
-
-2. **Scope**
-   - Create multiple scope sections (e.g., 1.3.1, 1.3.2, etc.) based on the background
-   - Each scope section should have:
-     * Scope Overview (1 paragraph)
-     * Scope of Work (bullet points with specific deliverables)
-     * Key Outcomes (bullet points with measurable results)
-   
-3. **Out of Scope**
-   - Present as a table with columns: Scope Area | Details
-   - Include areas like Development, Testing, Performance, Business Logic, etc.
-   - Be specific about what is NOT included
-
-4. **Deliverables and Work Products**
-   - Analyze the MAW Deliverables provided and classify each item appropriately
-   - Consider the background, scope of work, and activities to make informed classifications
-   
-   **Deliverables**
-   - Present as a table with columns: Item | Description | Target Date/Phase
-   - Include formal outputs delivered to the client (e.g., Implementation Schedule, Final Report, Training Materials, Go-Live Support Plan)
-   - For each deliverable, provide a brief description and indicate when it will be delivered
-   
-   **Work Products**
-   - Present as a separate table with columns: Item | Description | Purpose
-   - Include internal or supporting documents used during project execution (e.g., Data Mapping Document, Technical Specifications, Test Scripts, Configuration Guides)
-   - For each work product, provide a brief description and explain its purpose in the project
-   
-   - If MAW Deliverables are not provided, create a comprehensive list based on the scope and background
-   - Ensure deliverables and work products align with the scope sections and key outcomes
-
-5. **Risks**
-   - Identify and document project risks based on the scope and background
-   - Present as a table with columns: Risk Category | Description | Impact | Mitigation Strategy
-   - Include risks such as: Technical, Schedule, Resource, Integration, Stakeholder, etc.
-   - For each risk, assess impact as High/Medium/Low
-   - Provide concrete mitigation strategies
-
-6. **Dependencies**
-   - Document project dependencies and prerequisites
-   - Present as a table with columns: Dependency Type | Description | Owner | Status
-   - Include dependencies such as: Technical, Data, Infrastructure, Team/Resource, External Systems, etc.
-   - Specify who owns each dependency (IBM, Client, or Third-party)
-   - Indicate status as Required, Optional, or Critical
-
-7. **RACI Matrix**
-   - Define roles and responsibilities for key project activities
-   - Present as a table with columns: Activity/Task | IBM | Client
-   - Use standard RACI notation:
-     * R = Responsible (does the work)
-     * A = Accountable (final approval)
-     * C = Consulted (provides input)
-     * I = Informed (kept updated)
-   - Include activities such as:
-     * Project Planning & Kick-off
-     * Requirements Gathering
-     * Solution Design
-     * Development/Implementation
-     * Testing & Quality Assurance
-     * User Acceptance Testing (UAT)
-     * Deployment & Go-Live
-     * Training & Knowledge Transfer
-     * Documentation
-     * Project Sign-off
-   - Ensure clear accountability for each activity
-
-IMPORTANT GUIDELINES:
-- Write in a professional, formal business tone
-- Be specific and detailed - avoid vague statements
-- Use bullet points for clarity
-- Include technical details where appropriate
-- Base your content on the provided background, assumptions, out-of-scope information, and MAW deliverables
-- When classifying deliverables vs. work products, consider:
-  * Deliverables are formal outputs given to the client or used for project governance
-  * Work Products are intermediate artifacts created during project execution
-- Make realistic inferences when specific details are not provided, but stay aligned with the given context
-- If assumptions are provided, incorporate them naturally into the scope or note them separately
-- Format the output in Markdown with proper headers (##, ###) and formatting (**bold**, bullet points)
-- Use tables with proper markdown syntax (| column | column |) for structured information
-
-Generate the SoW document now."""
-
-        # Use the provider wrapper to generate content
-        content = generate_with_active_provider(prompt=prompt, max_tokens=25000)
-        
-        # Clean up the content
-        content = content.strip()
-        
-        # Replace escaped newlines with actual newlines if they exist as literal strings
-        if '\\n' in content:
-            logger.info("Converting escaped newlines...")
-            content = content.replace('\\n\\n', '\n\n').replace('\\n', '\n')
-        
         logger.info(f"Final content length: {len(content)} chars")
-        
-        # Check if the response indicates we need more information
-        # Try to parse as JSON to check for "sufficient": false
-        if '{' in content and 'sufficient' in content:
-            try:
-                # Extract JSON portion
-                start_idx = content.find('{')
-                end_idx = content.rfind('}') + 1
-                json_str = content[start_idx:end_idx]
-                parsed = json.loads(json_str)
-                
-                if not parsed.get('sufficient', True):
-                    return SoWGenerationResponse(
-                        success=False,
-                        needs_more_info=True,
-                        questions=parsed.get('questions', []),
-                        timestamp=datetime.now().isoformat()
-                    )
-            except json.JSONDecodeError:
-                # Not valid JSON, continue with normal flow
-                pass
-        
+
         # Final validation
         if not content or len(content) < 50:
             return SoWGenerationResponse(
@@ -813,14 +840,14 @@ Generate the SoW document now."""
                 needs_more_info=False,
                 timestamp=datetime.now().isoformat()
             )
-        
+
         return SoWGenerationResponse(
             success=True,
             sow_content=content,
             needs_more_info=False,
             timestamp=datetime.now().isoformat()
         )
-        
+
     except Exception as e:
         logger.error(f"SoW generation error: {e}")
         return SoWGenerationResponse(
@@ -829,6 +856,321 @@ Generate the SoW document now."""
             needs_more_info=False,
             timestamp=datetime.now().isoformat()
         )
+
+
+# --- ISBD slide deck generation: grounded in the already-generated SoW ----
+
+class ISBDGenerationRequest(BaseModel):
+    """Request for ISBD slide deck generation"""
+    project_name: str
+    customer: str
+    sow_content: str
+
+
+ISBD_JSON_RULES = """You are condensing ONE part of an already-approved Statement of Work (SoW) into \
+talking points for a short slide deck. Write like a consultant preparing their own slide notes, not \
+a template being auto-filled.
+
+Hard rules:
+- Only use facts that are already stated in the SoW text given below. Do not invent numbers, names, \
+dates, or details that are not present in it.
+- Where the SoW is silent on something, return fewer items (or an empty list) rather than padding \
+with generic filler.
+- Keep every item short - a slide bullet, not a paragraph. Quality over quantity: a short, accurate \
+list beats a long, generic one.
+- Output ONLY raw JSON matching the exact shape requested below. No markdown, no code fences, no \
+commentary before or after it.
+"""
+
+
+def _extract_json(content: str) -> Optional[Dict[str, Any]]:
+    """Best-effort extraction of a single JSON object from a model response."""
+    content = content.strip()
+    start_idx = content.find('{')
+    end_idx = content.rfind('}') + 1
+    if start_idx == -1 or end_idx <= start_idx:
+        return None
+    try:
+        return json.loads(content[start_idx:end_idx])
+    except json.JSONDecodeError:
+        return None
+
+
+def _build_isbd_prompts(sow_content: str) -> Dict[str, str]:
+    """Build the three ISBD section prompts, each grounded in the full SoW text."""
+    sow_block = f"STATEMENT OF WORK (ground truth - condense from this only):\n---\n{sow_content}\n---\n"
+
+    approach_prompt = ISBD_JSON_RULES + "\n" + sow_block + """
+SECTION TASK: Produce JSON with this exact shape:
+{"approach_bullets": ["...", ...], "scope_bullets": ["...", ...], "mermaid": "flowchart LR\\n..."}
+
+- "approach_bullets": up to 5 short bullets summarizing HOW the work will be delivered, drawn from \
+the SoW's Background/Scope sections.
+- "scope_bullets": up to 6 short bullets summarizing WHAT is in scope, drawn from the SoW's Scope \
+section (its numbered subsections/tasks).
+- "mermaid": a single minimal Mermaid flowchart definition, "flowchart LR" style, with 3 to 6 nodes \
+representing the high-level phases of the approach (2-4 words per node, e.g. Discovery, Design, \
+Build, Test, Deploy) IN THE ORDER they occur, connected with simple arrows (A --> B). Base the \
+phases strictly on the SoW's Scope subsections - do not invent phases that aren't implied by it. \
+Use only letters, digits, spaces, and hyphens inside node labels - no quotes, no special characters, \
+no parentheses.
+"""
+
+    assumptions_prompt = ISBD_JSON_RULES + "\n" + sow_block + """
+SECTION TASK: Produce JSON with this exact shape:
+{"assumptions": ["...", ...], "dependencies": ["...", ...]}
+
+- "assumptions": at most 5 short bullets, drawn from the SoW's Assumptions content. Fewer than 5 is \
+fine if that's all the SoW supports.
+- "dependencies": at most 5 short bullets, drawn from the SoW's Dependencies content. Fewer than 5 \
+is fine if that's all the SoW supports.
+"""
+
+    risks_prompt = ISBD_JSON_RULES + "\n" + sow_block + """
+SECTION TASK: Produce JSON with this exact shape:
+{"risks": [{"risk": "...", "impact": "High|Medium|Low", "mitigation": "..."}, ...]}
+
+- At most 5 rows, drawn from the SoW's Risks table/content. Fewer than 5 is fine if that's all the \
+SoW supports. Each field should be a short phrase, not a paragraph.
+"""
+
+    return {
+        "approach": approach_prompt,
+        "assumptions": assumptions_prompt,
+        "risks": risks_prompt,
+    }
+
+
+def _sanitize_mermaid(mermaid_text: Optional[str]) -> Optional[str]:
+    """Strip markdown code-fence wrapping a model may add around a mermaid definition."""
+    if not mermaid_text or not mermaid_text.strip():
+        return None
+    text = mermaid_text.strip()
+    text = re.sub(r"^```(?:mermaid)?\s*", "", text)
+    text = re.sub(r"```\s*$", "", text)
+    text = text.strip()
+    return text or None
+
+
+def _find_mmdc_binary() -> Optional[str]:
+    path = shutil.which("mmdc")
+    if path:
+        return path
+    for candidate in ("/opt/homebrew/bin/mmdc", "/usr/local/bin/mmdc"):
+        if os.path.isfile(candidate):
+            return candidate
+    return None
+
+
+def _render_mermaid_to_png(mermaid_text: str) -> Optional[bytes]:
+    """Render a Mermaid diagram definition to a PNG locally via mmdc (mermaid-cli). Returns None on any failure."""
+    mmdc_path = _find_mmdc_binary()
+    if not mmdc_path:
+        logger.warning("mmdc (mermaid-cli) not found on PATH - skipping ISBD diagram")
+        return None
+
+    try:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            in_path = os.path.join(tmp_dir, "diagram.mmd")
+            out_path = os.path.join(tmp_dir, "diagram.png")
+            with open(in_path, "w", encoding="utf-8") as f:
+                f.write(mermaid_text)
+
+            subprocess.run(
+                [mmdc_path, "-i", in_path, "-o", out_path, "-b", "white", "-w", "1400", "-H", "450"],
+                capture_output=True,
+                timeout=30,
+                check=True,
+            )
+
+            with open(out_path, "rb") as f:
+                return f.read()
+    except Exception as e:
+        logger.warning(f"Mermaid rendering failed, skipping ISBD diagram: {e}")
+        return None
+
+
+def _set_run_font(run, size: int = 12, bold: bool = False):
+    """Apply the ISBD deck's shared font styling to a text run."""
+    run.font.name = "Calibri"
+    run.font.size = Pt(size)
+    run.font.bold = bold
+
+
+def _build_isbd_presentation(
+    approach_bullets: List[str],
+    scope_bullets: List[str],
+    diagram_png: Optional[bytes],
+    assumptions: List[str],
+    dependencies: List[str],
+    risks: List[Dict[str, str]],
+) -> io.BytesIO:
+    """Build the 5-slide ISBD deck and return it as an in-memory .pptx stream."""
+    prs = Presentation()
+    prs.slide_width = Inches(13.333)
+    prs.slide_height = Inches(7.5)
+
+    slide_w = prs.slide_width
+    margin = Inches(0.5)
+    content_w = slide_w - 2 * margin
+
+    def add_title(slide, text: str):
+        box = slide.shapes.add_textbox(margin, Inches(0.3), content_w, Inches(0.6))
+        tf = box.text_frame
+        tf.word_wrap = True
+        p = tf.paragraphs[0]
+        run = p.add_run()
+        run.text = text
+        _set_run_font(run, size=14, bold=True)
+        return box
+
+    def add_subheader(slide, text: str, left, top, width):
+        box = slide.shapes.add_textbox(left, top, width, Inches(0.4))
+        tf = box.text_frame
+        tf.word_wrap = True
+        p = tf.paragraphs[0]
+        run = p.add_run()
+        run.text = text
+        _set_run_font(run, size=14, bold=True)
+        return box
+
+    def add_bullets(slide, items: List[str], left, top, width, height):
+        box = slide.shapes.add_textbox(left, top, width, height)
+        tf = box.text_frame
+        tf.word_wrap = True
+        for idx, item in enumerate(items):
+            p = tf.paragraphs[0] if idx == 0 else tf.add_paragraph()
+            run = p.add_run()
+            run.text = f"• {item}"
+            _set_run_font(run, size=12, bold=False)
+        return box
+
+    # Slide 1: Approach and Scope
+    slide1 = prs.slides.add_slide(prs.slide_layouts[6])
+    add_title(slide1, "Approach and Scope")
+
+    left_col_w = Inches(4.6)
+    add_subheader(slide1, "Approach", margin, Inches(1.1), left_col_w)
+    add_bullets(slide1, approach_bullets, margin, Inches(1.55), left_col_w, Inches(2.6))
+
+    add_subheader(slide1, "Scope", margin, Inches(4.3), left_col_w)
+    add_bullets(slide1, scope_bullets, margin, Inches(4.75), left_col_w, Inches(2.3))
+
+    if diagram_png:
+        img_stream = io.BytesIO(diagram_png)
+        diagram_left = margin + left_col_w + Inches(0.3)
+        diagram_w = slide_w - diagram_left - margin
+        slide1.shapes.add_picture(img_stream, diagram_left, Inches(2.2), width=diagram_w)
+
+    # Slides 2 & 3: Schedule / Cost - title only, native "click to add text" placeholder left untouched
+    for title_text in ("Schedule", "Cost"):
+        slide = prs.slides.add_slide(prs.slide_layouts[1])
+        title_ph = slide.shapes.title
+        title_ph.text_frame.text = title_text
+        run = title_ph.text_frame.paragraphs[0].runs[0]
+        _set_run_font(run, size=14, bold=True)
+
+    # Slide 4: Assumptions and Dependencies
+    slide4 = prs.slides.add_slide(prs.slide_layouts[6])
+    add_title(slide4, "Assumptions and Dependencies")
+
+    col_w = (content_w - Inches(0.4)) // 2
+    add_subheader(slide4, "Assumptions", margin, Inches(1.1), col_w)
+    add_bullets(slide4, assumptions[:5], margin, Inches(1.55), col_w, Inches(5.3))
+
+    right_col_left = margin + col_w + Inches(0.4)
+    add_subheader(slide4, "Dependencies", right_col_left, Inches(1.1), col_w)
+    add_bullets(slide4, dependencies[:5], right_col_left, Inches(1.55), col_w, Inches(5.3))
+
+    # Slide 5: Risks table
+    slide5 = prs.slides.add_slide(prs.slide_layouts[6])
+    add_title(slide5, "Risks")
+
+    risk_rows = risks[:5]
+    rows = len(risk_rows) + 1
+    table_shape = slide5.shapes.add_table(rows, 3, margin, Inches(1.2), content_w, Inches(0.5) * rows)
+    table = table_shape.table
+    table.columns[0].width = int(content_w * 0.45)
+    table.columns[1].width = int(content_w * 0.15)
+    table.columns[2].width = int(content_w * 0.40)
+
+    headers = ["Risk", "Impact", "Mitigation"]
+    for col_idx, header in enumerate(headers):
+        cell = table.cell(0, col_idx)
+        cell.text = header
+        run = cell.text_frame.paragraphs[0].runs[0]
+        _set_run_font(run, size=14, bold=True)
+
+    for row_idx, risk in enumerate(risk_rows, start=1):
+        values = [risk.get("risk", ""), risk.get("impact", ""), risk.get("mitigation", "")]
+        for col_idx, value in enumerate(values):
+            cell = table.cell(row_idx, col_idx)
+            cell.text = str(value)
+            run = cell.text_frame.paragraphs[0].runs[0]
+            _set_run_font(run, size=12, bold=False)
+
+    output = io.BytesIO()
+    prs.save(output)
+    output.seek(0)
+    return output
+
+
+@app.post("/generate/isbd")
+async def generate_isbd(request: ISBDGenerationRequest):
+    """
+    Generate a 5-slide ISBD PowerPoint deck (Approach & Scope, Schedule, Cost,
+    Assumptions & Dependencies, Risks) grounded in the already-generated SoW
+    draft. Schedule and Cost slides are left blank for the user to paste into.
+    """
+    if not request.sow_content or len(request.sow_content.strip()) < 50:
+        raise HTTPException(status_code=400, detail="A generated SoW draft is required before creating ISBD slides.")
+
+    try:
+        prompts = _build_isbd_prompts(request.sow_content)
+        loop = asyncio.get_running_loop()
+        approach_raw, assumptions_raw, risks_raw = await asyncio.gather(*[
+            loop.run_in_executor(None, generate_with_active_provider, prompts["approach"], 2000),
+            loop.run_in_executor(None, generate_with_active_provider, prompts["assumptions"], 1500),
+            loop.run_in_executor(None, generate_with_active_provider, prompts["risks"], 1500),
+        ])
+
+        approach_json = _extract_json(approach_raw) or {}
+        assumptions_json = _extract_json(assumptions_raw) or {}
+        risks_json = _extract_json(risks_raw) or {}
+
+        approach_bullets = [str(b) for b in (approach_json.get("approach_bullets") or [])][:6]
+        scope_bullets = [str(b) for b in (approach_json.get("scope_bullets") or [])][:6]
+        assumptions = [str(a) for a in (assumptions_json.get("assumptions") or [])][:5]
+        dependencies = [str(d) for d in (assumptions_json.get("dependencies") or [])][:5]
+        raw_risks = risks_json.get("risks") or []
+        risks = [r for r in raw_risks if isinstance(r, dict)][:5]
+
+        mermaid_text = _sanitize_mermaid(approach_json.get("mermaid"))
+        diagram_png = None
+        if mermaid_text:
+            diagram_png = await loop.run_in_executor(None, _render_mermaid_to_png, mermaid_text)
+
+        pptx_stream = _build_isbd_presentation(
+            approach_bullets=approach_bullets,
+            scope_bullets=scope_bullets,
+            diagram_png=diagram_png,
+            assumptions=assumptions,
+            dependencies=dependencies,
+            risks=risks,
+        )
+
+        filename = f"{request.project_name.replace(' ', '_')}_ISBD.pptx"
+        return StreamingResponse(
+            pptx_stream,
+            media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"ISBD generation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate ISBD slides: {str(e)}")
 
 
 # Save SoW Draft endpoint

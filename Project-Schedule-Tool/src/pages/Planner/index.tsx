@@ -58,7 +58,8 @@ import { exportProjectToExcel } from '../../engines/ExportEngine';
 import { storage } from '../../services/storage';
 import type { Task } from '../../models/Task';
 import { sowApi } from '../../services/api/sowApi';
-import type { SoWGenerationResponse } from '../../services/api/sowApi';
+import type { SoWGenerationResponse, SoWTaskSummary } from '../../services/api/sowApi';
+import { isbdApi } from '../../services/api/isbdApi';
 import { SoWModal } from '../../components/SoWModal';
 import { exportSoWToWord } from '../../utils/wordExport';
 import { saveSoWDraft, loadSoWDraft } from '../../utils/sowStorage';
@@ -314,6 +315,7 @@ export function Planner() {
   const [sowError, setSowError] = useState<string | undefined>(undefined);
   const [sowNeedsMoreInfo, setSowNeedsMoreInfo] = useState(false);
   const [sowQuestions, setSowQuestions] = useState<string[]>([]);
+  const [isbdLoading, setIsbdLoading] = useState(false);
 
   // Accordion expansion state
   const [expandedAccordions, setExpandedAccordions] = useState<{
@@ -667,6 +669,21 @@ export function Planner() {
     }
   };
 
+  // Builds a compact, factual summary of the current task grid to ground SoW generation
+  // (scope/deliverables/RACI should reflect the real schedule, not be invented from prose)
+  const buildSoWTaskSummary = (): SoWTaskSummary[] =>
+    tasks.map(t => ({
+      index: t.index,
+      activity: t.activity,
+      estimatedDays: t.estimatedDays,
+      estimatedWeeks: t.estimatedWeeks,
+      fte: t.fte,
+      dependency: t.dependency,
+      subActivities: t.subActivities,
+      calculatedStartDate: t.calculatedStartDate,
+      calculatedFinishDate: t.calculatedFinishDate,
+    }));
+
   // SoW Generation handlers
   const handleGenerateSoW = async () => {
     // If SoW already exists, just open the modal to view it
@@ -712,11 +729,12 @@ export function Planner() {
         assumptions: project.assumptions,
         out_of_scope: project.outOfScope,
         maw_deliverables: project.mawDeliverables,
+        tasks: buildSoWTaskSummary(),
       });
 
       if (response.success && response.sow_content) {
         setSowContent(response.sow_content);
-        
+
         // Save to JSON file in drafts folder
         const draft: SoWDraft = {
           project_name: project.name,
@@ -730,7 +748,7 @@ export function Planner() {
           version: '1.0'
         };
         await saveSoWDraft(draft);
-        
+
         setSnackbarSeverity('success');
         setSnackbarMessage('SoW generated and saved to drafts/');
         setSnackbarOpen(true);
@@ -784,11 +802,12 @@ export function Planner() {
         assumptions: project.assumptions,
         out_of_scope: project.outOfScope,
         maw_deliverables: project.mawDeliverables,
+        tasks: buildSoWTaskSummary(),
       });
 
       if (response.success && response.sow_content) {
         setSowContent(response.sow_content);
-        
+
         // Save to JSON file in drafts folder
         const draft: SoWDraft = {
           project_name: project.name,
@@ -802,7 +821,7 @@ export function Planner() {
           version: '1.0'
         };
         await saveSoWDraft(draft);
-        
+
         setSnackbarSeverity('success');
         setSnackbarMessage('SoW regenerated and saved to drafts/');
         setSnackbarOpen(true);
@@ -843,6 +862,7 @@ export function Planner() {
         assumptions: project.assumptions,
         out_of_scope: project.outOfScope,
         maw_deliverables: project.mawDeliverables,
+        tasks: buildSoWTaskSummary(),
       });
 
       if (response.success && response.sow_content) {
@@ -887,6 +907,31 @@ export function Planner() {
       setSnackbarSeverity('error');
       setSnackbarMessage('Failed to export to Word. Please try again.');
       setSnackbarOpen(true);
+    }
+  };
+
+  const handleGenerateISBD = async () => {
+    if (isbdLoading) {
+      return;
+    }
+
+    setIsbdLoading(true);
+    try {
+      await isbdApi.generateISBD({
+        project_name: project.name,
+        customer: project.customer,
+        sow_content: sowContent,
+      });
+      setSnackbarSeverity('success');
+      setSnackbarMessage('ISBD slide deck generated successfully!');
+      setSnackbarOpen(true);
+    } catch (error) {
+      console.error('ISBD generation error:', error);
+      setSnackbarSeverity('error');
+      setSnackbarMessage('Failed to generate ISBD slides. Please try again.');
+      setSnackbarOpen(true);
+    } finally {
+      setIsbdLoading(false);
     }
   };
 
@@ -2029,6 +2074,8 @@ export function Planner() {
         onRegenerate={handleRegenerateSoW}
         onRegenerateWithMoreInfo={handleRegenerateWithMoreInfo}
         onExportToWord={handleExportSoWToWord}
+        onGenerateISBD={handleGenerateISBD}
+        isbdLoading={isbdLoading}
       />
 
       {/* 7. Notifications Toast */}
