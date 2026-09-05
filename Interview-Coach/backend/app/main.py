@@ -5,7 +5,8 @@ from .config import get_config
 from .services.sap_client import SAPAIClient
 from .services.agent_service import AgentService
 from .services.session_service import SessionService
-from .routes import sessions, interview, dashboard
+from .services.settings_service import SettingsService
+from .routes import sessions, interview, dashboard, settings
 
 
 def create_app() -> FastAPI:
@@ -27,7 +28,8 @@ def create_app() -> FastAPI:
     )
 
     # Instantiate services
-    sap_client = SAPAIClient(config["sap_ai_core"])
+    settings_service = SettingsService(config["app"]["settings_path"])
+    sap_client = SAPAIClient(config, settings_service=settings_service)
     agent_service = AgentService(sap_client, config)
     session_service = SessionService(config["app"]["sessions_dir"])
 
@@ -35,12 +37,14 @@ def create_app() -> FastAPI:
     app.state.sap_client = sap_client
     app.state.agent_service = agent_service
     app.state.session_service = session_service
+    app.state.settings_service = settings_service
     app.state.config = config
 
     # Routers
     app.include_router(sessions.router, prefix="/api/sessions", tags=["sessions"])
     app.include_router(interview.router, prefix="/api/interview", tags=["interview"])
     app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
+    app.include_router(settings.router, prefix="/api/settings", tags=["settings"])
 
     @app.get("/api/health")
     async def health_check():

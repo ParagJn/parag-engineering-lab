@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { BrainCircuit, LayoutDashboard, PlusCircle } from 'lucide-react'
+import { BrainCircuit, LayoutDashboard, PlusCircle, Settings } from 'lucide-react'
 
 export default function Header() {
   const { pathname } = useLocation()
@@ -30,6 +30,17 @@ export default function Header() {
             >
               <LayoutDashboard size={15} />
               <span className="hidden sm:inline">Dashboard</span>
+            </Link>
+            <Link
+              to="/settings"
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                pathname === '/settings'
+                  ? 'bg-primary-50 text-primary-800'
+                  : 'text-slate-600 hover:bg-gray-100 hover:text-slate-800'
+              }`}
+            >
+              <Settings size={15} />
+              <span className="hidden sm:inline">Settings</span>
             </Link>
             <Link
               to="/setup"

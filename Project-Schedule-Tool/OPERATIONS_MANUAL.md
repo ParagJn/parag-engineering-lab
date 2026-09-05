@@ -1,7 +1,7 @@
 # Project Schedule Tool - Operations Manual
 
-**Version:** 2.1  
-**Last Updated:** September 1, 2026  
+**Version:** 2.2  
+**Last Updated:** September 3, 2026  
 **Document Owner:** Project Management Office  
 
 ---
@@ -14,13 +14,14 @@
 4. [Creating a New Project](#4-creating-a-new-project)
 5. [Working with Tasks](#5-working-with-tasks)
 6. [Gantt Timeline Visualization](#6-gantt-timeline-visualization)
-7. [AI Provider Selection](#7-ai-provider-selection)
-8. [Generating Statement of Work (SoW)](#8-generating-statement-of-work-sow)
-9. [Exporting to Excel](#9-exporting-to-excel)
-10. [Saving and Loading Projects](#10-saving-and-loading-projects)
-11. [Settings and Configuration](#11-settings-and-configuration)
-12. [Troubleshooting](#12-troubleshooting)
-13. [Best Practices](#13-best-practices)
+7. [Public Holiday Adjustments](#7-public-holiday-adjustments)
+8. [AI Provider Selection](#8-ai-provider-selection)
+9. [Generating Statement of Work (SoW)](#9-generating-statement-of-work-sow)
+10. [Exporting to Excel](#10-exporting-to-excel)
+11. [Saving and Loading Projects](#11-saving-and-loading-projects)
+12. [Settings and Configuration](#12-settings-and-configuration)
+13. [Troubleshooting](#13-troubleshooting)
+14. [Best Practices](#14-best-practices)
 
 ---
 
@@ -31,6 +32,7 @@ The Project Schedule Tool is an AI-powered web application designed to help proj
 
 ### 1.2 Key Capabilities
 - **Smart Scheduling**: Automatic dependency resolution and critical path calculations
+- **Public Holiday Adjustment**: Toggle Victoria (Australia) and India public holidays on and shift the whole schedule around them automatically
 - **AI-Powered Documentation**: Generate professional Statement of Work documents using enterprise AI
 - **Dual AI Providers**: Choose between SAP AI Core (Claude 4.7 Opus) or IBM ICA (Claude Sonnet 5)
 - **Visual Timeline**: Interactive Gantt chart with week-by-week task allocation
@@ -321,9 +323,68 @@ To override calculated start dates:
 
 ---
 
-## 7. AI Provider Selection
+## 7. Public Holiday Adjustments
 
-### 7.1 Accessing Provider Settings
+*(New in v2.2)*
+
+### 7.1 Configuring Holiday Lists
+
+Public holidays are configured once per region on the **Settings** page and then reused by every project.
+
+1. Navigate to **Settings** → **Public Holidays**
+2. Select a region: **Victoria, Australia** or **India**
+3. Click **"Add / Update Holidays"**
+4. Paste the holiday list copied from a webpage or spreadsheet into the text box (any format — the AI extracts the dates)
+5. Click **"Parse & Save"**
+6. The AI extracts this year's holidays and overwrites the existing saved list for that region
+7. A confirmation snackbar shows how many holidays were saved
+
+<<Screenshot Here: screenshot-27-holiday-settings.png - Public Holidays card on Settings page with paste modal open>>
+
+**Note**: Saving a new list for a region completely replaces the previous one for that region — re-paste the full list (not just new entries) each time you update it.
+
+### 7.2 Turning Holiday Adjustment On
+
+In the **Planner** toolbar, next to **"Force Recalculate"**, there are two toggle buttons:
+
+- **🇦🇺 Adjust Vic. Holidays**
+- **🇮🇳 Adjust Ind. Holidays**
+
+1. Click a button to turn that region's holidays **on**
+2. The schedule immediately recalculates: any task day landing on one of that region's holidays shifts forward to the next working day
+3. The shift **cascades** — every task depending (directly or indirectly) on a shifted task moves accordingly, exactly as if the holiday were an extra weekend day
+4. Click the same button again to turn that region **off** and recalculate without it
+5. Both regions can be enabled at the same time — a day that is a holiday in either active region is skipped
+
+<<Screenshot Here: screenshot-28-holiday-toggle-buttons.png - Planner toolbar showing Force Recalculate, Adjust Vic. Holidays, Adjust Ind. Holidays buttons>>
+
+### 7.3 Reading the "H" Marker
+
+When a task's scheduled day falls on an active holiday, the Gantt cell shows an **H** instead of the normal task box/color:
+
+| Region | On-Screen Color |
+|--------|------------------|
+| Victoria, Australia | 🟠 Orange / amber |
+| India | 🔵 Blue |
+
+- Hover over an **H** marker to see the holiday's name in a tooltip
+- This applies in both the weekly 5-box view and the day-by-day view
+
+<<Screenshot Here: screenshot-29-holiday-h-marker.png - Gantt cells showing orange H for Vic and blue H for India holidays>>
+
+### 7.4 Holidays in the Excel Export
+
+- The exported Gantt grid mirrors the on-screen state exactly: whichever regions are toggled on in the Planner at export time are the ones reflected in the spreadsheet's shifted dates and "H" markers
+- In Excel, the "H" character is rendered in **white** so it stands out against the task's own colored cell background
+- A **Public Holidays** section is added below "Out of Scope & Exclusions" listing every saved holiday for **both** regions (Vic Holidays and Ind. Holidays, each with its dates), regardless of which toggles were active — this is a permanent reference, not tied to the on-screen toggle state
+
+<<Screenshot Here: screenshot-30-excel-public-holidays.png - Excel sheet showing Public Holidays reference section and white H markers>>
+
+---
+
+## 8. AI Provider Selection
+
+### 8.1 Accessing Provider Settings
 
 The tool supports two enterprise AI providers for document generation.
 
@@ -337,7 +398,7 @@ The tool supports two enterprise AI providers for document generation.
 
 <<Screenshot Here: screenshot-15-settings-page.png - Settings page with AI Provider Selection section>>
 
-### 7.2 Provider Availability Status
+### 8.2 Provider Availability Status
 
 Each provider shows an availability indicator:
 
@@ -346,7 +407,7 @@ Each provider shows an availability indicator:
 
 <<Screenshot Here: screenshot-16-provider-status.png - Provider selection showing availability chips>>
 
-### 7.3 Switching Providers
+### 8.3 Switching Providers
 
 1. Select your preferred provider radio button
 2. A success message confirms the switch
@@ -357,9 +418,9 @@ Each provider shows an availability indicator:
 
 ---
 
-## 8. Generating Statement of Work (SoW)
+## 9. Generating Statement of Work (SoW)
 
-### 8.1 Prerequisites
+### 9.1 Prerequisites
 
 Before generating a SoW, ensure you have:
 
@@ -369,7 +430,7 @@ Before generating a SoW, ensure you have:
 ✅ **Assumptions** listed  
 ✅ **Out of Scope** items defined (optional but recommended)
 
-### 8.2 Generating Your First SoW
+### 9.2 Generating Your First SoW
 
 1. Complete the project metadata in the left panel
 2. Click the **"SoW Draft"** button in the toolbar
@@ -378,7 +439,7 @@ Before generating a SoW, ensure you have:
 
 <<Screenshot Here: screenshot-17-sow-button.png - SoW Draft button highlighted in toolbar>>
 
-### 8.3 AI Analysis Process
+### 9.3 AI Analysis Process
 
 The AI performs intelligent analysis:
 
@@ -390,7 +451,7 @@ The AI performs intelligent analysis:
 
 <<Screenshot Here: screenshot-18-sow-generation-loading.png - Loading spinner during SoW generation>>
 
-### 8.4 Reviewing the SoW
+### 9.4 Reviewing the SoW
 
 The generated SoW includes:
 
@@ -406,7 +467,7 @@ The generated SoW includes:
 
 <<Screenshot Here: screenshot-19-sow-modal-view.png - SoW modal showing generated content>>
 
-### 8.5 Editing the SoW
+### 9.5 Editing the SoW
 
 1. Click **"Edit"** button in the SoW modal
 2. The content becomes editable (Markdown format)
@@ -416,7 +477,7 @@ The generated SoW includes:
 
 <<Screenshot Here: screenshot-20-sow-edit-mode.png - SoW modal in edit mode>>
 
-### 8.6 Regenerating a SoW
+### 9.6 Regenerating a SoW
 
 To create a fresh version:
 
@@ -427,7 +488,7 @@ To create a fresh version:
 
 **Warning**: Regeneration overwrites any manual edits. Save important custom content elsewhere before regenerating.
 
-### 8.7 Exporting to Microsoft Word
+### 9.7 Exporting to Microsoft Word
 
 1. Review the SoW content in the modal
 2. Click **"Export to Word"** button
@@ -438,7 +499,7 @@ To create a fresh version:
 
 <<Screenshot Here: screenshot-21-export-word.png - Export to Word button and downloaded file>>
 
-### 8.8 Loading Existing SoW
+### 9.8 Loading Existing SoW
 
 If a SoW already exists for your project:
 
@@ -448,9 +509,9 @@ If a SoW already exists for your project:
 
 ---
 
-## 9. Exporting to Excel
+## 10. Exporting to Excel
 
-### 9.1 Excel Export Features
+### 10.1 Excel Export Features
 
 Export your project schedule to a consulting-grade Excel workbook with:
 
@@ -460,10 +521,11 @@ Export your project schedule to a consulting-grade Excel workbook with:
 - ✅ **Live Excel formulas** for calculations
 - ✅ **Professional formatting** ready for executive presentations
 - ✅ **Landscape orientation** with optimized print settings
+- ✅ **Public holiday parity** *(new in v2.2)* — whichever holiday regions are toggled on in the Planner are reflected in the export, with a **Public Holidays** reference section listing both regions' dates and "H" markers rendered in **white** text (see [7.4](#74-holidays-in-the-excel-export))
 
-> **New in v2.1:** The metadata table now includes three additional columns — **Man Days**, **Mode**, and **Dep. Link** — carried over from the Planner grid. See [9.3](#93-excel-file-structure) for the full column layout.
+> **New in v2.1:** The metadata table now includes three additional columns — **Man Days**, **Mode**, and **Dep. Link** — carried over from the Planner grid. See [10.3](#103-excel-file-structure) for the full column layout.
 
-### 9.2 Exporting Your Schedule
+### 10.2 Exporting Your Schedule
 
 1. Ensure all tasks are entered and dependencies set
 2. Click **"Export to Excel"** button in the toolbar
@@ -472,7 +534,7 @@ Export your project schedule to a consulting-grade Excel workbook with:
 
 <<Screenshot Here: screenshot-22-export-excel-button.png - Export to Excel button in toolbar>>
 
-### 9.3 Excel File Structure
+### 10.3 Excel File Structure
 
 **Sheet 1: Project Schedule**
 
@@ -502,7 +564,7 @@ Frozen panes, auto-filter range, and the Assumptions/Out-of-Scope merged section
 
 <<Screenshot Here: screenshot-23-excel-output.png - Excel file showing complete project schedule with Man Days, Mode, and Dep. Link columns>>
 
-### 9.4 Understanding the Excel Timeline
+### 10.4 Understanding the Excel Timeline
 
 Each week column shows:
 - **Colored background**: Matches task color from the planner
@@ -518,7 +580,7 @@ Interpretation: Task runs Monday-Wednesday only
 
 <<Screenshot Here: screenshot-24-excel-daily-boxes.png - Close-up of Excel cells showing 5-box indicators>>
 
-### 9.5 Excel Formulas
+### 10.5 Excel Formulas
 
 The exported file includes live formulas:
 
@@ -531,9 +593,9 @@ You can modify hours and the calculations update automatically.
 
 ---
 
-## 10. Saving and Loading Projects
+## 11. Saving and Loading Projects
 
-### 10.1 Auto-Save Feature
+### 11.1 Auto-Save Feature
 
 The application **automatically saves** your work every **2 minutes** to prevent data loss.
 
@@ -546,7 +608,7 @@ The application **automatically saves** your work every **2 minutes** to prevent
 
 <<Screenshot Here: screenshot-25-autosave-notification.png - Auto-save success notification>>
 
-### 10.2 Manual Saving
+### 11.2 Manual Saving
 
 To manually save your project:
 
@@ -556,7 +618,7 @@ To manually save your project:
 
 **Note**: Manual saves are typically unnecessary due to auto-save, but useful before major changes.
 
-### 10.3 Save File Locations
+### 11.3 Save File Locations
 
 Your projects are stored locally in the `drafts/` folder:
 
@@ -573,14 +635,14 @@ drafts/
 - Deleting a project draft does **not** delete its SoW
 - SoW files are **not** shown on the Dashboard
 
-### 10.4 Loading Projects from Dashboard
+### 11.4 Loading Projects from Dashboard
 
 1. Navigate to the **Dashboard**
 2. Locate your project card
 3. Click **"Load"**
 4. The project opens in the Planner workspace with all tasks restored
 
-### 10.5 Exporting Project as JSON
+### 11.5 Exporting Project as JSON
 
 To back up or share a project:
 
@@ -593,9 +655,9 @@ To back up or share a project:
 
 ---
 
-## 11. Settings and Configuration
+## 12. Settings and Configuration
 
-### 11.1 Settings Page Overview
+### 12.1 Settings Page Overview
 
 Access **Settings** from the top navigation bar.
 
@@ -612,7 +674,7 @@ Access **Settings** from the top navigation bar.
 
 <<Screenshot Here: screenshot-26-full-settings-page.png - Complete settings page>>
 
-### 11.2 Provider Configuration
+### 12.2 Provider Configuration
 
 Your IT administrator configures the AI providers. If a provider shows as **"Not Available"**:
 
@@ -620,7 +682,7 @@ Your IT administrator configures the AI providers. If a provider shows as **"Not
 2. Contact your IT support team
 3. Check for system maintenance notifications
 
-### 11.3 Application Information
+### 12.3 Application Information
 
 The Settings page displays:
 - Application version number
@@ -630,9 +692,9 @@ The Settings page displays:
 
 ---
 
-## 12. Troubleshooting
+## 13. Troubleshooting
 
-### 12.1 Common Issues and Solutions
+### 13.1 Common Issues and Solutions
 
 #### Issue: SoW Generation Fails
 
@@ -700,7 +762,7 @@ The Settings page displays:
 3. ✅ Clear browser cache (Ctrl+Shift+Delete)
 4. ✅ The existing date should remain visible when editing
 
-### 12.2 Browser Compatibility
+### 13.2 Browser Compatibility
 
 **Recommended Browsers:**
 - ✅ Google Chrome 90+
@@ -712,7 +774,7 @@ The Settings page displays:
 - ❌ Internet Explorer (all versions)
 - ❌ Mobile browsers (phone/tablet)
 
-### 12.3 Getting Help
+### 13.3 Getting Help
 
 If issues persist:
 
@@ -732,9 +794,9 @@ If issues persist:
 
 ---
 
-## 13. Best Practices
+## 14. Best Practices
 
-### 13.1 Project Planning
+### 14.1 Project Planning
 
 **✅ DO:**
 - Use descriptive project names (e.g., "PCR-001-CRM-Upgrade" not "Project 1")
@@ -749,7 +811,7 @@ If issues persist:
 - Create circular dependencies (Task A depends on Task B which depends on Task A)
 - Change project names after SoW generation (breaks the link)
 
-### 13.2 Task Management
+### 14.2 Task Management
 
 **✅ DO:**
 - Break large tasks into smaller sub-activities (< 40 hours each)
@@ -764,7 +826,7 @@ If issues persist:
 - Skip dependency definitions (results in overlapping parallel work assumptions)
 - Mix different project phases in the same color
 
-### 13.3 SoW Generation
+### 14.3 SoW Generation
 
 **✅ DO:**
 - Provide rich, detailed background information (3-5 sentences minimum)
@@ -779,7 +841,7 @@ If issues persist:
 - Share raw SoW without adding company branding/headers
 - Forget to update SoW when project scope changes significantly
 
-### 13.4 Collaboration
+### 14.4 Collaboration
 
 **✅ DO:**
 - Use consistent naming conventions across project teams
@@ -793,7 +855,7 @@ If issues persist:
 - Delete drafts without backing up first
 - Share sensitive project information via insecure channels
 
-### 13.5 Performance Optimization
+### 14.5 Performance Optimization
 
 **✅ DO:**
 - Close unnecessary browser tabs while using the tool
@@ -928,5 +990,6 @@ Downloads/SoW-{ProjectName}-{Timestamp}.docx
 | 1.5 | 2026-08-10 | PMO Team | Added SoW generation section |
 | 2.0 | 2026-08-30 | PMO Team | Added dual AI provider support, 5-box daily indicators, date editing improvements |
 | 2.1 | 2026-09-01 | PMO Team | Added row action toolbar (insert above/below), Man Days column, Effort Driven/Fixed Duration mode, dependency chain (🔗) indicator on Gantt timeline, and matching Excel export columns (Man Days, Mode, Dep. Link) |
+| 2.2 | 2026-09-03 | PMO Team | Added Public Holiday Adjustment feature (region-specific toggles for Victoria/India, cascading reschedule, color-coded "H" markers — orange for Vic, blue for India — and matching white "H" markers plus a Public Holidays reference section in the Excel export); fixed a Gantt rendering bug for Fixed Duration tasks with FTE > 1; fixed "New Project" not resetting task data from the previous project |
 
 ---

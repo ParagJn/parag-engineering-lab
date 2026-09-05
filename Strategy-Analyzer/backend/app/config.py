@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     sap_api_url: str = ""
     sap_resource_group: str = "genius"
     sap_model_discovery_url: str = "https://api.ai.prod.eu-central-1.aws.ml.hana.ondemand.com/v2/lm/scenarios/foundation-models/models"
-    sap_anthropic_model: str = "anthropic--claude-4.6-opus"
+    sap_anthropic_model: str = "anthropic--claude-4.7-opus"
     sap_gemini_model: str = "gemini-2.5-pro"
     sap_thinking_mode: str = "adaptive"
     sap_thinking_budget_tokens: int = 12000

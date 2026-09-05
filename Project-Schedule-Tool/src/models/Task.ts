@@ -15,6 +15,7 @@ export interface Task {
   manualStartDate?: string; // YYYY-MM-DD (optional override)
   calculatedStartDate?: string; // YYYY-MM-DD (calculated by engine)
   calculatedFinishDate?: string; // YYYY-MM-DD (calculated by engine)
+  startDateShiftReason?: string; // set when calculatedStartDate was pushed forward past one or more holidays
   weekAssignments?: Record<string, number>; // friday YYYY-MM-DD string -> percentage allocation (0.0 to 1.0)
   subActivities?: string[]; // Optional list of sub-activities under this task
   color: string; // hex color for timeline bar

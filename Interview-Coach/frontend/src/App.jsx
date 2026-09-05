@@ -3,6 +3,7 @@ import DashboardPage from './pages/DashboardPage'
 import SetupPage from './pages/SetupPage'
 import InterviewPage from './pages/InterviewPage'
 import ReportPage from './pages/ReportPage'
+import SettingsPage from './pages/SettingsPage'
 
 export default function App() {
   return (
@@ -10,6 +11,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<DashboardPage />} />
         <Route path="/setup" element={<SetupPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
         <Route path="/interview/:sessionId" element={<InterviewPage />} />
         <Route path="/report/:sessionId" element={<ReportPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

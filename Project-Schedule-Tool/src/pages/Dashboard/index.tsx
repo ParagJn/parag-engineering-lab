@@ -37,6 +37,7 @@ export function Dashboard() {
   const loadProject = useProjectStore((s) => s.loadProject);
   const setTasks = useTaskStore((s) => s.setTasks);
   const resetTasks = useTaskStore((s) => s.resetTasks);
+  const loadHolidayState = useTaskStore((s) => s.loadHolidayState);
 
   interface DraftPlan {
     filename: string;
@@ -73,6 +74,7 @@ export function Dashboard() {
         if (data.project && Array.isArray(data.tasks)) {
           loadProject(data.project);
           setTasks(data.tasks);
+          loadHolidayState(data);
           navigate('/planner');
         }
       } else {
@@ -121,6 +123,7 @@ export function Dashboard() {
         if (data.project && Array.isArray(data.tasks)) {
           loadProject(data.project);
           setTasks(data.tasks);
+          loadHolidayState(data);
           navigate('/planner');
         } else {
           alert('Invalid file format. Make sure it contains project and tasks data.');
@@ -137,6 +140,7 @@ export function Dashboard() {
     if (plan) {
       loadProject(plan.project);
       setTasks(plan.tasks);
+      loadHolidayState(plan);
       navigate('/planner');
     } else {
       alert('Plan data not found.');

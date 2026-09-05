@@ -31,6 +31,12 @@ interface TaskState {
   setRegionHolidays: (region: 'vic' | 'india', holidays: HolidayEntry[]) => void;
   toggleHolidayRegion: (region: 'vic' | 'india') => void;
   getActiveHolidayMap: () => Record<string, HolidayInfo>;
+  loadHolidayState: (state: {
+    vicHolidays?: HolidayEntry[];
+    indiaHolidays?: HolidayEntry[];
+    vicHolidaysEnabled?: boolean;
+    indiaHolidaysEnabled?: boolean;
+  }) => void;
 }
 
 function createInitialTasks(): Task[] {
@@ -246,8 +252,11 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
     const holidayMap = get().getActiveHolidayMap();
     const holidayDates = new Set(Object.keys(holidayMap));
+    const holidayNames: Record<string, string> = Object.fromEntries(
+      Object.entries(holidayMap).map(([date, info]) => [date, info.name])
+    );
 
-    const { tasks, weeks } = calculateSchedule(get().tasks, suggestedStartDateStr, get().minWeeksToShow || 52, holidayDates);
+    const { tasks, weeks } = calculateSchedule(get().tasks, suggestedStartDateStr, get().minWeeksToShow || 52, holidayDates, holidayNames);
     set({ tasks, weeks });
   },
 
@@ -282,6 +291,16 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       get().indiaHolidays.forEach(h => { map[h.date] = { name: h.name, region: 'india' }; });
     }
     return map;
+  },
+
+  loadHolidayState: (state) => {
+    set({
+      vicHolidays: state.vicHolidays || [],
+      indiaHolidays: state.indiaHolidays || [],
+      vicHolidaysEnabled: state.vicHolidaysEnabled || false,
+      indiaHolidaysEnabled: state.indiaHolidaysEnabled || false
+    });
+    get().recalculate();
   }
 }));
 

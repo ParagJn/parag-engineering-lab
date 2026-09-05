@@ -52,12 +52,21 @@ A professional, AI-powered web application designed to create, manage, and visua
 * **Professional Formatting**: Headers, borders, color schemes optimized for executive presentations
 * **Resource Allocation**: Clear FTE (Full-Time Equivalent) displays per task and week
 
-### 6. Enterprise-Grade AI Backend
+### 7. Public Holiday Adjustment 🆕
+* **Region-Specific Holiday Lists**: Configure Victoria, Australia and India public holidays on the Settings page — paste raw text copied from any webpage/spreadsheet and the AI extracts a clean date/name list for the current year
+* **One-Click Toggle Buttons**: "Adjust Vic. Holidays" 🇦🇺 and "Adjust Ind. Holidays" 🇮🇳 buttons in the Planner toolbar, next to "Force Recalculate"
+* **Automatic Schedule Shifting**: When enabled, any task day that falls on an applied holiday shifts forward by a working day, and the shift cascades through all dependent tasks automatically (holidays are treated exactly like weekends by the scheduling engine)
+* **Region-Colored "H" Markers**: Holiday days render an **H** marker instead of the normal task box — **orange/amber** for Victoria holidays, **blue** for India holidays — both regions can be toggled on simultaneously
+* **Excel Export Parity**: The exported Gantt grid mirrors the on-screen holiday adjustment exactly (same dates shifted, same "H" markers, rendered in white for contrast against the task's colored cell)
+* **Public Holidays Reference Section**: Excel export adds a dedicated section below "Out of Scope & Exclusions" listing every Victoria and India holiday date/name, independent of which toggles are currently active
+
+### 8. Enterprise-Grade AI Backend
 * **Dual Provider Architecture**: Switch between SAP AI Core and IBM ICA providers at runtime 🆕
 * **SAP AI Core Integration**: Production-ready integration with SAP's AI orchestration platform (Claude 4.7 Opus)
 * **IBM ICA Integration**: IBM watsonx Code Assistant support (Claude Sonnet 5, Gemini models) 🆕
 * **Provider Settings API**: RESTful endpoints for provider selection and status checking 🆕
 * **Settings Persistence**: Provider preference stored in `backend/settings.json` and survives restarts 🆕
+* **AI-Powered Holiday Parsing**: `/holidays/parse` endpoint uses the active AI provider to extract structured date/name holiday lists from pasted raw text 🆕
 * **Multi-Model Support**: Architecture supports OpenAI, Google Gemini, Azure OpenAI, and Anthropic
 * **OAuth 2.0 Authentication**: Automatic token management, caching, and refresh for SAP AI Core
 * **Orchestration API**: Uses SAP AI Core orchestration format v2 for advanced prompt engineering
@@ -73,9 +82,12 @@ A professional, AI-powered web application designed to create, manage, and visua
 ```
 Project-Schedule-Tool/
 ├── backend/                          # AI-powered FastAPI backend
-│   ├── main.py                       # FastAPI app with SoW generation endpoints
+│   ├── main.py                       # FastAPI app with SoW + holiday parsing endpoints
 │   ├── llm_client.py                 # Universal LLM client (SAP AI Core, OpenAI, etc.)
 │   ├── config.json                   # Multi-provider model configuration
+│   ├── data/                         # Saved public holiday lists ✨ NEW
+│   │   ├── holidays_vic_australia.json
+│   │   └── holidays_india.json
 │   ├── requirements.txt              # Python dependencies (FastAPI, requests, etc.)
 │   ├── .env                          # Environment variables (SAP credentials, not in git)
 │   ├── Generate-SoW.md               # SoW feature documentation
@@ -94,7 +106,8 @@ Project-Schedule-Tool/
 │   ├── models/
 │   │   ├── Project.ts                # Project metadata interface
 │   │   ├── Task.ts                   # Task structure with dependencies
-│   │   └── Week.ts                   # Week calculation model
+│   │   ├── Week.ts                   # Week calculation model
+│   │   └── Holiday.ts                # Holiday entry type (date + name) ✨ NEW
 │   ├── pages/
 │   │   ├── Dashboard/                # Project hub with saved plans and drafts
 │   │   ├── Planner/                  # Interactive split grid workspace with SoW button
@@ -288,6 +301,14 @@ python main.py
 - Saves to `drafts/{ProjectName}_draft.json`
 - SoW files stored separately and not affected by project deletion
 
+### Configuring & Applying Public Holidays 🆕
+1. Go to **Settings** → **Public Holidays**, pick a region (Victoria, Australia or India), click **"Add / Update Holidays"**, and paste the raw holiday text
+2. The AI parses the text and saves the current year's dates for that region (overwrites any previously saved list)
+3. In the **Planner** toolbar, click **"Adjust Vic. Holidays"** and/or **"Adjust Ind. Holidays"** to toggle each region on
+4. When toggled on, tasks that fall on a holiday shift forward by a working day (cascading to dependents) and render an **H** marker — orange for Vic, blue for India — instead of the normal task box
+5. Click a toggle again to turn it off and recalculate without that region's holidays
+6. Excel export always includes a **Public Holidays** reference section (both regions' full lists) and mirrors whichever toggles are active on screen in the Gantt grid itself
+
 ### Exporting to Excel
 1. Complete your project schedule with all tasks and dependencies
 2. Click **"Export to Excel"** in the toolbar
@@ -403,6 +424,28 @@ Expected response:
 **GET** `/load/sow-draft/{project_name}`
 - **Description**: Load existing SoW draft by project name
 - **Response**: SoW draft object or `exists: false`
+
+### Public Holidays API 🆕
+**POST** `/holidays/parse`
+- **Description**: AI-parses pasted holiday text into a structured date/name list and saves it, overwriting the existing list for that region
+- **Request Body**:
+  ```json
+  {
+    "region": "vic_australia",
+    "raw_text": "1 January 2026 - New Year's Day\n26 January 2026 - Australia Day..."
+  }
+  ```
+- **Response**:
+  ```json
+  { "success": true, "count": 12, "year": 2026 }
+  ```
+
+**GET** `/holidays/{region}`
+- **Description**: Retrieve the saved holiday list for a region (`vic_australia` or `india`)
+- **Response**:
+  ```json
+  { "holidays": [{ "date": "2026-01-01", "name": "New Year's Day" }, ...] }
+  ```
 
 ### Other Endpoints
 - **GET** `/health` - Backend health check
@@ -527,6 +570,11 @@ This is an internal project. For questions or contributions, contact the develop
 - ✅ Auto-save with validation
 - ✅ Separate SoW and project draft storage
 - ✅ Dashboard filtering (SoW files hidden)
+- ✅ Region-aware public holiday adjustment (Vic. Australia + India) with cascading reschedule, region-colored "H" markers, and Excel export parity 🆕
+
+### Recent Fixes 🩹
+- 🐛 Fixed Duration tasks with FTE > 1 now render their full Gantt bar span (weekly effort allocation previously always divided by FTE regardless of duration mode, cutting the bar short)
+- 🐛 "New Project" on the Dashboard now fully resets the task list and holiday toggles instead of carrying over the previous project's schedule until a manual page refresh
 
 ### Future Enhancements 🚀
 - 🔄 AI-powered task generation from project description

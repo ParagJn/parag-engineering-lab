@@ -18,6 +18,29 @@ export function moveToWorkingDay(date: dayjs.Dayjs, holidayDates: Set<string> = 
   return current;
 }
 
+// Helper: Walk the same days moveToWorkingDay would skip, collecting the names of any
+// holidays encountered (weekends are skipped silently — only holidays are surfaced,
+// since a shift onto a holiday is the confusing case that needs an explanation).
+export function collectSkippedHolidayNames(date: dayjs.Dayjs, holidayNames: Record<string, string> = {}): string[] {
+  const names: string[] = [];
+  let current = date;
+  while (true) {
+    const day = current.day();
+    if (day === 0 || day === 6) {
+      current = current.add(1, 'day');
+      continue;
+    }
+    const dateStr = current.format('YYYY-MM-DD');
+    if (holidayNames[dateStr]) {
+      names.push(holidayNames[dateStr]);
+      current = current.add(1, 'day');
+      continue;
+    }
+    break;
+  }
+  return names;
+}
+
 // Helper: Add N working days to a start date (skipping weekends and holidays)
 export function addWorkingDays(startDate: dayjs.Dayjs, days: number, holidayDates: Set<string> = new Set()): dayjs.Dayjs {
   let current = moveToWorkingDay(startDate, holidayDates);
@@ -59,7 +82,8 @@ export function calculateSchedule(
   tasks: Task[],
   suggestedStartDateStr: string,
   minWeeksToShow = 10,
-  holidayDates: Set<string> = new Set()
+  holidayDates: Set<string> = new Set(),
+  holidayNames: Record<string, string> = {}
 ): SchedulingResult {
   if (tasks.length === 0) {
     return { tasks: [], weeks: [] };
@@ -154,7 +178,12 @@ export function calculateSchedule(
     }
 
     // Ensure the start date itself isn't a weekend/holiday (e.g. dependency-driven Monday, or manual override)
+    const requestedStartDate = startDate;
+    const skippedHolidays = collectSkippedHolidayNames(requestedStartDate, holidayNames);
     startDate = moveToWorkingDay(startDate, holidayDates);
+    const startDateShiftReason = skippedHolidays.length > 0
+      ? `Shifted from ${requestedStartDate.format('YYYY-MM-DD')} — ${skippedHolidays.join(', ')}`
+      : undefined;
 
     // Calculate finish date
     let finishDate = startDate;
@@ -169,6 +198,7 @@ export function calculateSchedule(
       estimatedWeeks: Math.round(weeks),
       calculatedStartDate: startDate.format('YYYY-MM-DD'),
       calculatedFinishDate: finishDate.format('YYYY-MM-DD'),
+      startDateShiftReason,
       weekAssignments: {} // Will calculate below
     };
 

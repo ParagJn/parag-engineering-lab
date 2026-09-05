@@ -284,7 +284,7 @@ Create `backend/.env` by copying `.env.example` and filling in your credentials.
 | `SAP_TOKEN_URL` | OAuth2 token endpoint |
 | `SAP_API_URL` | SAP AI Core API base URL |
 | `SAP_RESOURCE_GROUP` | Resource group name (default: `genius`) |
-| `SAP_ANTHROPIC_MODEL` | Model ID (default: `anthropic--claude-4.6-opus`) |
+| `SAP_ANTHROPIC_MODEL` | Model ID (default: `anthropic--claude-4.7-opus`) |
 | `SAP_GEMINI_MODEL` | Model ID (default: `gemini-2.5-pro`) |
 | `SAP_THINKING_MODE` | `adaptive`, `enabled`, or `disabled` (default: `adaptive`) |
 | `SAP_THINKING_BUDGET_TOKENS` | Thinking token budget (default: `12000`) |
@@ -417,7 +417,7 @@ Key defaults (all overridable via `.env`):
 | Azure API version | `2025-04-01-preview` |
 | GPT-5.4 deployment | `gpt-5.4-common` |
 | GPT-5.3 Codex deployment | `gpt-5.3-codex-common` |
-| SAP Anthropic model | `anthropic--claude-4.6-opus` |
+| SAP Anthropic model | `anthropic--claude-4.7-opus` |
 | SAP Gemini model | `gemini-2.5-pro` |
 | Thinking mode | `adaptive` |
 | Thinking token budget | `12,000` |

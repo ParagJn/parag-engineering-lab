@@ -30,6 +30,11 @@ export const reattemptSession = (sessionId) =>
 export const getDashboardStats = () => api.get('/dashboard/stats')
 export const getDashboardSessions = () => api.get('/dashboard/sessions')
 
+// ── Settings ──────────────────────────────────────────────────────
+export const getSettings = () => api.get('/settings/')
+export const updateSettings = (data) => api.put('/settings/', data)
+export const verifySettings = (data) => api.post('/settings/verify', data)
+
 // ── Health ────────────────────────────────────────────────────────
 export const checkHealth = () => api.get('/health')
 

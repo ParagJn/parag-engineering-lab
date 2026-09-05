@@ -44,7 +44,6 @@ import {
   Download as DownloadIcon,
   Save as SaveIcon,
   UploadFile as UploadFileIcon,
-  Refresh as RefreshIcon,
   ListAlt as ListAltIcon,
   Close as CloseIcon,
   Description as DescriptionIcon,
@@ -228,7 +227,6 @@ export function Planner() {
   const deleteTask = useTaskStore((s) => s.deleteTask);
   const updateTask = useTaskStore((s) => s.updateTask);
   const setTasks = useTaskStore((s) => s.setTasks);
-  const recalculate = useTaskStore((s) => s.recalculate);
   const setMinWeeksToShow = useTaskStore((s) => s.setMinWeeksToShow);
   const vicHolidaysEnabled = useTaskStore((s) => s.vicHolidaysEnabled);
   const indiaHolidaysEnabled = useTaskStore((s) => s.indiaHolidaysEnabled);
@@ -429,7 +427,12 @@ export function Planner() {
     const updatedProject = { ...project, name: customPlanName };
 
     // Save
-    storage.savePlan(updatedProject, tasks);
+    storage.savePlan(updatedProject, tasks, {
+      vicHolidays: vicHolidaysList,
+      indiaHolidays: indiaHolidaysList,
+      vicHolidaysEnabled,
+      indiaHolidaysEnabled
+    });
     setSaveDialogOpen(false);
     setSnackbarSeverity('success');
     setSnackbarMessage(`Plan "${customPlanName}" successfully saved to browser local storage!`);
@@ -448,7 +451,11 @@ export function Planner() {
 
     const dataToSave = {
       project: updatedProject,
-      tasks
+      tasks,
+      vicHolidays: vicHolidaysList,
+      indiaHolidays: indiaHolidaysList,
+      vicHolidaysEnabled,
+      indiaHolidaysEnabled
     };
     const jsonString = JSON.stringify(dataToSave, null, 2);
     const blob = new Blob([jsonString], { type: 'application/json' });
@@ -470,18 +477,18 @@ export function Planner() {
     setSnackbarOpen(true);
   };
 
-  // Ref to track latest project & tasks for background auto-save
-  const latestDataRef = useRef({ project, tasks });
+  // Ref to track latest project, tasks & holiday state for background auto-save
+  const latestDataRef = useRef({ project, tasks, vicHolidaysList, indiaHolidaysList, vicHolidaysEnabled, indiaHolidaysEnabled });
   useEffect(() => {
-    latestDataRef.current = { project, tasks };
-  }, [project, tasks]);
+    latestDataRef.current = { project, tasks, vicHolidaysList, indiaHolidaysList, vicHolidaysEnabled, indiaHolidaysEnabled };
+  }, [project, tasks, vicHolidaysList, indiaHolidaysList, vicHolidaysEnabled, indiaHolidaysEnabled]);
 
   // Save draft locally to drafts/ folder
   const handleSaveDraft = async (isAutoSave = false) => {
     const now = new Date();
     const currentProj = latestDataRef.current.project;
     const currentTasks = latestDataRef.current.tasks;
-    
+
     // Skip saving if project name is empty or default
     if (!currentProj.name || currentProj.name.trim() === '' || currentProj.name === 'New Project Schedule') {
       if (!isAutoSave) {
@@ -497,7 +504,11 @@ export function Planner() {
 
     const dataToSave = {
       project: currentProj,
-      tasks: currentTasks
+      tasks: currentTasks,
+      vicHolidays: latestDataRef.current.vicHolidaysList,
+      indiaHolidays: latestDataRef.current.indiaHolidaysList,
+      vicHolidaysEnabled: latestDataRef.current.vicHolidaysEnabled,
+      indiaHolidaysEnabled: latestDataRef.current.indiaHolidaysEnabled
     };
 
     try {
@@ -664,6 +675,11 @@ export function Planner() {
       return;
     }
 
+    // Guard against duplicate concurrent generation requests (e.g. a fast double-click)
+    if (sowLoading) {
+      return;
+    }
+
     // Validate project name before generating SoW
     if (!project.name || project.name.trim() === '' || project.name === 'New Project Schedule') {
       setSnackbarSeverity('warning');
@@ -733,6 +749,11 @@ export function Planner() {
   };
 
   const handleRegenerateSoW = async () => {
+    // Guard against duplicate concurrent generation requests (e.g. a fast double-click)
+    if (sowLoading) {
+      return;
+    }
+
     // Validate project name before regenerating SoW
     if (!project.name || project.name.trim() === '' || project.name === 'New Project Schedule') {
       setSnackbarSeverity('warning');
@@ -800,6 +821,11 @@ export function Planner() {
   };
 
   const handleRegenerateWithMoreInfo = async (additionalInfo: string) => {
+    // Guard against duplicate concurrent generation requests (e.g. a fast double-click)
+    if (sowLoading) {
+      return;
+    }
+
     setSowLoading(true);
     setSowError(undefined);
     setSowNeedsMoreInfo(false);
@@ -987,7 +1013,8 @@ export function Planner() {
         valueGetter: (params: any) => {
           const hours = params.data?.estimatedHours || 0;
           const fte = params.data?.fte || 1;
-          return Math.round((hours / 8) * fte);
+          const days = Math.round(hours / 8); // matches displayed Est. Days
+          return Math.round(days * fte);
         },
         cellStyle: { textAlign: 'center', color: '#92400e', fontWeight: '600', backgroundColor: '#fffbeb' }
       },
@@ -1051,20 +1078,42 @@ export function Planner() {
           // Parse the edited value
           const strVal = String(params.newValue || '').trim();
           if (strVal === '') return params.oldValue;
-          
+
           const parsed = dayjs(strVal);
           if (parsed.isValid()) {
             return parsed.format('YYYY-MM-DD');
           }
           return params.oldValue; // Keep old value if invalid
         },
+        cellRenderer: (params: any) => {
+          const reason = params.data?.startDateShiftReason as string | undefined;
+          return (
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, height: '100%' }}>
+              <span>{params.value || ''}</span>
+              {reason && (
+                <Box
+                  component="span"
+                  title={reason}
+                  sx={{
+                    fontSize: '9px', fontWeight: 'bold', color: '#fff',
+                    bgcolor: '#F59E0B', borderRadius: '3px', px: '3px', lineHeight: '14px',
+                    cursor: 'help'
+                  }}
+                >
+                  H
+                </Box>
+              )}
+            </Box>
+          );
+        },
         cellStyle: (params: any) => {
           const hasManual = !!params.data?.manualStartDate;
+          const hasShift = !!params.data?.startDateShiftReason;
           return {
             textAlign: 'center',
-            color: hasManual ? '#1d4ed8' : '#1e293b',
-            fontWeight: hasManual ? '600' : 'normal',
-            backgroundColor: hasManual ? '#eff6ff' : 'transparent'
+            color: hasManual ? '#1d4ed8' : (hasShift ? '#92400e' : '#1e293b'),
+            fontWeight: hasManual || hasShift ? '600' : 'normal',
+            backgroundColor: hasManual ? '#eff6ff' : (hasShift ? '#fff7ed' : 'transparent')
           };
         }
       },
@@ -1526,6 +1575,7 @@ export function Planner() {
               size="small"
               onClick={handleGenerateSoW}
               color="secondary"
+              disabled={sowLoading}
             >
               {sowContent ? 'View SoW Draft' : 'SoW Draft'}
             </Button>
@@ -1697,14 +1747,6 @@ export function Planner() {
               Schedule Workspace
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'row', gap: 1 }}>
-              <Button
-                variant="outlined"
-                startIcon={<RefreshIcon />}
-                size="small"
-                onClick={() => recalculate()}
-              >
-                Force Recalculate
-              </Button>
               <Button
                 variant={vicHolidaysEnabled ? 'contained' : 'outlined'}
                 color="warning"

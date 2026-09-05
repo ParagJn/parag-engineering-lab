@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parag Engineering Lab — Interactive Mind Map</title>
+  
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="Visual graph-node mind map exploring the technology stacks, business benefits, and multi-agent frameworks of Parag Engineering Lab." />
+  <meta property="og:title" content="Parag Engineering Lab — Interactive Mind Map" />
+  <meta property="og:description" content="Explore system workflows and AI projects with an interactive force-directed graph." />
+  <meta name="theme-color" content="#080c14" />
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- D3.js via CDN -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+
+  <style>
+    /* ═══════════════════════════════════════════════════════════════
+       DESIGN SYSTEM & THEME TOKENS
+    ═══════════════════════════════════════════════════════════════ */
+    :root {
+      --bg-color: #080c14;
+      --surface-color: #111827;
+      --surface-glass: rgba(17, 24, 39, 0.75);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-highlight: rgba(96, 165, 250, 0.4);
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #475569;
+      
+      --accent-blue: #3b82f6;
+      --accent-purple: #8b5cf6;
+      --accent-sky: #0ea5e9;
+      --accent-teal: #14b8a6;
+      --accent-green: #10b981;
+      
+      --header-height: 64px;
+      --sidebar-width: 400px;
+      --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+    }
+
+    [data-theme="light"] {
+      --bg-color: #f8fafc;
+      --surface-color: #ffffff;
+      --surface-glass: rgba(255, 255, 255, 0.85);
+      --border-color: rgba(15, 23, 42, 0.08);
+      --border-highlight: rgba(37, 99, 235, 0.4);
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      
+      --accent-blue: #2563eb;
+      --accent-purple: #7c3aed;
+      --accent-sky: #0284c7;
+      --accent-teal: #0d9488;
+      --accent-green: #059669;
+      
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       BASE STYLES
+    ═══════════════════════════════════════════════════════════════ */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-primary);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       HEADER BAR
+    ═══════════════════════════════════════════════════════════════ */
+    header {
+      height: var(--header-height);
+      background-color: var(--surface-color);
+      border-bottom: 1px solid var(--border-color);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 100;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      transition: background-color 0.3s, border-color 0.3s;
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-container {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--accent-teal), var(--accent-blue));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 800;
+      font-size: 16px;
+    }
+
+    .brand-title h1 {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-title p {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 1px;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .search-box {
+      position: relative;
+      width: 280px;
+    }
+
+    .search-box input {
+      width: 100%;
+      background-color: var(--bg-color);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 8px 12px 8px 36px;
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 13px;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .search-box input:focus {
+      border-color: var(--accent-teal);
+      box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.15);
+    }
+
+    .search-box svg {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 16px;
+      height: 16px;
+      color: var(--text-secondary);
+      pointer-events: none;
+    }
+
+    .theme-toggle-btn {
+      background: none;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: all 0.2s;
+    }
+
+    .theme-toggle-btn:hover {
+      background-color: var(--bg-color);
+      color: var(--text-primary);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       MAIN LAYOUT
+    ═══════════════════════════════════════════════════════════════ */
+    .app-main {
+      flex: 1;
+      display: flex;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       MIND MAP CANVAS (D3.js)
+    ═══════════════════════════════════════════════════════════════ */
+    .canvas-container {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background-color: var(--bg-color);
+      cursor: grab;
+    }
+
+    .canvas-container:active {
+      cursor: grabbing;
+    }
+
+    #mindmap-svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* D3 graph custom elements styling */
+    .link {
+      fill: none;
+      stroke: var(--border-color);
+      stroke-width: 1.5px;
+      transition: stroke 0.3s, stroke-width 0.3s;
+    }
+
+    .node circle {
+      stroke-width: 2px;
+      cursor: pointer;
+      transition: r 0.25s ease, stroke-width 0.25s ease;
+    }
+
+    .node circle:hover {
+      stroke-width: 4px;
+    }
+
+    .node text {
+      font-size: 11px;
+      font-weight: 500;
+      fill: var(--text-primary);
+      font-family: inherit;
+      pointer-events: none;
+      transition: fill 0.3s;
+    }
+
+    /* Zoom and Center floating controls */
+    .viewport-controls {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background-color: var(--surface-glass);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 4px;
+      z-index: 10;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .viewport-btn {
+      background: none;
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .viewport-btn:hover {
+      background-color: rgba(255, 255, 255, 0.08);
+      color: var(--text-primary);
+    }
+
+    /* Dynamic states */
+    .node.dimmed, .link.dimmed {
+      opacity: 0.15;
+    }
+
+    .node.highlighted circle {
+      stroke: var(--accent-teal) !important;
+      stroke-width: 5px !important;
+      filter: drop-shadow(0 0 8px var(--accent-teal));
+    }
+
+    /* Hint text overlay */
+    .canvas-hint {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      background-color: var(--surface-glass);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 11px;
+      color: var(--text-secondary);
+      pointer-events: none;
+      box-shadow: var(--shadow-lg);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       SIDEBAR DETAILS PANEL
+    ═══════════════════════════════════════════════════════════════ */
+    .sidebar {
+      width: var(--sidebar-width);
+      background-color: var(--surface-color);
+      border-left: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      z-index: 20;
+      box-shadow: -6px 0 30px rgba(0, 0, 0, 0.25);
+      transition: background-color 0.3s, border-color 0.3s;
+    }
+
+    .sidebar-header {
+      padding: 24px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .sidebar-header h2 {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sidebar-header p {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .sidebar-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Custom Scrollbar for Sidebar */
+    .sidebar-content::-webkit-scrollbar {
+      width: 6px;
+    }
+    .sidebar-content::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .sidebar-content::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 4px;
+    }
+    .sidebar-content::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+
+    /* Detail panels styles */
+    .detail-type {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent-teal);
+      margin-bottom: 6px;
+    }
+
+    .detail-title {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 10px;
+      color: var(--text-primary);
+    }
+
+    .detail-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+
+    .tech-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .tech-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10.5px;
+      font-weight: 600;
+      padding: 3px 8px;
+      background-color: var(--bg-color);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: var(--text-secondary);
+    }
+
+    .sidebar-section-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 6px;
+      margin-bottom: 10px;
+    }
+
+    .benefit-item {
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      padding-left: 14px;
+      position: relative;
+      margin-bottom: 8px;
+    }
+
+    .benefit-item::before {
+      content: '•';
+      position: absolute;
+      left: 2px;
+      color: var(--accent-teal);
+      font-weight: bold;
+    }
+
+    .orchestration-box {
+      background-color: rgba(20, 184, 166, 0.03);
+      border: 1px solid rgba(20, 184, 166, 0.15);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .sidebar-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12.5px;
+      color: var(--text-primary);
+      text-decoration: none;
+      transition: color 0.2s;
+      margin-top: 8px;
+      width: fit-content;
+    }
+
+    .sidebar-link:hover {
+      color: var(--accent-teal);
+    }
+
+    /* Placeholder sidebar state */
+    .sidebar-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-muted);
+      text-align: center;
+      gap: 12px;
+      padding: 32px;
+    }
+
+    .sidebar-placeholder svg {
+      width: 48px;
+      height: 48px;
+      opacity: 0.3;
+    }
+
+    .sidebar-placeholder p {
+      font-size: 13px;
+      max-width: 24ch;
+      line-height: 1.5;
+    }
+
+    /* Legend */
+    .sidebar-legend {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border-color);
+      background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    .legend-title {
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+
+    .legend-rows {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10.5px;
+      color: var(--text-secondary);
+    }
+
+    .legend-color {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    /* Responsive collapses */
+    @media (max-width: 1024px) {
+      .sidebar {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div class="brand-section">
+      <div class="logo-container">M</div>
+      <div class="brand-title">
+        <h1>Parag Engineering Lab</h1>
+        <p>Interactive Codebase Mind Map</p>
+      </div>
+    </div>
+    
+    <div class="header-controls">
+      <!-- Search Input -->
+      <div class="search-box">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input type="text" id="search-input" placeholder="Search experiments or tech..." autocomplete="off">
+      </div>
+      
+      <!-- Theme Switcher -->
+      <button class="theme-toggle-btn" id="theme-toggle" title="Toggle Light/Dark Theme">
+        <svg id="moon-icon" style="width:18px;height:18px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+        <svg id="sun-icon" style="width:18px;height:18px;display:none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m2.828-9.9a5 5 0 11-7.07 7.07 5 5 0 017.07-7.07z" />
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN WORKSPACE -->
+  <div class="app-main">
+    
+    <!-- CANVAS -->
+    <div class="canvas-container" id="canvas-container">
+      <div class="canvas-hint">Click nodes to expand/collapse • Drag to arrange • Scroll to zoom</div>
+      <svg id="mindmap-svg"></svg>
+
+      <!-- Viewport Floating Controls -->
+      <div class="viewport-controls">
+        <button class="viewport-btn" id="zoom-in" title="Zoom In">
+          <svg style="width:16px;height:16px" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
+        <button class="viewport-btn" id="zoom-out" title="Zoom Out">
+          <svg style="width:16px;height:16px" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 12H4" />
+          </svg>
+        </button>
+        <button class="viewport-btn" id="zoom-reset" title="Fit to Screen">
+          <svg style="width:16px;height:16px" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18.2" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- SIDEBAR DETAILS PANEL -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h2>
+          <svg style="width:18px;height:18px" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Component Metadata
+        </h2>
+        <p>Select any experiment node to review its details</p>
+      </div>
+      
+      <div class="sidebar-content" id="sidebar-details">
+        <div class="sidebar-placeholder">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+          </svg>
+          <p>Click on any application or sub-category node in the graph map to view details.</p>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div class="sidebar-legend">
+        <div class="legend-title">Mind Map Legend</div>
+        <div class="legend-rows">
+          <div class="legend-item"><div class="legend-color" style="background:#e11d48"></div>Lab Hub</div>
+          <div class="legend-item"><div class="legend-color" style="background:#f59e0b"></div>Category Tiers</div>
+          <div class="legend-item"><div class="legend-color" style="background:#3b82f6"></div>Experiments</div>
+          <div class="legend-item"><div class="legend-color" style="background:#10b981"></div>Tech / Core Stack</div>
+          <div class="legend-item"><div class="legend-color" style="background:#8b5cf6"></div>Business Benefits</div>
+          <div class="legend-item"><div class="legend-color" style="background:#0ea5e9"></div>Orchestration</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- GRAPH DATA & FORCE SIMULATION -->
+  <script>
+    /* ═══════════════════════════════════════════════════════════════
+       HIERARCHICAL MIND MAP DATA
+    ═══════════════════════════════════════════════════════════════ */
+    const MINDMAP_DATA = {
+      name: "Parag Engineering Lab",
+      type: "root",
+      color: "#e11d48",
+      children: [
+        {
+          name: "Enterprise Orchestration",
+          type: "tier",
+          color: "#f59e0b",
+          children: [
+            {
+              name: "Agentic Procurement",
+              type: "project",
+              color: "#3b82f6",
+              desc: "Simulates complex buyer/supplier negotiations (Gemini Buyer vs. Claude Supplier) with live CPG stock checks, volume discounts, PO invoicing, and audit history.",
+              tech: ["FastAPI", "React 19", "TypeScript", "Tailwind v4", "JSON DB"],
+              benefits: ["Volume discount optimization", "Closes contract cycles faster", "Stock alerts replica Replenishment"],
+              orchestration: "Multi-Agent Conversational Negotiation Loop with Human-In-The-Loop (HITL)",
+              dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/Agentic-Procurement",
+              children: [
+                { name: "FastAPI / React 19 / JSON DB", type: "tech", color: "#10b981" },
+                { name: "Sourcing speed & compliance audits", type: "benefit", color: "#8b5cf6" },
+                { name: "Gemini / Claude negotiation loop (HITL)", type: "orchestration", color: "#0ea5e9" }
+              ]
+            },
+            {
+              name: "Strategy Analyzer",
+              type: "project",
+              color: "#3b82f6",
+              desc: "Automates consulting strategies parsing. Reviews PDF/DOCX/PPTX uploads across 4 agents using parallel pipelines and generates recommendation action maps.",
+              tech: ["FastAPI", "React 18", "Pillow", "LangChain", "python-docx/pptx"],
+              benefits: ["Due diligence acceleration", "Multiperspective challenge verification", "Actionable visual maps"],
+              orchestration: "Parallel Specialized Agents (Architecture, Cost, Validator) synthesized by a final Synthesizer agent",
+              dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/Strategy-Analyzer",
+              children: [
+                { name: "FastAPI / React 18 / Pillow", type: "tech", color: "#10b981" },
+                { name: "Accelerated due diligence & action maps", type: "benefit", color: "#8b5cf6" },
+                { name: "4-Agent consensus (Claude/Gemini/GPT)", type: "orchestration", color: "#0ea5e9" }
+              ]
+            },
+            {
+              name: "Project Schedule Tool",
+              type: "project",
+              color: "#3b82f6",
+              desc: "Task scheduling dashboard utilizing topological sorting to compile Gantt critical paths, triggering Claude via SAP AI Core to generate Statements of Work.",
+              tech: ["FastAPI", "React 19", "AG Grid", "ExcelJS", "python-docx"],
+              benefits: ["Automates task sequence dependency", "Generates RACI contract documents", "Live Gantt exports"],
+              orchestration: "Deterministic topological path calculation + Claude Statement of Work generator",
+              dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/Project-Schedule-Tool",
+              children: [
+                { name: "React 19 / AG Grid / ExcelJS", type: "tech", color: "#10b981" },
+                { name: "Topological Gantt paths & contract templates", type: "benefit", color: "#8b5cf6" },
+                { name: "Claude Statement of Work (SoW) writer", type: "orchestration", color: "#0ea5e9" }
+              ]
+            }
+          ]
+        },
+        {
+          name: "Content & Media Pipelines",
+          type: "tier",
+          color: "#f59e0b",
+          children: [
+            {
+              name: "Agentic Post Strategist",
+              type: "project",
+              color: "#3b82f6",
+              desc: "Content strategy workspace running Gemini and Claude in parallel to generate social hook formulas and 30-day content planners.",
+              tech: ["FastAPI", "React 18", "asyncio", "Tailwind CSS"],
+              benefits: ["High-volume post calendar generation", "Optimized hook structures", "Provider fallback routing"],
+              orchestration: "Parallel LLM execution with unified synthesis layers",
+              dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/Agentic-Post-Strategist",
+              children: [
+                { name: "FastAPI / React 18 / asyncio", type: "tech", color: "#10b981" },
+                { name: "30-Day social schedules & hooks generation", type: "benefit", color: "#8b5cf6" },
+                { name: "Gemini / Claude parallel execution", type: "orchestration", color: "#0ea5e9" }
+              ]
+            },
+            {
+              name: "Article Generator",
+              type: "project",
+              color: "#3b82f6",
+              desc: "Article writing pipeline converting input links to styled social posts, employing Claude to evaluate Gemini's text drafts.",
+              tech: ["FastAPI", "React 18", "SSE Streaming", "asyncio"],
+              benefits: ["Prevents drafting hallucinations", "Automatic editorial reviews", "SSE real-time streaming feedback"],
+              orchestration: "Critic-Generator loop retrying generation automatically below score thresholds",
+              dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/Article-Generator",
+              children: [
+                { name: "React 18 / SSE Streaming / asyncio", type: "tech", color: "#10b981" },
+                { name: "Fact check verification & SSE text streams", type: "benefit", color: "#8b5cf6" },
+                { name: "Gemini writer & Claude critic retry loop", type: "orchestration", color: "#0ea5e9" }
+              ]
+            },
+            {
+              name: "Daily Articles Pages",
+              type: "project",
+              color: "#3b82f6",
+              desc: "Automated daily tech newspaper compiler parsing news RSS feeds, summarizing with Gemini, and laying out magazine spreads via Claude Sonnet.",
+              tech: ["FastAPI", "React 19", "Playwright", "SMTP Mailer", "feedparser"],
+              benefits: ["Daily curation news blends", "Professional print-ready styles", "Automated email PDF deliveries"],
+              orchestration: "Map-Reduce pipeline (Gemini map summaries + Claude editorial newspaper styling layout)",
+              dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/Daily-Articles-Pages",
+              children: [
+                { name: "FastAPI / Playwright / feedparser", type: "tech", color: "#10b981" },
+                { name: "Aggregated news digests & PDF email lists", type: "benefit", color: "#8b5cf6" },
+                { name: "Gemini Flash summaries + Claude page styles", type: "orchestration", color: "#0ea5e9" }
+              ]
+            }
+          ]
+        },
+        {
+          name: "Career Intelligence",
+          type: "tier",
+          color: "#f59e0b",
+          children: [
+            {
+              name: "Interview Coach",
+              type: "project",
+              color: "#3b82f6",
+              desc: "Interview trainer simulating standard panel questions via SAP AI Core, evaluating responses using three distinct models simultaneously.",
+              tech: ["FastAPI", "React 18", "Recharts", "SAP AI Core proxy"],
+              benefits: ["Multi-perspective coaching scores", "Tailored company-aware questions", "Candidate tracking performance charts"],
+              orchestration: "Consensus evaluation scoring using parallel model gathers",
+              dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/Interview-Coach",
+              children: [
+                { name: "React 18 / Recharts / SAP AI Core", type: "tech", color: "#10b981" },
+                { name: "Multi-agent evaluations & scoring dashboards", type: "benefit", color: "#8b5cf6" },
+                { name: "Panel questions consensus (Gemini/Claude/GPT)", type: "orchestration", color: "#0ea5e9" }
+              ]
+            },
+            {
+              name: "Profile Generator",
+              type: "project",
+              color: "#3b82f6",
+              desc: "Resume builder parsing PDFs via Gemini and invoking Claude to output animated HTML templates, PDFs, and LinkedIn summaries.",
+              tech: ["FastAPI", "React 18", "pdfplumber", "Playwright", "SAP AI Core"],
+              benefits: ["Transforms text description to animated sites", "Automatic PDF exports", "Iterative request updates"],
+              orchestration: "Cascading model pipeline (Gemini extraction + Claude layout styling)",
+              dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/Profile-Generator",
+              children: [
+                { name: "FastAPI / React 18 / pdfplumber", type: "tech", color: "#10b981" },
+                { name: "Animated resume sites & LinkedIn updates", type: "benefit", color: "#8b5cf6" },
+                { name: "Gemini parser & Claude UI builder", type: "orchestration", color: "#0ea5e9" }
+              ]
+            },
+            {
+              name: "Profile Generator V2",
+              type: "project",
+              color: "#3b82f6",
+              desc: "ATS CV optimizer matching resume content to job requirements and highlighting vocabulary keyword gaps in real time.",
+              tech: ["FastAPI", "React 18", "google-genai", "Anthropic SDK"],
+              benefits: ["Hiring keywords alignment matching", "ATS scorecard assessments", "Dynamic HTML CV exports"],
+              orchestration: "Two-stage verification loop (Gemini analyzer + Claude copywriter)",
+              dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/Profile-Generator-V2",
+              children: [
+                { name: "React 18 / google-genai / Anthropic SDK", type: "tech", color: "#10b981" },
+                { name: "ATS keyword mapping & score tracking", type: "benefit", color: "#8b5cf6" },
+                { name: "Gemini researcher & Claude layout formatter", type: "orchestration", color: "#0ea5e9" }
+              ]
+            }
+          ]
+        },
+        {
+          name: "Data & DB Systems",
+          type: "tier",
+          color: "#f59e0b",
+          children: [
+            {
+              name: "Chat With Database",
+              type: "project",
+              color: "#3b82f6",
+              desc: "Natural language query engine connecting to SQL databases, running LangGraph ReAct agents to inspect schemas and run query metrics.",
+              tech: ["FastAPI", "React 19", "LangGraph", "SQLAlchemy", "PostgreSQL/MySQL"],
+              benefits: ["Conversational query analytics", "Automatic schema analysis mapping", "Markdown table formatter"],
+              orchestration: "LangGraph ReAct agent loop equipped with SQL inspection and execution tools",
+              dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/Chat-With-Database",
+              children: [
+                { name: "React 19 / LangGraph / SQLAlchemy", type: "tech", color: "#10b981" },
+                { name: "No-SQL conversational database requests", type: "benefit", color: "#8b5cf6" },
+                { name: "LangGraph ReAct DB schema tools agent", type: "orchestration", color: "#0ea5e9" }
+              ]
+            },
+            {
+              name: "VoltStream Energy Dashboard",
+              type: "project",
+              color: "#3b82f6",
+              desc: "Enterprise energy consumption auditor identifying database outliers and generating dynamic SVG data lineage diagrams.",
+              tech: ["FastAPI", "React 19", "Pandas", "Axios", "SAP AI Core"],
+              benefits: ["Trace anomalies root causes", "Cleans consumption data", "Visual lineage graphs audit"],
+              orchestration: "Outlier database validation + Gemini data quality diagnostics",
+              dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/Energy-Dashboard-Monitor",
+              children: [
+                { name: "React 19 / Pandas / SAP AI Core", type: "tech", color: "#10b981" },
+                { name: "Clean energy data & lineage traces", type: "benefit", color: "#8b5cf6" },
+                { name: "Gemini quality validator diagnostics", type: "orchestration", color: "#0ea5e9" }
+              ]
+            },
+            {
+              name: "Document Processor",
+              type: "project",
+              color: "#3b82f6",
+              desc: "Word document parser extracting hierarchical chunks along section headers, using Azure OpenAI Vision to index embedded charts.",
+              tech: ["FastAPI", "React 18", "python-docx", "Pillow", "Azure OpenAI"],
+              benefits: ["Chunk contexts mapped with header breadcrumbs", "Multi-modal OCR vision indexing", "Direct Milvus DB integration formats"],
+              orchestration: "Visual image processing + hierarchical chunking pipelines",
+              dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/document_processor",
+              children: [
+                { name: "React 18 / python-docx / Azure OpenAI", type: "tech", color: "#10b981" },
+                { name: "Hierarchical RAG chunks & diagram OCR", type: "benefit", color: "#8b5cf6" },
+                { name: "Azure vision OCR + embedding pipelines", type: "orchestration", color: "#0ea5e9" }
+              ]
+            }
+          ]
+        },
+        {
+          name: "Developer & Doc Utilities",
+          type: "tier",
+          color: "#f59e0b",
+          children: [
+            {
+              name: "Skills Generator",
+              type: "project",
+              color: "#3b82f6",
+              desc: "Developer toolkit converting descriptions to versioned agent SKILL.md configurations, syncing directly to local Claude Code CLI folders.",
+              tech: ["FastAPI", "Vanilla JS", "Anthropic SDK", "google-genai"],
+              benefits: ["Automates developer agent settings", "One-click test case validates behavior", "Instant CLI sync paths"],
+              orchestration: "Template-driven prompt engineering and validator script executions",
+              dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/Skills-Generator",
+              children: [
+                { name: "FastAPI / Vanilla JS / Anthropic SDK", type: "tech", color: "#10b981" },
+                { name: "Prompt configurations & Claude CLI sync", type: "benefit", color: "#8b5cf6" },
+                { name: "Template prompt parser & validation tests", type: "orchestration", color: "#0ea5e9" }
+              ]
+            },
+            {
+              name: "File Compare",
+              type: "project",
+              color: "#3b82f6",
+              desc: "Streamlit workbook comparison tool, converting page text to markdown, and running OCR on layout charts via Azure OpenAI Vision.",
+              tech: ["Streamlit", "Azure OpenAI", "pypdf", "python-docx"],
+              benefits: ["Section-by-section diff reports", "Diagram visual text conversions", "Fast markdown diff exports"],
+              orchestration: "OCR vision image text extraction + comparative evaluations",
+              dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/File-Compare",
+              children: [
+                { name: "Streamlit / Azure OpenAI / pypdf", type: "tech", color: "#10b981" },
+                { name: "Document comparisons & image text extracts", type: "benefit", color: "#8b5cf6" },
+                { name: "Comparative vision check OCR parsing", type: "orchestration", color: "#0ea5e9" }
+              ]
+            },
+            {
+              name: "md-to-docx Converter",
+              type: "project",
+              color: "#3b82f6",
+              desc: "Streamlit layout converter formatting Markdown text documents to business Word files, compiling Mermaid structures to embedded PNG shapes.",
+              tech: ["Streamlit", "python-docx", "markdown-it-py", "Pillow"],
+              benefits: ["Convert readmes to Word documents", "Embeds Mermaid diagrams inline", "ZIP batch downloads"],
+              orchestration: "Markdown parsing token tree parser + mermaid.ink API renderer",
+              dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/md-to-docx",
+              children: [
+                { name: "Streamlit / python-docx / Pillow", type: "tech", color: "#10b981" },
+                { name: "Word files layout formats & inline drawings", type: "benefit", color: "#8b5cf6" },
+                { name: "Mermaid layout parser wrapper scripts", type: "orchestration", color: "#0ea5e9" }
+              ]
+            },
+            {
+              name: "TalentFlow",
+              type: "project",
+              color: "#3b82f6",
+              desc: "Recruiting workbench database parsing resume text via regex filters and managing candidate channels inside local SQLite systems.",
+              tech: ["Vanilla JS", "SQLite", "Chart.js", "Python CGI"],
+              benefits: ["Funnel visualizations tracking", "SQLite local candidate registers", "Deterministic candidate evaluation"],
+              orchestration: "Regex matching algorithms + SQLite database tracking",
+              dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/TalentFlow",
+              children: [
+                { name: "Vanilla JS / SQLite / Chart.js / CGI", type: "tech", color: "#10b981" },
+                { name: "Hiring tracker & pipeline analytics charts", type: "benefit", color: "#8b5cf6" },
+                { name: "Regex parser & candidate funnel queries", type: "orchestration", color: "#0ea5e9" }
+              ]
+            }
+          ]
+        }
+      ]
+    };
+
+    /* ═══════════════════════════════════════════════════════════════
+       D3.js FORCE-DIRECTED GRAPH SETUP
+    ═══════════════════════════════════════════════════════════════ */
+    const containerEl = document.getElementById("canvas-container");
+    const svg = d3.select("#mindmap-svg");
+    const gContainer = svg.append("g");
+    
+    let width = containerEl.clientWidth;
+    let height = containerEl.clientHeight;
+    svg.attr("width", width).attr("height", height);
+
+    // Zoom setup
+    const zoom = d3.zoom()
+      .scaleExtent([0.1, 3])
+      .on("zoom", (event) => {
+        gContainer.attr("transform", event.transform);
+      });
+    svg.call(zoom);
+
+    // Color definitions per type
+    const colors = {
+      root: "#e11d48",
+      tier: "#f59e0b",
+      project: "#3b82f6",
+      tech: "#10b981",
+      benefit: "#8b5cf6",
+      orchestration: "#0ea5e9"
+    };
+
+    // Keep track of collapsed children
+    // Start with level 3 (metadata leaf nodes) collapsed by default for neatness
+    function collapseMetadata(d) {
+      if (d.children) {
+        if (d.data.type === "project") {
+          d._children = d.children;
+          d.children = null;
+        } else {
+          d.children.forEach(collapseMetadata);
+        }
+      }
+    }
+
+    const rootHierarchy = d3.hierarchy(MINDMAP_DATA);
+    rootHierarchy.descendants().forEach(d => {
+      d.id = d.data.name.replace(/\s+/g, "-").toLowerCase();
+    });
+    rootHierarchy.children.forEach(collapseMetadata);
+
+    let nodes = [];
+    let links = [];
+
+    // Force simulation setup
+    const simulation = d3.forceSimulation()
+      .force("link", d3.forceLink().id(d => d.id).distance(d => {
+        if (d.source.data.type === "root") return 150;
+        if (d.source.data.type === "tier") return 120;
+        return 75;
+      }).strength(0.85))
+      .force("charge", d3.forceManyBody().strength(d => {
+        if (d.data.type === "root") return -800;
+        if (d.data.type === "tier") return -400;
+        return -250;
+      }))
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force("collision", d3.forceCollide().radius(d => {
+        if (d.data.type === "root") return 65;
+        if (d.data.type === "tier") return 50;
+        if (d.data.type === "project") return 40;
+        return 30;
+      }))
+      .on("tick", ticked);
+
+    // Update diagram structure
+    function update() {
+      // Flatten hierarchy based on collapsed state
+      nodes = rootHierarchy.descendants();
+      links = rootHierarchy.links();
+
+      // Draw Links
+      const linkSelection = gContainer.selectAll(".link")
+        .data(links, d => `${d.source.id}-${d.target.id}`);
+
+      // Exit
+      linkSelection.exit().remove();
+
+      // Enter + Update
+      const linkEnter = linkSelection.enter()
+        .append("path")
+        .attr("class", "link");
+
+      const linkMerge = linkEnter.merge(linkSelection);
+
+      // Draw Nodes
+      const nodeSelection = gContainer.selectAll(".node")
+        .data(nodes, d => d.id);
+
+      // Exit
+      nodeSelection.exit().remove();
+
+      // Enter
+      const nodeEnter = nodeSelection.enter()
+        .append("g")
+        .attr("class", "node")
+        .call(d3.drag()
+          .on("start", dragstarted)
+          .on("drag", dragged)
+          .on("end", dragended))
+        .on("click", (event, d) => {
+          // Toggle expand/collapse on click
+          if (d.children) {
+            d._children = d.children;
+            d.children = null;
+          } else if (d._children) {
+            d.children = d._children;
+            d._children = null;
+          }
+          
+          // Select item
+          selectNode(d.data);
+          
+          update();
+          simulation.alpha(0.3).restart();
+          event.stopPropagation();
+        });
+
+      nodeEnter.append("circle")
+        .attr("r", d => {
+          if (d.data.type === "root") return 14;
+          if (d.data.type === "tier") return 10;
+          if (d.data.type === "project") return 8;
+          return 5;
+        })
+        .attr("fill", d => d.data.color || colors[d.data.type])
+        .attr("stroke", d => {
+          if (d.data.type === "root") return "rgba(255,255,255,0.4)";
+          return "transparent";
+        });
+
+      nodeEnter.append("text")
+        .attr("dy", d => d.data.type === "root" || d.data.type === "tier" ? "-16px" : "15px")
+        .attr("text-anchor", "middle")
+        .text(d => d.data.name);
+
+      const nodeMerge = nodeEnter.merge(nodeSelection);
+
+      // Update node styles based on search/state
+      nodeMerge.select("circle")
+        .attr("fill", d => d.data.color || colors[d.data.type])
+        .attr("r", d => {
+          if (d.data.type === "root") return 14;
+          if (d.data.type === "tier") return 10;
+          if (d.data.type === "project") return 8;
+          return 5;
+        });
+
+      // Bind node values in simulation
+      simulation.nodes(nodes);
+      simulation.force("link").links(links);
+      simulation.alpha(0.5).restart();
+    }
+
+    function ticked() {
+      // Connect curved paths between nodes
+      gContainer.selectAll(".link")
+        .attr("d", d => {
+          const dx = d.target.x - d.source.x;
+          const dy = d.target.y - d.source.y;
+          const dr = Math.sqrt(dx * dx + dy * dy) * 1.2; // curve factor
+          return `M${d.source.x},${d.source.y}A${dr},${dr} 0 0,1 ${d.target.x},${d.target.y}`;
+        });
+
+      gContainer.selectAll(".node")
+        .attr("transform", d => `translate(${d.x},${d.y})`);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       INTERACTION ACTIONS
+    ═══════════════════════════════════════════════════════════════ */
+    // Drag handlers
+    function dragstarted(event, d) {
+      if (!event.active) simulation.alphaTarget(0.3).restart();
+      d.fx = d.x;
+      d.fy = d.y;
+    }
+
+    function dragged(event, d) {
+      d.fx = event.x;
+      d.fy = event.y;
+    }
+
+    function dragended(event, d) {
+      if (!event.active) simulation.alphaTarget(0);
+      d.fx = null;
+      d.fy = null;
+    }
+
+    // Detail Panel Renderer
+    const sidebarDetails = document.getElementById("sidebar-details");
+    function selectNode(data) {
+      if (data.type !== "project") {
+        // Only render full detail panels for applications (projects)
+        sidebarDetails.innerHTML = `
+          <div class="detail-type">${data.type.toUpperCase()}</div>
+          <h2 class="detail-title">${data.name}</h2>
+          <p class="detail-desc">${data.desc || "Operational category mapping for this lab workbench tier."}</p>
+        `;
+        return;
+      }
+      
+      // Build tech tags
+      let tagsHtml = "";
+      data.tech.forEach(t => {
+        tagsHtml += `<span class="tech-tag">${t}</span>`;
+      });
+      
+      // Build benefit items
+      let benefitsHtml = "";
+      data.benefits.forEach(b => {
+        benefitsHtml += `<div class="benefit-item">${b}</div>`;
+      });
+
+      sidebarDetails.innerHTML = `
+        <div class="detail-type">APPLICATION EXPERIMENT</div>
+        <h2 class="detail-title">${data.name}</h2>
+        <p class="detail-desc">${data.desc}</p>
+        
+        <div class="sidebar-section-title">Technology Stack</div>
+        <div class="tech-tags">
+          ${tagsHtml}
+        </div>
+        
+        <div class="sidebar-section-title" style="margin-top: 20px;">Business Benefits</div>
+        <div>
+          ${benefitsHtml}
+        </div>
+        
+        <div class="sidebar-section-title" style="margin-top: 20px;">AI Orchestration Framework</div>
+        <div class="orchestration-box">
+          ${data.orchestration}
+        </div>
+        
+        <div class="sidebar-section-title" style="margin-top: 20px;">Workspace Code Resource</div>
+        <a href="${data.dir}" class="sidebar-link" target="_blank">
+          <svg style="width:14px;height:14px" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+          </svg>
+          Browse Directory Code
+        </a>
+      `;
+    }
+
+    // Search bar functionality
+    const searchInput = document.getElementById("search-input");
+    searchInput.addEventListener("input", (e) => {
+      const query = e.target.value.toLowerCase().trim();
+      
+      if (query === "") {
+        // Reset styles
+        gContainer.selectAll(".node").classList.remove("dimmed").classList.remove("highlighted");
+        gContainer.selectAll(".link").classList.remove("dimmed");
+        d3.selectAll(".node").classed("dimmed", false).classed("highlighted", false);
+        d3.selectAll(".link").classed("dimmed", false);
+        return;
+      }
+      
+      d3.selectAll(".node").each(function(d) {
+        const matchesName = d.data.name.toLowerCase().includes(query);
+        const matchesTech = d.data.tech && d.data.tech.some(t => t.toLowerCase().includes(query));
+        const matchesDesc = d.data.desc && d.data.desc.toLowerCase().includes(query);
+        
+        const isMatch = matchesName || matchesTech || matchesDesc;
+        
+        d3.select(this)
+          .classed("highlighted", isMatch)
+          .classed("dimmed", !isMatch);
+      });
+      
+      // Dim links connected to dimmed nodes
+      d3.selectAll(".link").each(function(d) {
+        const sourceMatch = d.source.data.name.toLowerCase().includes(query) || 
+                            (d.source.data.tech && d.source.data.tech.some(t => t.toLowerCase().includes(query)));
+        const targetMatch = d.target.data.name.toLowerCase().includes(query) || 
+                            (d.target.data.tech && d.target.data.tech.some(t => t.toLowerCase().includes(query)));
+        
+        d3.select(this).classed("dimmed", !(sourceMatch && targetMatch));
+      });
+    });
+
+    // Viewport actions
+    const zoomInBtn = document.getElementById("zoom-in");
+    const zoomOutBtn = document.getElementById("zoom-out");
+    const zoomResetBtn = document.getElementById("zoom-reset");
+    
+    zoomInBtn.addEventListener("click", () => {
+      svg.transition().duration(250).call(zoom.scaleBy, 1.3);
+    });
+    
+    zoomOutBtn.addEventListener("click", () => {
+      svg.transition().duration(250).call(zoom.scaleBy, 0.7);
+    });
+    
+    zoomResetBtn.addEventListener("click", () => {
+      svg.transition().duration(400).call(
+        zoom.transform,
+        d3.zoomIdentity.translate(width / 2, height / 2).scale(0.85).translate(-width/2, -height/2)
+      );
+    });
+
+    // Theme Switch
+    const themeToggle = document.getElementById("theme-toggle");
+    const sunIcon = document.getElementById("sun-icon");
+    const moonIcon = document.getElementById("moon-icon");
+    
+    themeToggle.addEventListener("click", () => {
+      const currentTheme = document.documentElement.getAttribute("data-theme");
+      const nextTheme = currentTheme === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", nextTheme);
+      
+      if (nextTheme === "light") {
+        sunIcon.style.display = "block";
+        moonIcon.style.display = "none";
+        document.querySelector('meta[name="theme-color"]').setAttribute("content", "#f8fafc");
+      } else {
+        sunIcon.style.display = "none";
+        moonIcon.style.display = "block";
+        document.querySelector('meta[name="theme-color"]').setAttribute("content", "#080c14");
+      }
+    });
+
+    // Screen resizing alignment
+    window.addEventListener("resize", () => {
+      width = containerEl.clientWidth;
+      height = containerEl.clientHeight;
+      svg.attr("width", width).attr("height", height);
+      simulation.force("center", d3.forceCenter(width / 2, height / 2));
+      simulation.alpha(0.3).restart();
+    });
+
+    // Init
+    update();
+    
+    // Initial center transform
+    svg.call(zoom.transform, d3.zoomIdentity.translate(width / 2 - 100, height / 2 - 10).scale(0.8));
+  </script>
+</body>
+</html>

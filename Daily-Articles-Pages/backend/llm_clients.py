@@ -56,7 +56,7 @@ class SapCompletionAgent:
             "AI-Resource-Group": self.settings.sap_resource_group,
             "Content-Type": "application/json",
         }
-        params: dict[str, Any] = {"max_tokens": max_tokens, "temperature": 0.2}
+        params: dict[str, Any] = {"max_tokens": max_tokens}
         if self.thinking:
             thinking: dict[str, Any] = {"type": self.settings.sap_thinking_mode}
             if self.settings.sap_thinking_mode == "enabled":

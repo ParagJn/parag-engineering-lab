@@ -133,7 +133,7 @@ def parse_pptx(path: Path) -> dict[str, Any]:
     for index, slide in enumerate(deck.slides, start=1):
         lines = []
         for shape in slide.shapes:
-            if hasattr(shape, "text") and shape.text:
+            if hasattr(shape, "text") and shape.text and shape.text.strip():
                 lines.append(shape.text.strip())
         title = lines[0].splitlines()[0][:80] if lines else f"Slide {index}"
         slides.append({"number": index, "title": title, "text": "\n".join(lines)})

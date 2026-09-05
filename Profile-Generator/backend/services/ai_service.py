@@ -1,8 +1,8 @@
 """
 AI Service — two-stage pipeline via SAP AI Core Generative AI Hub:
   Stage 1: gemini-2.5-pro  — extracts a structured profile JSON from raw document text.
-  Stage 2: anthropic--claude-4.6-opus — generates the final HTML outputs (CV + LinkedIn).
-  Stage 3: anthropic--claude-4.6-opus — refines existing outputs based on user feedback.
+  Stage 2: anthropic--claude-4.7-opus — generates the final HTML outputs (CV + LinkedIn).
+  Stage 3: anthropic--claude-4.7-opus — refines existing outputs based on user feedback.
 
 Authentication: OAuth 2.0 client-credentials flow → bearer token cached in-process.
 """
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────────────────────────
 
 _SAP_MODEL_GEMINI  = "gemini-2.5-pro"
-_SAP_MODEL_CLAUDE  = "anthropic--claude-4.6-opus"
+_SAP_MODEL_CLAUDE  = "anthropic--claude-4.7-opus"
 
 _sap_token_cache: dict = {"token": None, "expires_at": 0.0}
 
@@ -332,7 +332,7 @@ Output the complete HTML file starting with <!DOCTYPE html>. No code fences. No 
 
 
 async def generate_cv_outputs_with_claude(profile_data: dict) -> dict:
-    """Use anthropic--claude-4.6-opus (via SAP AI Core) to generate CV and LinkedIn HTML."""
+    """Use anthropic--claude-4.7-opus (via SAP AI Core) to generate CV and LinkedIn HTML."""
     profile_json = json.dumps(profile_data, indent=2)
 
     # Generate CV HTML
@@ -454,7 +454,7 @@ Output ONLY the complete updated HTML file starting with <!DOCTYPE html>. No cod
 async def refine_outputs_with_claude(
     profile_data: dict, cv_html: str, linkedin_html: str, instructions: str
 ) -> dict:
-    """Use anthropic--claude-4.6-opus (via SAP AI Core) to refine CV and LinkedIn HTML."""
+    """Use anthropic--claude-4.7-opus (via SAP AI Core) to refine CV and LinkedIn HTML."""
     profile_json = json.dumps(profile_data, indent=2)
 
     # Refine CV HTML
