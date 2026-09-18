@@ -1646,7 +1646,7 @@ export function Planner() {
       </Box>
 
       {/* Main Workspace Body */}
-      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', p: 3, gap: 2 }}>
+      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden', p: 3, gap: 2 }}>
         {/* 2. Project Details Banner (Compact, full width) */}
         <Accordion 
           expanded={expandedAccordions.details} 
@@ -1785,7 +1785,7 @@ export function Planner() {
         </Accordion>
 
         {/* 3. Split Screen task list and timeline */}
-        <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 2, overflow: 'hidden' }}>
+        <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 480, p: 2, overflow: 'hidden' }}>
           {/* Section Toolbar */}
           <Box sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="subtitle1" sx={{ fontWeight: '700', color: 'text.primary' }}>
@@ -1844,7 +1844,7 @@ export function Planner() {
                 onGridReady={onGrid1Ready}
                 onBodyScroll={onBodyScroll1}
                 animateRows={true}
-                headerHeight={48}
+                headerHeight={56}
                 rowHeight={38}
                 suppressDragLeaveHidesColumns={true}
               />
