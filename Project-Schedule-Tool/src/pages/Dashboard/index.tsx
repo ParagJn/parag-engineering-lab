@@ -15,7 +15,12 @@ import {
   TableHead,
   TableRow,
   Paper,
-  IconButton
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Tooltip
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -24,7 +29,9 @@ import {
   Delete as DeleteIcon,
   FolderOpen as FolderOpenIcon,
   AccessTime as AccessTimeIcon,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Archive as ArchiveIcon,
+  Unarchive as UnarchiveIcon
 } from '@mui/icons-material';
 import { useProjectStore } from '../../state/projectStore';
 import { useTaskStore } from '../../state/taskStore';
@@ -48,6 +55,8 @@ export function Dashboard() {
 
   const [savedPlans, setSavedPlans] = useState<any[]>([]);
   const [drafts, setDrafts] = useState<DraftPlan[]>([]);
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const [archivedDrafts, setArchivedDrafts] = useState<DraftPlan[]>([]);
 
   const fetchDrafts = async () => {
     try {
@@ -61,10 +70,67 @@ export function Dashboard() {
     }
   };
 
+  const fetchArchivedDrafts = async () => {
+    try {
+      const response = await fetch('/api/list-archive');
+      if (response.ok) {
+        const data = await response.json();
+        setArchivedDrafts(data);
+      }
+    } catch (e) {
+      console.error('Failed to fetch archived drafts:', e);
+    }
+  };
+
   useEffect(() => {
     setSavedPlans(storage.getPlans());
     fetchDrafts();
   }, []);
+
+  const handleOpenArchive = () => {
+    setArchiveOpen(true);
+    fetchArchivedDrafts();
+  };
+
+  const handleArchiveDraft = async (filename: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const response = await fetch('/api/archive-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename })
+      });
+      if (response.ok) {
+        fetchDrafts();
+      } else {
+        const data = await response.json().catch(() => ({}));
+        alert(data.error || 'Failed to archive draft.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error archiving draft.');
+    }
+  };
+
+  const handleUnarchiveDraft = async (filename: string) => {
+    try {
+      const response = await fetch('/api/unarchive-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename })
+      });
+      if (response.ok) {
+        fetchArchivedDrafts();
+        fetchDrafts();
+      } else {
+        const data = await response.json().catch(() => ({}));
+        alert(data.error || 'Failed to move draft back.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error moving draft back.');
+    }
+  };
 
   const handleOpenDraft = async (filename: string) => {
     try {
@@ -164,8 +230,16 @@ export function Dashboard() {
       }}
     >
       <Container maxWidth="lg">
-        {/* Settings Button - Top Right */}
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+        {/* Settings / Archive Buttons - Top Right */}
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, mb: 2 }}>
+          <Button
+            variant="outlined"
+            startIcon={<UnarchiveIcon />}
+            onClick={handleOpenArchive}
+            sx={{ borderRadius: 2 }}
+          >
+            View Archive
+          </Button>
           <Button
             variant="outlined"
             startIcon={<SettingsIcon />}
@@ -433,6 +507,15 @@ export function Dashboard() {
                         >
                           Open Draft
                         </Button>
+                        <Tooltip title="Archive">
+                          <IconButton
+                            color="warning"
+                            size="small"
+                            onClick={(e) => handleArchiveDraft(draft.filename, e)}
+                          >
+                            <ArchiveIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
                         <IconButton
                           color="error"
                           size="small"
@@ -448,6 +531,60 @@ export function Dashboard() {
             </TableContainer>
           </Box>
         )}
+
+        {/* Archived Projects Dialog */}
+        <Dialog open={archiveOpen} onClose={() => setArchiveOpen(false)} maxWidth="md" fullWidth>
+          <DialogTitle sx={{ fontWeight: '700' }}>Archived Projects</DialogTitle>
+          <DialogContent>
+            {archivedDrafts.length > 0 ? (
+              <TableContainer component={Paper} sx={{ boxShadow: 'none', border: '1px solid rgba(0,0,0,0.08)' }}>
+                <Table>
+                  <TableHead sx={{ bgcolor: '#f1f5f9' }}>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: '700' }}>Project Name</TableCell>
+                      <TableCell sx={{ fontWeight: '700' }}>Customer</TableCell>
+                      <TableCell sx={{ fontWeight: '700' }}>Last Saved</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: '700', pr: 4 }}>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {archivedDrafts.map((draft) => (
+                      <TableRow key={draft.filename} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                        <TableCell sx={{ fontWeight: '600' }}>{draft.name}</TableCell>
+                        <TableCell>{draft.customer}</TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', flexDirection: 'row', gap: 1, alignItems: 'center' }}>
+                            <AccessTimeIcon fontSize="inherit" color="action" />
+                            <Typography variant="body2">
+                              {new Date(draft.lastSaved).toLocaleString()}
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell align="right" sx={{ pr: 3 }}>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<UnarchiveIcon />}
+                            onClick={() => handleUnarchiveDraft(draft.filename)}
+                          >
+                            Move to Draft
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            ) : (
+              <Typography color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
+                No archived projects.
+              </Typography>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setArchiveOpen(false)}>Close</Button>
+          </DialogActions>
+        </Dialog>
 
         {/* Quick Instructions section */}
         <Box
