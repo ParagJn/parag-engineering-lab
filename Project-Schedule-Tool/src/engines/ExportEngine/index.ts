@@ -448,6 +448,36 @@ export async function exportProjectToExcel(
     });
   });
 
+  // 10. Totals Row (sum Est. Hours, Est. Days, Est. Weeks, Man Days across all task rows)
+  const totalsRowIdx = currentRow;
+  const firstDataRow = 8;
+  const lastDataRow = currentRow - 1;
+  const totalsTopBorder = { top: { style: 'medium', color: { argb: 'FF366092' } } } as ExcelJS.Borders;
+
+  const totalsLabelCell = worksheet.getCell(totalsRowIdx, 8);
+  totalsLabelCell.value = 'Total';
+  totalsLabelCell.font = { name: fontName, size: 11, bold: true };
+  totalsLabelCell.alignment = { horizontal: 'right' };
+  totalsLabelCell.border = totalsTopBorder;
+
+  const totalsCols = [9, 10, 11, 13]; // I: Est. Hours, J: Est. Days, K: Est. Weeks, M: Man Days
+  totalsCols.forEach(colIdx => {
+    const colLetter = getColumnLetter(colIdx);
+    const cell = worksheet.getCell(totalsRowIdx, colIdx);
+    cell.value = { formula: `=SUM(${colLetter}${firstDataRow}:${colLetter}${lastDataRow})` };
+    cell.font = { name: fontName, size: 11, bold: true };
+    cell.numFmt = '#,##0';
+    cell.alignment = { horizontal: 'center' };
+    cell.border = totalsTopBorder;
+  });
+
+  // Extend the top border across the remaining grid columns for a clean full-width rule
+  [7, 12, 14, 15, 16].forEach(colIdx => {
+    worksheet.getCell(totalsRowIdx, colIdx).border = totalsTopBorder;
+  });
+
+  currentRow++;
+
   // Freeze Panes (Freeze columns A-P, and rows 1-7)
   worksheet.views = [
     {
