@@ -1115,6 +1115,25 @@ def _build_isbd_presentation(
     return output
 
 
+def _save_isbd_draft(project_name: str, data: Dict[str, Any]) -> None:
+    """Persist the parsed ISBD content as JSON so it can be inspected or reused
+    without re-running the AI calls. Non-fatal if it fails."""
+    try:
+        backend_dir = Path(__file__).parent
+        drafts_dir = backend_dir.parent / "drafts"
+        drafts_dir.mkdir(exist_ok=True)
+
+        sanitized_name = project_name.replace(' ', '_').replace('/', '_').replace('\\', '_')
+        filepath = drafts_dir / f"isbd_draft_{sanitized_name}.json"
+
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+
+        logger.info(f"ISBD draft saved: {filepath}")
+    except Exception as e:
+        logger.warning(f"Failed to save ISBD draft JSON: {e}")
+
+
 @app.post("/generate/isbd")
 async def generate_isbd(request: ISBDGenerationRequest):
     """
@@ -1149,6 +1168,18 @@ async def generate_isbd(request: ISBDGenerationRequest):
         diagram_png = None
         if mermaid_text:
             diagram_png = await loop.run_in_executor(None, _render_mermaid_to_png, mermaid_text)
+
+        _save_isbd_draft(request.project_name, {
+            "project_name": request.project_name,
+            "customer": request.customer,
+            "timestamp": datetime.now().isoformat(),
+            "approach_bullets": approach_bullets,
+            "scope_bullets": scope_bullets,
+            "mermaid": mermaid_text,
+            "assumptions": assumptions,
+            "dependencies": dependencies,
+            "risks": risks,
+        })
 
         pptx_stream = _build_isbd_presentation(
             approach_bullets=approach_bullets,
