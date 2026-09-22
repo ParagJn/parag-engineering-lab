@@ -3,19 +3,20 @@
 import json
 
 from config import get_settings
-from llm_clients import SapCompletionAgent
+from llm_clients import build_agent
 
 
-async def generate_linkedin_posts(stories: list[dict]) -> list[dict]:
+async def generate_linkedin_posts(stories: list[dict], provider: str = "ibm_ica") -> list[dict]:
     """Generate a LinkedIn-ready post for each story.
 
     Returns a list of dicts with keys: index, headline, post.
     """
     settings = get_settings()
-    agent = SapCompletionAgent(settings, "linkedin", settings.sap_anthropic_model)
+    agent = build_agent(settings, "linkedin", "claude", provider)
 
     if not agent.configured:
-        raise ValueError("SAP AI Core is not configured — check SAP_* env vars")
+        label = "SAP AI Core" if provider == "sap" else "IBM ICA"
+        raise ValueError(f"{label} is not configured — check the relevant env vars")
 
     # Build a compact stories payload to keep token usage manageable
     stories_input = []
@@ -76,7 +77,8 @@ Return ONLY valid JSON — an array of exactly {n} objects with NO additional ke
   ...
 ]"""
 
-    result = await agent.complete(system="", user=prompt, max_tokens=6000)
+    max_tokens = 6000 if provider == "sap" else 12000
+    result = await agent.complete(system="", user=prompt, max_tokens=max_tokens)
     response_text = result.content
 
     # Strip markdown code fences if present
@@ -85,12 +87,12 @@ Return ONLY valid JSON — an array of exactly {n} objects with NO additional ke
         response_text = response_text.rsplit("```", 1)[0]
 
     try:
-        posts = json.loads(response_text)
+        posts = json.loads(response_text, strict=False)
     except json.JSONDecodeError:
         start = response_text.find("[")
         end = response_text.rfind("]") + 1
         if start != -1 and end > start:
-            posts = json.loads(response_text[start:end])
+            posts = json.loads(response_text[start:end], strict=False)
         else:
             raise ValueError("Failed to parse LinkedIn posts from Claude response")
 

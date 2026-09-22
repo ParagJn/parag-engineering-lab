@@ -156,7 +156,16 @@ function App() {
   const [linkedinExporting, setLinkedinExporting] = useState(false)
   const [linkedinTitle, setLinkedinTitle] = useState('Morning Edition')
   const [copiedIndex, setCopiedIndex] = useState(null)
+  const [provider, setProvider] = useState(() => localStorage.getItem('modelProvider') || 'ibm_ica')
   const iframeRef = useRef(null)
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('modelProvider', provider)
+    } catch {
+      // ignore (e.g. private browsing / storage disabled)
+    }
+  }, [provider])
 
   // Load sources + archive on mount
   useEffect(() => {
@@ -206,7 +215,7 @@ function App() {
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source_ids: sourceIds }),
+        body: JSON.stringify({ source_ids: sourceIds, provider }),
       })
 
       clearInterval(interval)
@@ -371,7 +380,7 @@ function App() {
     setLinkedinError(null)
     setLinkedinLoading(true)
     try {
-      const resp = await fetch(`/api/linkedin-posts/${currentArchiveEntry.filename}`)
+      const resp = await fetch(`/api/linkedin-posts/${currentArchiveEntry.filename}?provider=${provider}`)
       if (!resp.ok) {
         const err = await resp.json()
         throw new Error(err.detail || 'Failed to generate LinkedIn posts')
@@ -624,6 +633,37 @@ function App() {
                   </button>
                 )
               })}
+            </div>
+
+            {/* Model Provider Settings */}
+            <div className="flex items-center gap-3 mb-5">
+              <span className="text-xs font-semibold text-stone-500 uppercase tracking-widest">
+                Model Provider
+              </span>
+              <div role="radiogroup" aria-label="Model Provider" className="flex gap-2">
+                {[
+                  { id: 'ibm_ica', label: 'IBM ICA Models' },
+                  { id: 'sap', label: 'SAP Models' },
+                ].map(opt => (
+                  <button
+                    key={opt.id}
+                    role="radio"
+                    aria-checked={provider === opt.id}
+                    onClick={() => !loading && setProvider(opt.id)}
+                    disabled={loading}
+                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition-all duration-200 cursor-pointer disabled:opacity-50 ${
+                      provider === opt.id
+                        ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
+                        : 'bg-stone-50 border-stone-200 text-stone-500 hover:border-stone-300 hover:text-stone-700'
+                    }`}
+                  >
+                    <span className={`w-2.5 h-2.5 rounded-full border ${
+                      provider === opt.id ? 'border-indigo-500 bg-indigo-500' : 'border-stone-300'
+                    }`} />
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="flex items-center gap-4">

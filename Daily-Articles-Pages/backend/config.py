@@ -19,6 +19,11 @@ class Settings(BaseSettings):
     sap_thinking_mode: str = "adaptive"
     sap_thinking_budget_tokens: int = 12000
 
+    ibm_ica_endpoint: str = ""
+    ibm_ica_api_key: str = ""
+    ibm_ica_model_id: str = "claude-sonnet-5"
+    ibm_ica_gemini_model_id: str = ""
+
     model_config = SettingsConfigDict(
         env_file=str(_ENV_FILE),
         env_file_encoding="utf-8",

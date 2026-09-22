@@ -4,7 +4,7 @@ import httpx
 import feedparser
 
 from config import get_settings
-from llm_clients import SapCompletionAgent
+from llm_clients import build_agent
 
 
 async def fetch_rss_stories(feed_url: str, limit: int = 30) -> list[dict]:
@@ -28,10 +28,12 @@ async def fetch_rss_stories(feed_url: str, limit: int = 30) -> list[dict]:
     return stories
 
 
-async def enrich_stories_with_gemini(stories: list[dict], source_name: str) -> list[dict]:
-    """Use SAP Gemini to search for additional context on each story."""
+async def enrich_stories_with_gemini(
+    stories: list[dict], source_name: str, provider: str = "ibm_ica"
+) -> list[dict]:
+    """Use Gemini (via IBM ICA or SAP AI Core) to search for additional context on each story."""
     settings = get_settings()
-    agent = SapCompletionAgent(settings, "enricher", settings.sap_gemini_model)
+    agent = build_agent(settings, "enricher", "gemini", provider)
 
     if not agent.configured:
         return stories
@@ -56,12 +58,13 @@ Return exactly 10 stories."""
 
     import json
     try:
-        result = await agent.complete(system="", user=prompt, max_tokens=4000)
+        max_tokens = 4000 if provider == "sap" else 8000
+        result = await agent.complete(system="", user=prompt, max_tokens=max_tokens)
         text = result.content.strip()
         if text.startswith("```"):
             text = text.split("\n", 1)[1]
             text = text.rsplit("```", 1)[0]
-        enriched = json.loads(text)
+        enriched = json.loads(text, strict=False)
     except Exception:
         enriched = []
 

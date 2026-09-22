@@ -45,6 +45,7 @@ async def list_sources():
 
 class GenerateRequest(BaseModel):
     source_ids: list[str]
+    provider: str = "ibm_ica"
 
 
 @app.post("/api/generate")
@@ -84,11 +85,11 @@ async def generate_magazine(req: GenerateRequest):
         combined_source = " + ".join(source_names)
 
         # Step 2: Enrich with Gemini (search & categorize)
-        enriched = await enrich_stories_with_gemini(all_stories, combined_source)
+        enriched = await enrich_stories_with_gemini(all_stories, combined_source, req.provider)
 
         # Step 3: Curate with Anthropic Claude
         edition_date = datetime.now().strftime("%A, %B %d, %Y")
-        magazine_data = await curate_magazine(enriched, combined_source, edition_date)
+        magazine_data = await curate_magazine(enriched, combined_source, edition_date, req.provider)
 
         # Step 4: Render HTML
         html = generate_magazine_html(magazine_data, combined_source)
@@ -203,7 +204,7 @@ async def clear_archive():
 
 
 @app.get("/api/linkedin-posts/{filename}")
-async def get_linkedin_posts(filename: str):
+async def get_linkedin_posts(filename: str, provider: str = "ibm_ica"):
     """Generate LinkedIn posts for all stories in an archived magazine."""
     safe_name = os.path.basename(filename)
     if not safe_name.endswith(".html"):
@@ -223,7 +224,7 @@ async def get_linkedin_posts(filename: str):
         )
 
     try:
-        posts = await generate_linkedin_posts(stories)
+        posts = await generate_linkedin_posts(stories, provider)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
