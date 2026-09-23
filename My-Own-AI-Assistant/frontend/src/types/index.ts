@@ -13,11 +13,14 @@ export interface MessageAttachment {
   filename: string;
 }
 
+export type ModelProvider = 'claude' | 'gemini';
+
 export interface Session {
   session_id: string;
   created_at: string;
   updated_at: string;
   title: string;
+  model: ModelProvider;
   messages: Message[];
   attachment_ids: string[];
 }
@@ -27,6 +30,12 @@ export interface SessionListItem {
   title: string;
   created_at: string;
   updated_at: string;
+  model: ModelProvider;
+}
+
+export interface UpdateSessionRequest {
+  title?: string;
+  model?: ModelProvider;
 }
 
 export interface Attachment {
@@ -36,6 +45,7 @@ export interface Attachment {
   size_bytes: number;
   status: 'uploaded' | 'processing' | 'ready' | 'failed';
   markdown_available: boolean;
+  image_count: number;
 }
 
 export interface MessageRequest {

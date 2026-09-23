@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ChatWindow } from './components/ChatWindow';
 import { apiService } from './services/api';
-import type { Session, SessionListItem } from './types';
+import type { ModelProvider, Session, SessionListItem } from './types';
 
 function App() {
   const [sessions, setSessions] = useState<SessionListItem[]>([]);
@@ -89,6 +89,21 @@ function App() {
     }
   };
 
+  const handleModelChange = async (model: ModelProvider) => {
+    if (!currentSession) return;
+
+    // Optimistic update so the dropdown feels immediate
+    setCurrentSession({ ...currentSession, model });
+
+    try {
+      await apiService.updateSession(currentSession.session_id, { model });
+      await loadSessions();
+    } catch (err) {
+      console.error('Failed to update model:', err);
+      setError('Failed to update model');
+    }
+  };
+
   const handleSendMessage = async (content: string, files: File[]) => {
     if (!currentSession) return;
 
@@ -136,11 +151,8 @@ function App() {
 
       <div className="flex-1 flex flex-col">
         {error && (
-          <div className="px-6 py-4 google-border-accent" style={{ backgroundColor: '#fef7f7', borderLeftColor: '#EA4335' }}>
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">⚠️</span>
-              <p className="text-gray-800 font-medium">{error}</p>
-            </div>
+          <div className="px-6 py-3 bg-red-50 border-b border-red-100">
+            <p className="text-sm text-red-700">{error}</p>
           </div>
         )}
 
@@ -149,28 +161,19 @@ function App() {
             messages={currentSession.messages}
             onSendMessage={handleSendMessage}
             isLoading={isLoading}
+            model={currentSession.model}
+            onModelChange={handleModelChange}
           />
         ) : (
-          <div className="flex-1 flex items-start justify-start bg-gray-50 p-6">
-            <div className="text-left w-full">
-              <div className="mb-8">
-                <h1 className="text-6xl font-light mb-6 bg-gradient-to-r from-blue-600 via-red-500 via-yellow-500 to-green-600 bg-clip-text text-transparent">
-                  AI Assistant
-                </h1>
-                <p className="text-lg text-gray-600 mb-8">Your personal AI companion for technical work and document analysis</p>
-              </div>
-              <button
-                onClick={handleNewSession}
-                className="px-8 py-4 text-base font-medium rounded-full shadow-lg hover:shadow-xl transition-all google-border-subtle"
-                style={{ 
-                  background: 'linear-gradient(135deg, #4285F4, #EA4335)',
-                  color: 'white'
-                }}
-              >
-                <span className="mr-2">✨</span>
-                Start a Conversation
-              </button>
-            </div>
+          <div className="flex-1 flex flex-col items-center justify-center bg-white px-6">
+            <h1 className="text-3xl font-normal text-gray-900 mb-3">AI Assistant</h1>
+            <p className="text-gray-500 mb-8">Your personal assistant for technical work and document analysis</p>
+            <button
+              onClick={handleNewSession}
+              className="px-5 py-2.5 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              Start a conversation
+            </button>
           </div>
         )}
       </div>

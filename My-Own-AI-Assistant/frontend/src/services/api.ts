@@ -7,6 +7,7 @@ import type {
   MessageRequest,
   ChatResponse,
   Attachment,
+  UpdateSessionRequest,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -37,6 +38,10 @@ export const apiService = {
 
   async deleteSession(sessionId: string): Promise<void> {
     await api.delete(`/sessions/${sessionId}`);
+  },
+
+  async updateSession(sessionId: string, request: UpdateSessionRequest): Promise<void> {
+    await api.patch(`/sessions/${sessionId}`, request);
   },
 
   async renameSession(sessionId: string, newTitle: string): Promise<void> {

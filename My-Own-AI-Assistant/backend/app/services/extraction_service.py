@@ -5,16 +5,29 @@ from pathlib import Path
 from typing import Protocol
 
 
+class ExtractedImage:
+    """An image extracted from a document."""
+
+    def __init__(self, data: bytes, mime_type: str, filename: str):
+        self.data = data
+        self.mime_type = mime_type
+        self.filename = filename
+
+
 class DocumentExtractor(Protocol):
     """Protocol for document extractors."""
-    
+
     def supports(self, mime_type: str, filename: str) -> bool:
         """Check if extractor supports this file type."""
         ...
-    
+
     def extract(self, path: Path) -> str:
         """Extract text content from file."""
         ...
+
+    def extract_images(self, path: Path) -> list[ExtractedImage]:
+        """Extract embedded images from file. Default: none."""
+        return []
 
 
 class TextExtractor:
@@ -63,6 +76,26 @@ class PDFExtractor:
         except Exception as e:
             return f"Error extracting PDF: {str(e)}"
 
+    def extract_images(self, path: Path) -> list[ExtractedImage]:
+        """Extract embedded images from PDF pages."""
+        images: list[ExtractedImage] = []
+        try:
+            import PyPDF2
+
+            with open(path, "rb") as f:
+                reader = PyPDF2.PdfReader(f)
+                for page_num, page in enumerate(reader.pages, 1):
+                    page_images = getattr(page, "images", [])
+                    for img_num, image in enumerate(page_images, 1):
+                        mime_type = mimetypes.guess_type(image.name)[0] or "image/png"
+                        filename = f"page{page_num}_image{img_num}_{image.name}"
+                        images.append(ExtractedImage(image.data, mime_type, filename))
+        except Exception:
+            # If image extraction fails, just skip images rather than failing the whole upload.
+            return images
+
+        return images
+
 
 class DocxExtractor:
     """Extractor for DOCX files."""
@@ -87,6 +120,28 @@ class DocxExtractor:
         except Exception as e:
             return f"Error extracting DOCX: {str(e)}"
 
+    def extract_images(self, path: Path) -> list[ExtractedImage]:
+        """Extract embedded images from a DOCX file's relationships."""
+        images: list[ExtractedImage] = []
+        try:
+            import docx
+
+            doc = docx.Document(path)
+            img_num = 0
+            for rel in doc.part.rels.values():
+                if "image" not in rel.reltype:
+                    continue
+                img_num += 1
+                image_part = rel.target_part
+                mime_type = image_part.content_type or "image/png"
+                ext = mimetypes.guess_extension(mime_type) or ".png"
+                filename = f"image{img_num}{ext}"
+                images.append(ExtractedImage(image_part.blob, mime_type, filename))
+        except Exception:
+            return images
+
+        return images
+
 
 class ExtractionService:
     """Service for extracting content from various file types."""
@@ -99,34 +154,50 @@ class ExtractionService:
             DocxExtractor(),
         ]
     
-    def extract_to_markdown(self, file_path: Path, mime_type: str) -> str:
+    def extract_to_markdown(self, file_path: Path, mime_type: str, image_count: int = 0) -> str:
         """
         Extract content from a file and convert to Markdown.
-        
+
         Args:
             file_path: Path to the file
             mime_type: MIME type of the file
-            
+            image_count: Number of embedded images found (for a note in the markdown)
+
         Returns:
             Markdown-formatted content
         """
         filename = file_path.name
-        
+
         # Find appropriate extractor
         for extractor in self.extractors:
             if extractor.supports(mime_type, filename):
                 content = extractor.extract(file_path)
-                
+
                 # Wrap in Markdown structure
                 markdown = f"# {filename}\n\n"
                 markdown += f"**Type:** {mime_type}\n\n"
                 markdown += "---\n\n"
                 markdown += content
-                
+
+                if image_count:
+                    markdown += (
+                        f"\n\n---\n\n## Embedded Images\n\n"
+                        f"This document contains {image_count} embedded image(s), attached "
+                        f"separately below for visual analysis."
+                    )
+
                 return markdown
-        
+
         # No extractor found
         return f"# {filename}\n\n**Type:** {mime_type}\n\nNo extractor available for this file type."
+
+    def extract_images(self, file_path: Path, mime_type: str) -> list[ExtractedImage]:
+        """Extract embedded images from a file, if the matching extractor supports it."""
+        filename = file_path.name
+        for extractor in self.extractors:
+            if extractor.supports(mime_type, filename):
+                return extractor.extract_images(file_path)
+        return []
 
 
 # Singleton instance

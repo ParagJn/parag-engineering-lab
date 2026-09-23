@@ -14,5 +14,6 @@ class Session(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     title: str = Field(default="New conversation", description="Session title")
+    model: str = Field(default="claude", description="Model provider: claude or gemini")
     messages: list[Message] = Field(default_factory=list)
     attachment_ids: list[str] = Field(default_factory=list)

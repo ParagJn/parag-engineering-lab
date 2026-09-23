@@ -1,5 +1,6 @@
 """Attachment service for file management."""
 
+import base64
 import mimetypes
 import shutil
 import uuid
@@ -7,7 +8,7 @@ from pathlib import Path
 from typing import BinaryIO, Optional
 
 from ..config import config
-from ..models import Attachment, AttachmentStatus
+from ..models import Attachment, AttachmentImage, AttachmentStatus
 from ..repositories import AttachmentRepository
 from .extraction_service import get_extraction_service
 
@@ -53,7 +54,8 @@ class AttachmentService:
         
         # Validate file size
         if size_bytes > config.MAX_FILE_SIZE:
-            raise ValueError(f"File size exceeds maximum allowed size")
+            max_mb = config.MAX_FILE_SIZE / (1024 * 1024)
+            raise ValueError(f"File size exceeds the maximum allowed size of {max_mb:.0f}MB")
         
         # Get storage paths
         stored_path = self.repository.get_file_path(attachment_id, filename)
@@ -89,20 +91,42 @@ class AttachmentService:
             attachment.status = AttachmentStatus.PROCESSING
             self.repository.update(attachment)
             
-            # Extract content
+            # Extract embedded images first, so the markdown can note how many were found
             file_path = Path(attachment.stored_path)
-            markdown_content = self.extraction_service.extract_to_markdown(
+            extracted_images = self.extraction_service.extract_images(
                 file_path,
                 attachment.mime_type,
             )
-            
+
+            images: list[AttachmentImage] = []
+            for image in extracted_images:
+                image_path = self.repository.get_image_path(attachment.attachment_id, image.filename)
+                image_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(image_path, "wb") as f:
+                    f.write(image.data)
+                images.append(
+                    AttachmentImage(
+                        filename=image.filename,
+                        mime_type=image.mime_type,
+                        stored_path=str(image_path),
+                    )
+                )
+
+            # Extract text content
+            markdown_content = self.extraction_service.extract_to_markdown(
+                file_path,
+                attachment.mime_type,
+                image_count=len(images),
+            )
+
             # Save markdown
             markdown_path = self.repository.get_content_markdown_path(attachment.attachment_id)
             with open(markdown_path, "w", encoding="utf-8") as f:
                 f.write(markdown_content)
-            
+
             # Update attachment
             attachment.content_markdown_path = str(markdown_path)
+            attachment.images = images
             attachment.status = AttachmentStatus.READY
             self.repository.update(attachment)
             
@@ -130,6 +154,26 @@ class AttachmentService:
         with open(markdown_path, "r", encoding="utf-8") as f:
             return f.read()
     
+    def get_attachment_images(self, attachment_id: str) -> list[dict]:
+        """Get base64-encoded image data for an attachment, for vision analysis."""
+        attachment = self.repository.get(attachment_id)
+        if not attachment or not attachment.images:
+            return []
+
+        images = []
+        for image in attachment.images:
+            image_path = Path(image.stored_path)
+            if not image_path.exists():
+                continue
+            with open(image_path, "rb") as f:
+                data = base64.b64encode(f.read()).decode("ascii")
+            images.append({
+                "filename": image.filename,
+                "mime_type": image.mime_type,
+                "data": data,
+            })
+        return images
+
     def _generate_attachment_id(self) -> str:
         """Generate a unique attachment ID."""
         return f"att_{uuid.uuid4().hex[:16]}"

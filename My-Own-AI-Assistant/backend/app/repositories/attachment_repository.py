@@ -1,6 +1,7 @@
 """Attachment repository for file storage."""
 
 import json
+import shutil
 from pathlib import Path
 from typing import Optional
 
@@ -77,22 +78,21 @@ class AttachmentRepository:
     def delete(self, attachment_id: str) -> bool:
         """Delete an attachment and its files."""
         attachment_dir = self._get_attachment_dir(attachment_id)
-        
+
         if not attachment_dir.exists():
             return False
-        
-        # Delete all files in the directory
-        for file in attachment_dir.iterdir():
-            file.unlink()
-        
-        # Delete the directory
-        attachment_dir.rmdir()
+
+        shutil.rmtree(attachment_dir)
         return True
-    
+
     def get_file_path(self, attachment_id: str, filename: str) -> Path:
         """Get path to store a file."""
         return self._get_attachment_dir(attachment_id) / filename
-    
+
     def get_content_markdown_path(self, attachment_id: str) -> Path:
         """Get path for content markdown."""
         return self._get_attachment_dir(attachment_id) / "content.md"
+
+    def get_image_path(self, attachment_id: str, image_filename: str) -> Path:
+        """Get path to store an extracted image."""
+        return self._get_attachment_dir(attachment_id) / "images" / image_filename

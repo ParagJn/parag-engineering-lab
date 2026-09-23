@@ -16,6 +16,7 @@ class AttachmentResponse(BaseModel):
     size_bytes: int
     status: str
     markdown_available: bool
+    image_count: int = 0
 
 
 @router.post("", response_model=AttachmentResponse)
@@ -47,8 +48,9 @@ async def upload_attachment(session_id: str, file: UploadFile = File(...)):
             size_bytes=attachment.size_bytes,
             status=attachment.status.value,
             markdown_available=attachment.content_markdown_path is not None,
+            image_count=len(attachment.images),
         )
-    
+
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -71,4 +73,5 @@ async def get_attachment(session_id: str, attachment_id: str):
         size_bytes=attachment.size_bytes,
         status=attachment.status.value,
         markdown_available=attachment.content_markdown_path is not None,
+        image_count=len(attachment.images),
     )

@@ -24,7 +24,14 @@ class Config:
     IBM_ICA_API_KEY = os.getenv("IBM_ICA_API_KEY", "")
     IBM_ICA_ENDPOINT = os.getenv("IBM_ICA_ENDPOINT", "")
     IBM_ICA_MODEL_ID = os.getenv("IBM_ICA_MODEL_ID", "claude-sonnet-5")
+    IBM_ICA_GEMINI_MODEL_ID = os.getenv("IBM_ICA_GEMINI_MODEL_ID", "gemini-3.7-flash")
     IBM_ICA_INSECURE_TLS = os.getenv("IBM_ICA_INSECURE_TLS", "false").lower() in ("true", "1", "yes")
+
+    # Model provider choice -> underlying model_id
+    MODEL_CHOICES = {
+        "claude": IBM_ICA_MODEL_ID,
+        "gemini": IBM_ICA_GEMINI_MODEL_ID,
+    }
     
     # Model settings
     MODEL_TIMEOUT = int(os.getenv("MODEL_TIMEOUT", "60"))
@@ -38,7 +45,7 @@ class Config:
     ]
     
     # File upload settings
-    MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+    MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
     ALLOWED_EXTENSIONS = {
         ".pdf", ".docx", ".doc", ".txt", ".md", ".markdown"
     }

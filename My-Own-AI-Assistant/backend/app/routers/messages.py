@@ -59,9 +59,10 @@ async def send_message(session_id: str, request: MessageRequest):
     if len(session.messages) == 1:
         session_service.update_session_title(session, request.content)
     
-    # Build attachments context (for documents only, images handled by model service)
+    # Build attachments context (extracted text) and gather embedded images for vision analysis
     attachments_context = None
-    
+    attachment_images: list[dict] = []
+
     if request.attachment_ids:
         context_parts = []
         for att_id in request.attachment_ids:
@@ -71,15 +72,18 @@ async def send_message(session_id: str, request: MessageRequest):
                 if content:
                     # Include the extracted text in XML-style tags
                     context_parts.append(f"<attachment id='{att_id}' filename='{attachment.filename}'>\n{content}\n</attachment>")
-        
+                attachment_images.extend(attachment_service.get_attachment_images(att_id))
+
         if context_parts:
             attachments_context = "## Attached Documents\n\n" + "\n\n".join(context_parts)
-    
+
     try:
         # Generate response
         result = await model_service.generate(
             messages=session.messages,
             attachments_context=attachments_context,
+            model=session.model,
+            images=attachment_images,
         )
         
         # Add assistant message
