@@ -1,8 +1,9 @@
 // ChatWindow component for displaying messages
 
-import React, { useRef, useEffect } from 'react';
+import { useRef, useEffect, forwardRef } from 'react';
 import { Message } from './Message';
-import { Composer } from './Composer';
+import { Composer, type ComposerHandle } from './Composer';
+import { RateLimitTimer, type RateLimitInfo } from './RateLimitTimer';
 import type { Message as MessageType, ModelProvider } from '../types';
 
 interface ChatWindowProps {
@@ -11,15 +12,23 @@ interface ChatWindowProps {
   isLoading: boolean;
   model: ModelProvider;
   onModelChange: (model: ModelProvider) => void;
+  webSearchEnabled: boolean;
+  onWebSearchToggle: (enabled: boolean) => void;
+  rateLimitInfo: RateLimitInfo | null;
+  onCancelRateLimitWait: () => void;
 }
 
-export const ChatWindow: React.FC<ChatWindowProps> = ({
+export const ChatWindow = forwardRef<ComposerHandle, ChatWindowProps>(({
   messages,
   onSendMessage,
   isLoading,
   model,
   onModelChange,
-}) => {
+  webSearchEnabled,
+  onWebSearchToggle,
+  rateLimitInfo,
+  onCancelRateLimitWait,
+}, ref) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -34,7 +43,20 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             <h1 className="text-4xl font-normal text-gray-900 mb-8 text-center">
               What do you want to know?
             </h1>
-            <Composer onSend={onSendMessage} disabled={isLoading} model={model} onModelChange={onModelChange} />
+            {rateLimitInfo && (
+              <div className="mb-4">
+                <RateLimitTimer info={rateLimitInfo} onCancel={onCancelRateLimitWait} />
+              </div>
+            )}
+            <Composer
+              ref={ref}
+              onSend={onSendMessage}
+              disabled={isLoading}
+              model={model}
+              onModelChange={onModelChange}
+              webSearchEnabled={webSearchEnabled}
+              onWebSearchToggle={onWebSearchToggle}
+            />
           </div>
         </div>
       ) : (
@@ -43,7 +65,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             {messages.map((message) => (
               <Message key={message.id} message={message} />
             ))}
-            {isLoading && (
+            {isLoading && !rateLimitInfo && (
               <div className="max-w-3xl mx-auto px-8">
                 <div className="text-xs font-medium text-gray-400 mb-1.5">Assistant</div>
                 <div className="flex gap-1.5 py-1">
@@ -55,9 +77,24 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             )}
             <div ref={messagesEndRef} />
           </div>
-          <Composer onSend={onSendMessage} disabled={isLoading} model={model} onModelChange={onModelChange} />
+          {rateLimitInfo && (
+            <div className="max-w-3xl mx-auto px-8 w-full mb-3">
+              <RateLimitTimer info={rateLimitInfo} onCancel={onCancelRateLimitWait} />
+            </div>
+          )}
+          <Composer
+            ref={ref}
+            onSend={onSendMessage}
+            disabled={isLoading}
+            model={model}
+            onModelChange={onModelChange}
+            webSearchEnabled={webSearchEnabled}
+            onWebSearchToggle={onWebSearchToggle}
+          />
         </>
       )}
     </div>
   );
-};
+});
+
+ChatWindow.displayName = 'ChatWindow';

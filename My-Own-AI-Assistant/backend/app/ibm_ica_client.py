@@ -192,17 +192,98 @@ class IBMICAClient:
 
         # OpenAI-style response
         try:
-            return str(data["choices"][0]["message"]["content"]).strip()
+            content = data["choices"][0]["message"]["content"]
+            if content:
+                return str(content).strip()
         except (KeyError, IndexError, TypeError):
             pass
 
         # Anthropic-style response
         try:
-            return str(data["content"][0]["text"]).strip()
+            text_blocks = [
+                block["text"] for block in data["content"] if block.get("type") == "text"
+            ]
+            if text_blocks:
+                return "\n".join(text_blocks).strip()
         except (KeyError, IndexError, TypeError):
             pass
 
         return json.dumps(data, indent=2)[:800]
+
+    @staticmethod
+    def _extract_tool_calls(raw: str) -> list[dict] | None:
+        """
+        Extract normalized tool calls from an API response, if any.
+
+        Returns a list of {"id", "name", "arguments"} dicts, or None if the
+        response contains no tool calls.
+        """
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            return None
+
+        # OpenAI-style response
+        try:
+            raw_calls = data["choices"][0]["message"].get("tool_calls")
+            if raw_calls:
+                calls = []
+                for call in raw_calls:
+                    fn = call.get("function", {})
+                    try:
+                        arguments = json.loads(fn.get("arguments") or "{}")
+                    except json.JSONDecodeError:
+                        arguments = {}
+                    calls.append({
+                        "id": call.get("id"),
+                        "name": fn.get("name"),
+                        "arguments": arguments,
+                    })
+                return calls or None
+        except (KeyError, IndexError, TypeError, AttributeError):
+            pass
+
+        # Anthropic-style response
+        try:
+            content_blocks = data.get("content")
+            if isinstance(content_blocks, list):
+                calls = [
+                    {
+                        "id": block.get("id"),
+                        "name": block.get("name"),
+                        "arguments": block.get("input", {}),
+                    }
+                    for block in content_blocks
+                    if block.get("type") == "tool_use"
+                ]
+                if calls:
+                    return calls
+        except (KeyError, TypeError, AttributeError):
+            pass
+
+        return None
+
+    @staticmethod
+    def _extract_raw_assistant_message(raw: str) -> dict | None:
+        """Extract the raw assistant message object, used to echo tool calls back verbatim."""
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            return None
+
+        # OpenAI-style response
+        try:
+            message = data["choices"][0]["message"]
+            if isinstance(message, dict):
+                return message
+        except (KeyError, IndexError, TypeError):
+            pass
+
+        # Anthropic-style response
+        if isinstance(data.get("content"), list):
+            return {"role": "assistant", "content": data["content"]}
+
+        return None
 
     @staticmethod
     def _estimate_tokens(text: str) -> int:
@@ -285,15 +366,17 @@ class IBMICAClient:
         messages: list[dict],
         max_tokens: int = 100,
         model_id: str | None = None,
+        tools: list[dict] | None = None,
     ) -> dict[str, Any]:
         """
         Send chat completion request.
-        
+
         Args:
             messages: List of message dicts with 'role' and 'content'
             max_tokens: Maximum tokens to generate
             model_id: Override model ID for this request
-            
+            tools: Optional OpenAI-style tool/function definitions to offer the model
+
         Returns:
             Dictionary with keys:
                 - text: Extracted text response
@@ -303,6 +386,9 @@ class IBMICAClient:
                 - completion_tokens: Output tokens
                 - total_tokens: Sum of input + output
                 - estimated: Whether token counts are estimates
+                - tool_calls: Normalized list of {"id", "name", "arguments"}, or None
+                - raw_assistant_message: The raw assistant message object (to echo back
+                  verbatim in a follow-up request after executing tool calls), or None
         """
         if not isinstance(messages, list) or not messages:
             raise IBMICAConfigError("At least one message is required.")
@@ -312,6 +398,8 @@ class IBMICAClient:
             "messages": messages,
             "max_tokens": max_tokens,
         }
+        if tools:
+            payload["tools"] = tools
 
         raw, used_url = self._send_chat(payload, self.last_url)
         reply = self._extract_text(raw)
@@ -327,6 +415,8 @@ class IBMICAClient:
             "completion_tokens": completion_tokens,
             "total_tokens": total_tokens,
             "estimated": estimated,
+            "tool_calls": self._extract_tool_calls(raw),
+            "raw_assistant_message": self._extract_raw_assistant_message(raw),
         }
 
 

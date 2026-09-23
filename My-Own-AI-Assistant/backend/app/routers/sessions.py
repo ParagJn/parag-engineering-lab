@@ -18,6 +18,7 @@ class SessionResponse(BaseModel):
     updated_at: str
     title: str
     model: str
+    web_search_enabled: bool
 
 
 class SessionListItem(BaseModel):
@@ -27,12 +28,14 @@ class SessionListItem(BaseModel):
     created_at: str
     updated_at: str
     model: str
+    web_search_enabled: bool
 
 
 class UpdateSessionRequest(BaseModel):
     """Update session request."""
     title: str | None = None
     model: str | None = None
+    web_search_enabled: bool | None = None
 
 
 @router.post("", response_model=SessionResponse)
@@ -47,6 +50,7 @@ async def create_session():
         updated_at=session.updated_at.isoformat(),
         title=session.title,
         model=session.model,
+        web_search_enabled=session.web_search_enabled,
     )
 
 
@@ -63,6 +67,7 @@ async def list_sessions():
             created_at=s.created_at.isoformat(),
             updated_at=s.updated_at.isoformat(),
             model=s.model,
+            web_search_enabled=s.web_search_enabled,
         )
         for s in sessions
     ]
@@ -95,7 +100,7 @@ async def delete_session(session_id: str):
 
 @router.patch("/{session_id}")
 async def update_session(session_id: str, request: UpdateSessionRequest):
-    """Update a session (rename and/or change model)."""
+    """Update a session (rename, change model, and/or toggle web search)."""
     session_service = get_session_service()
     repository = SessionRepository()
 
@@ -113,6 +118,9 @@ async def update_session(session_id: str, request: UpdateSessionRequest):
                 detail=f"Invalid model '{request.model}'. Choices: {list(config.MODEL_CHOICES)}",
             )
         session.model = request.model
+
+    if request.web_search_enabled is not None:
+        session.web_search_enabled = request.web_search_enabled
 
     repository.update(session)
 

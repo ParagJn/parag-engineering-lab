@@ -1,15 +1,20 @@
 """Messages router."""
 
+import logging
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from ..repositories import SessionRepository
 from ..services import (
+    ModelRateLimitError,
     get_attachment_service,
     get_message_service,
     get_model_service,
     get_session_service,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/sessions/{session_id}/messages", tags=["messages"])
 
@@ -84,6 +89,7 @@ async def send_message(session_id: str, request: MessageRequest):
             attachments_context=attachments_context,
             model=session.model,
             images=attachment_images,
+            web_search_enabled=session.web_search_enabled,
         )
         
         # Add assistant message
@@ -108,7 +114,15 @@ async def send_message(session_id: str, request: MessageRequest):
             ),
         )
     
+    except ModelRateLimitError:
+        # Remove failed user message
+        session.messages.pop()
+        raise HTTPException(
+            status_code=429,
+            detail="Too many requests to the model provider. Please wait and try again.",
+        )
     except Exception as e:
         # Remove failed user message
         session.messages.pop()
+        logger.exception("Failed to generate response for session %s", session_id)
         raise HTTPException(status_code=500, detail=f"Failed to generate response: {str(e)}")

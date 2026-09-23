@@ -3,9 +3,21 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import type { Message as MessageType } from '../types';
+
+// Allow the model's "web-sourced" attribution span through sanitization,
+// on top of the default (GitHub-style) allowed HTML.
+const sanitizeSchema = {
+  ...defaultSchema,
+  attributes: {
+    ...defaultSchema.attributes,
+    span: [...(defaultSchema.attributes?.span || []), 'className'],
+  },
+};
 
 interface MessageProps {
   message: MessageType;
@@ -29,7 +41,15 @@ export const Message: React.FC<MessageProps> = ({ message }) => {
         <div className="markdown">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema]]}
             components={{
+              a({ href, children, ...props }: any) {
+                return (
+                  <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
+                    {children}
+                  </a>
+                );
+              },
               code({ node, inline, className, children, ...props }: any) {
                 const match = /language-(\w+)/.exec(className || '');
                 return !inline && match ? (

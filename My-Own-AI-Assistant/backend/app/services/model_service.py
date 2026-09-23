@@ -5,6 +5,34 @@ from typing import Any
 from ..config import config
 from ..ibm_ica_client import IBMICAClient, IBMICAError
 from ..models import Message, MessageRole
+from .web_search_service import get_web_search_service
+
+class ModelRateLimitError(RuntimeError):
+    """Raised when the model gateway rate-limits the request (HTTP 429)."""
+    pass
+
+
+SEARCH_WEB_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "search_web",
+        "description": (
+            "Search the web for up-to-date or external information you don't already know, "
+            "such as current events, recent data, or anything outside your training data. "
+            "Use this whenever answering the user's request requires current information."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The search query to run.",
+                },
+            },
+            "required": ["query"],
+        },
+    },
+}
 
 
 class ModelService:
@@ -23,7 +51,17 @@ class ModelService:
             timeout=config.MODEL_TIMEOUT,
             insecure_tls=config.IBM_ICA_INSECURE_TLS,
         )
-    
+        self.web_search_service = get_web_search_service()
+
+    ATTRIBUTION_INSTRUCTION = (
+        "When your answer draws on information you found via the search_web tool, wrap that "
+        "specific sentence, fact, or list/quiz item in an inline HTML tag exactly like this: "
+        "<span class=\"web-sourced\">the text here</span>. Every opening tag must have a matching "
+        "closing </span>. Do not wrap content that comes from the uploaded document(s) or from "
+        "your own general knowledge — leave that as plain text. Only wrap the parts genuinely "
+        "sourced from web search results."
+    )
+
     async def generate(
         self,
         messages: list[Message],
@@ -31,6 +69,7 @@ class ModelService:
         max_tokens: int | None = None,
         model: str = "claude",
         images: list[dict] | None = None,
+        web_search_enabled: bool = False,
     ) -> dict[str, Any]:
         """
         Generate a response from the model.
@@ -42,13 +81,18 @@ class ModelService:
             model: Model provider choice ("claude" or "gemini")
             images: Optional list of {filename, mime_type, data (base64)} dicts to attach
                 to the current turn for vision analysis
+            web_search_enabled: Whether to offer the model a "search_web" tool it can
+                call to look things up before answering
 
         Returns:
             Dictionary with response text and usage information
         """
         # Build message list for the model
-        model_messages = self._build_model_messages(messages, attachments_context, images)
+        model_messages = self._build_model_messages(
+            messages, attachments_context, images, web_search_enabled
+        )
         model_id = config.MODEL_CHOICES.get(model, config.IBM_ICA_MODEL_ID)
+        tools = [SEARCH_WEB_TOOL] if web_search_enabled else None
 
         # Call the model
         try:
@@ -56,8 +100,16 @@ class ModelService:
                 messages=model_messages,
                 max_tokens=max_tokens or config.MAX_TOKENS,
                 model_id=model_id,
+                tools=tools,
             )
-            
+
+            # If the model asked to search the web, run the search(es), feed the
+            # results back, and let the model produce its final answer.
+            if result.get("tool_calls"):
+                result = self._run_tool_calls(
+                    model_messages, result, model_id, max_tokens or config.MAX_TOKENS
+                )
+
             return {
                 "text": result["text"],
                 "prompt_tokens": result["prompt_tokens"],
@@ -66,13 +118,87 @@ class ModelService:
                 "estimated": result["estimated"],
             }
         except IBMICAError as e:
+            if getattr(e, "http_code", None) == 429:
+                raise ModelRateLimitError(str(e)) from e
             raise RuntimeError(f"Model generation failed: {str(e)}") from e
+
+    def _run_tool_calls(
+        self,
+        model_messages: list[dict],
+        result: dict[str, Any],
+        model_id: str,
+        max_tokens: int,
+    ) -> dict[str, Any]:
+        """Execute requested tool calls and get the model's follow-up answer."""
+        tool_calls = result["tool_calls"]
+        assistant_message = result.get("raw_assistant_message") or {
+            "role": "assistant",
+            "content": result["text"],
+        }
+
+        follow_up_messages = model_messages + [assistant_message]
+        all_results: list[dict] = []
+
+        for call in tool_calls:
+            if call.get("name") != "search_web":
+                continue
+            query = (call.get("arguments") or {}).get("query", "")
+            results = self.web_search_service.search(query)
+            all_results.extend(results)
+            tool_result_text = self.web_search_service.format_results(query, results)
+
+            follow_up_messages.append({
+                "role": "tool",
+                "tool_call_id": call.get("id"),
+                "name": "search_web",
+                "content": tool_result_text,
+            })
+
+        follow_up_messages.append({
+            "role": "user",
+            "content": f"(Reminder: {self.ATTRIBUTION_INSTRUCTION})",
+        })
+
+        # The gateway (Bedrock via litellm) requires the `tools` schema to be present
+        # on any request whose history includes a tool call/result, even though we
+        # just want a plain text answer here.
+        final = self.client.chat(
+            messages=follow_up_messages,
+            max_tokens=max_tokens,
+            model_id=model_id,
+            tools=[SEARCH_WEB_TOOL],
+        )
+
+        sources = self._format_sources(all_results)
+        if sources:
+            final["text"] = f"{final['text']}\n\n{sources}"
+
+        return final
+
+    @staticmethod
+    def _format_sources(results: list[dict]) -> str:
+        """Build a Markdown 'Sources' section from search results, deduped by URL."""
+        seen: set[str] = set()
+        links = []
+        for r in results:
+            url = r.get("url")
+            if not url or url in seen:
+                continue
+            seen.add(url)
+            title = r.get("title") or url
+            links.append(f"{len(links) + 1}. [{title}]({url})")
+
+        if not links:
+            return ""
+
+        return "**Sources:**\n" + "\n".join(links)
     
     def _build_model_messages(
         self,
         messages: list[Message],
         attachments_context: str | None = None,
         images: list[dict] | None = None,
+        web_search_enabled: bool = False,
     ) -> list[dict]:
         """Build message list for the model."""
         model_messages = []
@@ -82,6 +208,9 @@ class ModelService:
 
         if attachments_context:
             system_content += f"\n\n{attachments_context}"
+
+        if web_search_enabled:
+            system_content += f"\n\n{self.ATTRIBUTION_INSTRUCTION}"
 
         model_messages.append({
             "role": "system",

@@ -1,6 +1,6 @@
 // Composer component for message input
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useImperativeHandle, forwardRef } from 'react';
 import type { ModelProvider } from '../types';
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
@@ -10,12 +10,30 @@ interface ComposerProps {
   disabled: boolean;
   model: ModelProvider;
   onModelChange: (model: ModelProvider) => void;
+  webSearchEnabled: boolean;
+  onWebSearchToggle: (enabled: boolean) => void;
 }
 
-export const Composer: React.FC<ComposerProps> = ({ onSend, disabled, model, onModelChange }) => {
+export interface ComposerHandle {
+  /** Put text back into the input box (e.g. after a send ultimately failed). */
+  restoreContent: (text: string) => void;
+}
+
+export const Composer = forwardRef<ComposerHandle, ComposerProps>(({
+  onSend,
+  disabled,
+  model,
+  onModelChange,
+  webSearchEnabled,
+  onWebSearchToggle,
+}, ref) => {
   const [content, setContent] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    restoreContent: (text: string) => setContent(text),
+  }));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,6 +145,24 @@ export const Composer: React.FC<ComposerProps> = ({ onSend, disabled, model, onM
                 <option value="claude">Claude Sonnet 5</option>
                 <option value="gemini">Gemini 3.7 Flash</option>
               </select>
+
+              <button
+                type="button"
+                onClick={() => onWebSearchToggle(!webSearchEnabled)}
+                disabled={disabled}
+                title="Let the assistant search the web when needed"
+                className={`flex items-center gap-1.5 text-xs font-medium rounded-full pl-2.5 pr-3 py-1.5 border transition-colors disabled:opacity-50 ${
+                  webSearchEnabled
+                    ? 'bg-gray-900 text-white border-gray-900'
+                    : 'text-gray-600 bg-transparent border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="9" strokeWidth={2} />
+                  <path strokeLinecap="round" strokeWidth={2} d="M3 12h18M12 3c2.5 2.7 4 6 4 9s-1.5 6.3-4 9c-2.5-2.7-4-6-4-9s1.5-6.3 4-9z" />
+                </svg>
+                Web search
+              </button>
             </div>
 
             <button
@@ -147,4 +183,6 @@ export const Composer: React.FC<ComposerProps> = ({ onSend, disabled, model, onM
       </form>
     </div>
   );
-};
+});
+
+Composer.displayName = 'Composer';

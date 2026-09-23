@@ -85,6 +85,12 @@
   @apply italic;
 }
 
+/* Content the model attributed to web search results (see model_service.py ATTRIBUTION_INSTRUCTION) */
+.markdown .web-sourced {
+  @apply text-blue-700 bg-blue-50 rounded px-1 py-0.5;
+  border-bottom: 1px dashed theme('colors.blue.300');
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

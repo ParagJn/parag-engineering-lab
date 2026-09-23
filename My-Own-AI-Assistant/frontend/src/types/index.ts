@@ -21,6 +21,7 @@ export interface Session {
   updated_at: string;
   title: string;
   model: ModelProvider;
+  web_search_enabled: boolean;
   messages: Message[];
   attachment_ids: string[];
 }
@@ -31,11 +32,13 @@ export interface SessionListItem {
   created_at: string;
   updated_at: string;
   model: ModelProvider;
+  web_search_enabled: boolean;
 }
 
 export interface UpdateSessionRequest {
   title?: string;
   model?: ModelProvider;
+  web_search_enabled?: boolean;
 }
 
 export interface Attachment {
