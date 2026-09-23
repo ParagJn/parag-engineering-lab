@@ -4,12 +4,15 @@ Supports multiple endpoint paths, SSL configuration, and comprehensive error han
 """
 
 import json
+import logging
 import os
 import socket
 import ssl
 import urllib.error
 import urllib.request
-from typing import Any
+from typing import Any, Iterator
+
+logger = logging.getLogger(__name__)
 
 
 class IBMICAError(RuntimeError):
@@ -181,6 +184,162 @@ class IBMICAClient:
             raise IBMICAConnectionError(
                 "Request timed out while connecting to IBM ICA."
             ) from err
+
+    def _stream_call(self, url: str, payload: dict):
+        """Open a streaming HTTP POST request and return the raw response object."""
+        body = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            url,
+            data=body,
+            method="POST",
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "text/event-stream",
+                "Authorization": f"Bearer {self.api_key}",
+                "User-Agent": (
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/120.0.0.0 Safari/537.36"
+                ),
+            },
+        )
+
+        try:
+            return urllib.request.urlopen(req, timeout=self.timeout, context=self.ssl_context)
+        except urllib.error.HTTPError as err:
+            detail = err.read().decode("utf-8", "replace")[:400]
+            message = f"HTTP {err.code} {err.reason}"
+            if detail:
+                message = f"{message}: {detail}"
+
+            if err.code in (401, 403):
+                raise IBMICAAuthError(
+                    "Authentication failed (invalid key or auth scheme)."
+                ) from err
+            raise IBMICAResponseError(message, err.code) from err
+        except urllib.error.URLError as err:
+            reason = getattr(err, "reason", err)
+            if isinstance(reason, ssl.SSLCertVerificationError):
+                raise IBMICAConnectionError(
+                    "SSL certificate verification failed. "
+                    "Install certifi in your venv or set IBM_ICA_INSECURE_TLS=true "
+                    "for local connectivity testing."
+                ) from err
+            raise IBMICAConnectionError(f"Network error: {reason}") from err
+        except (TimeoutError, socket.timeout) as err:
+            raise IBMICAConnectionError(
+                "Request timed out while connecting to IBM ICA."
+            ) from err
+
+    def chat_stream(
+        self,
+        messages: list[dict],
+        max_tokens: int = 100,
+        model_id: str | None = None,
+        tools: list[dict] | None = None,
+    ) -> Iterator[str]:
+        """
+        Send a streaming chat completion request, yielding text deltas as they
+        arrive over SSE.
+
+        If the gateway does not actually stream (e.g. it ignores `stream: true`
+        and returns one plain JSON body instead), this falls back to yielding
+        the full extracted text exactly once, so callers never have to special
+        case "streaming isn't really supported" — they just get fewer yields.
+        """
+        if not isinstance(messages, list) or not messages:
+            raise IBMICAConfigError("At least one message is required.")
+
+        payload = {
+            "model": model_id or self.model_id,
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "stream": True,
+        }
+        if tools:
+            payload["tools"] = tools
+
+        ordered_urls = [self.last_url] if self.last_url else []
+        ordered_urls.extend(url for url in self.candidate_urls if url != self.last_url)
+
+        resp = None
+        used_url = None
+        last_err: str | None = None
+        for url in ordered_urls:
+            try:
+                resp = self._stream_call(url, payload)
+                used_url = url
+                break
+            except IBMICAAuthError:
+                raise
+            except IBMICAResponseError as err:
+                last_err = str(err)
+                if err.http_code in (404, 405):
+                    continue
+                raise
+            except IBMICAConnectionError as err:
+                last_err = str(err)
+                continue
+
+        if resp is None:
+            if last_err:
+                raise IBMICAConnectionError(last_err)
+            raise IBMICAConnectionError("Could not reach a working chat endpoint.")
+
+        self.last_url = used_url
+        logger.info(
+            "chat_stream: connected to %s, response Content-Type=%s",
+            used_url, resp.headers.get("Content-Type"),
+        )
+
+        got_sse_data = False
+        chunk_count = 0
+        buffered_raw = bytearray()
+        try:
+            with resp:
+                for raw_line in resp:
+                    buffered_raw.extend(raw_line)
+                    line = raw_line.decode("utf-8", "replace").strip()
+                    if not line or not line.startswith("data:"):
+                        continue
+
+                    data_str = line[len("data:"):].strip()
+                    if data_str == "[DONE]":
+                        got_sse_data = True
+                        break
+
+                    try:
+                        chunk = json.loads(data_str)
+                    except json.JSONDecodeError:
+                        continue
+
+                    got_sse_data = True
+                    try:
+                        delta = chunk["choices"][0]["delta"].get("content")
+                    except (KeyError, IndexError, TypeError):
+                        delta = None
+                    if delta:
+                        chunk_count += 1
+                        yield delta
+        except (TimeoutError, socket.timeout) as err:
+            raise IBMICAConnectionError(
+                "Request timed out while streaming from IBM ICA."
+            ) from err
+
+        if not got_sse_data:
+            # Gateway ignored `stream: true`; treat the buffered body as a
+            # normal, non-streamed response and yield it as a single chunk.
+            logger.info(
+                "chat_stream: no SSE data detected (gateway likely ignored stream=true); "
+                "falling back to a single non-streamed chunk (%d bytes buffered)",
+                len(buffered_raw),
+            )
+            raw = bytes(buffered_raw).decode("utf-8", "replace")
+            text = self._extract_text(raw)
+            if text:
+                yield text
+        else:
+            logger.info("chat_stream: received %d real SSE delta chunk(s)", chunk_count)
 
     @staticmethod
     def _extract_text(raw: str) -> str:

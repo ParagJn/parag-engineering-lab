@@ -19,6 +19,23 @@ const api = axios.create({
   },
 });
 
+/** Error thrown by `streamMessage` for non-2xx responses, shaped like an axios error
+ * so existing `(err as any)?.response?.status` checks keep working unchanged. */
+export class StreamRequestError extends Error {
+  response: { status: number; data: { detail?: string } };
+
+  constructor(status: number, detail?: string) {
+    super(detail || `Request failed with status ${status}`);
+    this.response = { status, data: { detail } };
+  }
+}
+
+interface StreamMessageCallbacks {
+  onChunk: (text: string) => void;
+  onDone: (message: { id: string; role: string; content: string; created_at: string }) => void;
+  onError: (error: unknown) => void;
+}
+
 export const apiService = {
   // Sessions
   async createSession(): Promise<{ session_id: string; created_at: string; updated_at: string; title: string }> {
@@ -52,6 +69,80 @@ export const apiService = {
   async sendMessage(sessionId: string, request: MessageRequest): Promise<ChatResponse> {
     const response = await api.post(`/sessions/${sessionId}/messages`, request);
     return response.data;
+  },
+
+  /**
+   * Send a message and stream the assistant's reply as it's generated.
+   * Returns a handle with `cancel()` to abort the in-flight request.
+   */
+  streamMessage(
+    sessionId: string,
+    request: MessageRequest,
+    { onChunk, onDone, onError }: StreamMessageCallbacks,
+  ): { cancel: () => void } {
+    const controller = new AbortController();
+
+    (async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/sessions/${sessionId}/messages/stream`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(request),
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          let detail: string | undefined;
+          try {
+            detail = (await response.json())?.detail;
+          } catch {
+            // ignore — non-JSON error body
+          }
+          throw new StreamRequestError(response.status, detail);
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) {
+          throw new Error('Streaming is not supported by this browser.');
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          let boundary = buffer.indexOf('\n\n');
+          while (boundary !== -1) {
+            const rawEvent = buffer.slice(0, boundary);
+            buffer = buffer.slice(boundary + 2);
+
+            let eventName = 'message';
+            let data = '';
+            for (const line of rawEvent.split('\n')) {
+              if (line.startsWith('event:')) eventName = line.slice(6).trim();
+              else if (line.startsWith('data:')) data += line.slice(5).trim();
+            }
+
+            if (data) {
+              const parsed = JSON.parse(data);
+              if (eventName === 'chunk') onChunk(parsed.text);
+              else if (eventName === 'done') onDone(parsed.message);
+              else if (eventName === 'error') throw new Error(parsed.detail || 'Streaming failed');
+            }
+
+            boundary = buffer.indexOf('\n\n');
+          }
+        }
+      } catch (err) {
+        if ((err as any)?.name === 'AbortError') return;
+        onError(err);
+      }
+    })();
+
+    return { cancel: () => controller.abort() };
   },
 
   // Attachments

@@ -1,6 +1,8 @@
 """Model service for IBM ICA integration."""
 
-from typing import Any
+import asyncio
+import threading
+from typing import Any, AsyncIterator, Iterator
 
 from ..config import config
 from ..ibm_ica_client import IBMICAClient, IBMICAError
@@ -122,14 +124,12 @@ class ModelService:
                 raise ModelRateLimitError(str(e)) from e
             raise RuntimeError(f"Model generation failed: {str(e)}") from e
 
-    def _run_tool_calls(
+    def _prepare_tool_call_followup(
         self,
         model_messages: list[dict],
         result: dict[str, Any],
-        model_id: str,
-        max_tokens: int,
-    ) -> dict[str, Any]:
-        """Execute requested tool calls and get the model's follow-up answer."""
+    ) -> tuple[list[dict], list[dict]]:
+        """Run the requested tool call(s) and build the follow-up message list."""
         tool_calls = result["tool_calls"]
         assistant_message = result.get("raw_assistant_message") or {
             "role": "assistant",
@@ -159,6 +159,18 @@ class ModelService:
             "content": f"(Reminder: {self.ATTRIBUTION_INSTRUCTION})",
         })
 
+        return follow_up_messages, all_results
+
+    def _run_tool_calls(
+        self,
+        model_messages: list[dict],
+        result: dict[str, Any],
+        model_id: str,
+        max_tokens: int,
+    ) -> dict[str, Any]:
+        """Execute requested tool calls and get the model's follow-up answer."""
+        follow_up_messages, all_results = self._prepare_tool_call_followup(model_messages, result)
+
         # The gateway (Bedrock via litellm) requires the `tools` schema to be present
         # on any request whose history includes a tool call/result, even though we
         # just want a plain text answer here.
@@ -174,6 +186,109 @@ class ModelService:
             final["text"] = f"{final['text']}\n\n{sources}"
 
         return final
+
+    async def generate_stream(
+        self,
+        messages: list[Message],
+        attachments_context: str | None = None,
+        max_tokens: int | None = None,
+        model: str = "claude",
+        images: list[dict] | None = None,
+        web_search_enabled: bool = False,
+    ) -> AsyncIterator[str]:
+        """
+        Same generation flow as `generate()`, but yields the final answer as text
+        deltas instead of returning it all at once.
+
+        When web search is off, there's no tool-calling decision to make, so we
+        stream the answer directly from the first call. When web search is on,
+        the initial call still has to be non-streamed (we need the full response
+        to know whether the model called the tool) — only the resulting
+        answer-producing call is streamed in that case.
+        """
+        model_messages = self._build_model_messages(
+            messages, attachments_context, images, web_search_enabled
+        )
+        model_id = config.MODEL_CHOICES.get(model, config.IBM_ICA_MODEL_ID)
+        tokens = max_tokens or config.MAX_TOKENS
+
+        if not web_search_enabled:
+            try:
+                stream_iter = self.client.chat_stream(
+                    messages=model_messages,
+                    max_tokens=tokens,
+                    model_id=model_id,
+                )
+                async for delta in self._iter_blocking_generator(stream_iter):
+                    yield delta
+            except IBMICAError as e:
+                if getattr(e, "http_code", None) == 429:
+                    raise ModelRateLimitError(str(e)) from e
+                raise RuntimeError(f"Model generation failed: {str(e)}") from e
+            return
+
+        try:
+            result = self.client.chat(
+                messages=model_messages,
+                max_tokens=tokens,
+                model_id=model_id,
+                tools=[SEARCH_WEB_TOOL],
+            )
+        except IBMICAError as e:
+            if getattr(e, "http_code", None) == 429:
+                raise ModelRateLimitError(str(e)) from e
+            raise RuntimeError(f"Model generation failed: {str(e)}") from e
+
+        if not result.get("tool_calls"):
+            if result["text"]:
+                yield result["text"]
+            return
+
+        follow_up_messages, all_results = self._prepare_tool_call_followup(model_messages, result)
+
+        try:
+            stream_iter = self.client.chat_stream(
+                messages=follow_up_messages,
+                max_tokens=tokens,
+                model_id=model_id,
+                tools=[SEARCH_WEB_TOOL],
+            )
+            async for delta in self._iter_blocking_generator(stream_iter):
+                yield delta
+        except IBMICAError as e:
+            if getattr(e, "http_code", None) == 429:
+                raise ModelRateLimitError(str(e)) from e
+            raise RuntimeError(f"Model generation failed: {str(e)}") from e
+
+        sources = self._format_sources(all_results)
+        if sources:
+            yield f"\n\n{sources}"
+
+    @staticmethod
+    async def _iter_blocking_generator(gen: Iterator[str]) -> AsyncIterator[str]:
+        """Bridge a blocking (network I/O) generator onto the asyncio event loop."""
+        loop = asyncio.get_event_loop()
+        queue: asyncio.Queue = asyncio.Queue()
+
+        def producer():
+            try:
+                for item in gen:
+                    loop.call_soon_threadsafe(queue.put_nowait, ("item", item))
+            except Exception as exc:  # noqa: BLE001 - re-raised on the event loop side
+                loop.call_soon_threadsafe(queue.put_nowait, ("error", exc))
+            finally:
+                loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
+
+        threading.Thread(target=producer, daemon=True).start()
+
+        while True:
+            kind, value = await queue.get()
+            if kind == "item":
+                yield value
+            elif kind == "error":
+                raise value
+            else:
+                break
 
     @staticmethod
     def _format_sources(results: list[dict]) -> str:
