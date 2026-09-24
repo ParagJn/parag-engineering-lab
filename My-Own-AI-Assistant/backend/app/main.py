@@ -1,10 +1,16 @@
 """Main FastAPI application."""
 
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import config
 from .routers import attachments_router, messages_router, sessions_router
+
+# INFO-level logging so streaming diagnostics (see ibm_ica_client.chat_stream)
+# show up in the console, not just ERROR-level tracebacks.
+logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message)s")
 
 # Ensure directories exist
 config.ensure_directories()

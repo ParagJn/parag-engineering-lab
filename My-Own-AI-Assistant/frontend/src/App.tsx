@@ -14,6 +14,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rateLimitInfo, setRateLimitInfo] = useState<RateLimitInfo | null>(null);
+  const [streamingText, setStreamingText] = useState<string | null>(null);
 
   const composerRef = useRef<ComposerHandle>(null);
   const countdownIntervalRef = useRef<number | null>(null);
@@ -162,6 +163,7 @@ function App() {
     setIsLoading(true);
     setError(null);
     setRateLimitInfo(null);
+    setStreamingText(null);
 
     // Upload attachments once; a rate-limit retry reuses the same attachment ids.
     const attachmentIds: string[] = [];
@@ -177,58 +179,64 @@ function App() {
       return;
     }
 
-    const attemptSend = async (isRetry: boolean) => {
-      try {
-        await apiService.sendMessage(currentSession.session_id, {
-          content,
-          attachment_ids: attachmentIds,
-        });
+    const attemptSend = (isRetry: boolean) => {
+      setStreamingText(null);
 
-        // Reload the current session to get updated messages
-        const updatedSession = await apiService.getSession(currentSession.session_id);
-        setCurrentSession(updatedSession);
+      apiService.streamMessage(currentSession.session_id, {
+        content,
+        attachment_ids: attachmentIds,
+      }, {
+        onChunk: (text) => {
+          setStreamingText((prev) => (prev ?? '') + text);
+        },
+        onDone: async () => {
+          setStreamingText(null);
+          // Reload the current session to get the persisted messages
+          const updatedSession = await apiService.getSession(currentSession.session_id);
+          setCurrentSession(updatedSession);
+          await loadSessions();
+          setIsLoading(false);
+        },
+        onError: (err) => {
+          setStreamingText(null);
+          const status = (err as any)?.response?.status;
 
-        // Refresh session list to update timestamps
-        await loadSessions();
-        setIsLoading(false);
-      } catch (err) {
-        const status = (err as any)?.response?.status;
-
-        if (status === 429) {
-          if (!isRetry) {
-            // Wait 90s (with a visible countdown), then retry exactly once.
-            // The user can cancel the wait early via the timer's Cancel button.
-            cancelRateLimitRef.current = () => {
-              if (countdownIntervalRef.current) {
-                clearInterval(countdownIntervalRef.current);
-                countdownIntervalRef.current = null;
-              }
-              cancelRateLimitRef.current = null;
-              setRateLimitInfo(null);
+          if (status === 429) {
+            if (!isRetry) {
+              // Wait 90s (with a visible countdown), then retry exactly once.
+              // The user can cancel the wait early via the timer's Cancel button.
+              cancelRateLimitRef.current = () => {
+                if (countdownIntervalRef.current) {
+                  clearInterval(countdownIntervalRef.current);
+                  countdownIntervalRef.current = null;
+                }
+                cancelRateLimitRef.current = null;
+                setRateLimitInfo(null);
+                composerRef.current?.restoreContent(content);
+                setIsLoading(false);
+              };
+              startRateLimitCountdown(() => {
+                cancelRateLimitRef.current = null;
+                attemptSend(true);
+              });
+            } else {
+              // Still rate-limited after the retry: give up and hand the prompt back.
               composerRef.current?.restoreContent(content);
+              setError('Still getting rate-limited. Your message was restored to the input box — try again when ready.');
               setIsLoading(false);
-            };
-            startRateLimitCountdown(() => {
-              cancelRateLimitRef.current = null;
-              attemptSend(true);
-            });
-          } else {
-            // Still rate-limited after the retry: give up and hand the prompt back.
-            composerRef.current?.restoreContent(content);
-            setError('Still getting rate-limited. Your message was restored to the input box — try again when ready.');
-            setIsLoading(false);
+            }
+            return;
           }
-          return;
-        }
 
-        console.error('Failed to send message:', err);
-        const detail = (err as any)?.response?.data?.detail;
-        setError(detail ? `Failed to send message: ${detail}` : 'Failed to send message. Please try again.');
-        setIsLoading(false);
-      }
+          console.error('Failed to send message:', err);
+          const detail = (err as any)?.response?.data?.detail;
+          setError(detail ? `Failed to send message: ${detail}` : 'Failed to send message. Please try again.');
+          setIsLoading(false);
+        },
+      });
     };
 
-    await attemptSend(false);
+    attemptSend(false);
   };
 
   const handleCancelRateLimitWait = () => {
@@ -265,6 +273,7 @@ function App() {
             onWebSearchToggle={handleWebSearchToggle}
             rateLimitInfo={rateLimitInfo}
             onCancelRateLimitWait={handleCancelRateLimitWait}
+            streamingText={streamingText}
           />
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center bg-white px-6">

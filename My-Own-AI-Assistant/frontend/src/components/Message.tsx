@@ -26,10 +26,32 @@ interface MessageProps {
 export const Message: React.FC<MessageProps> = ({ message }) => {
   const isUser = message.role === 'user';
 
+  const handleDownload = () => {
+    const blob = new Blob([message.content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `response-${message.id}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="max-w-3xl mx-auto px-8 mb-8 animate-fadeIn">
-      <div className={`text-xs font-medium text-gray-400 mb-1.5 ${isUser ? 'text-right' : ''}`}>
-        {isUser ? 'You' : 'Assistant'}
+      <div className={`flex items-center gap-2 text-xs font-medium text-gray-400 mb-1.5 ${isUser ? 'justify-end' : ''}`}>
+        <span>{isUser ? 'You' : 'Assistant'}</span>
+        {!isUser && message.content && (
+          <button
+            type="button"
+            onClick={handleDownload}
+            title="Download as Markdown"
+            className="text-gray-400 hover:text-gray-700 transition-colors"
+          >
+            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
+            </svg>
+          </button>
+        )}
       </div>
       {isUser ? (
         <div className="flex justify-end">

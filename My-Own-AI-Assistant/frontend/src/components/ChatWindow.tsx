@@ -16,6 +16,7 @@ interface ChatWindowProps {
   onWebSearchToggle: (enabled: boolean) => void;
   rateLimitInfo: RateLimitInfo | null;
   onCancelRateLimitWait: () => void;
+  streamingText: string | null;
 }
 
 export const ChatWindow = forwardRef<ComposerHandle, ChatWindowProps>(({
@@ -28,16 +29,30 @@ export const ChatWindow = forwardRef<ComposerHandle, ChatWindowProps>(({
   onWebSearchToggle,
   rateLimitInfo,
   onCancelRateLimitWait,
+  streamingText,
 }, ref) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const displayMessages = streamingText !== null
+    ? [
+        ...messages,
+        {
+          id: 'streaming',
+          role: 'assistant' as const,
+          content: streamingText,
+          created_at: new Date().toISOString(),
+          attachments: [],
+        },
+      ]
+    : messages;
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, streamingText]);
 
   return (
     <div className="flex-1 flex flex-col h-screen bg-white">
-      {messages.length === 0 && !isLoading ? (
+      {displayMessages.length === 0 && !isLoading ? (
         <div className="flex-1 flex flex-col items-center justify-center px-8 pb-24">
           <div className="w-full max-w-3xl">
             <h1 className="text-4xl font-normal text-gray-900 mb-8 text-center">
@@ -62,10 +77,10 @@ export const ChatWindow = forwardRef<ComposerHandle, ChatWindowProps>(({
       ) : (
         <>
           <div className="flex-1 overflow-y-auto py-8">
-            {messages.map((message) => (
+            {displayMessages.map((message) => (
               <Message key={message.id} message={message} />
             ))}
-            {isLoading && !rateLimitInfo && (
+            {isLoading && !rateLimitInfo && streamingText === null && (
               <div className="max-w-3xl mx-auto px-8">
                 <div className="text-xs font-medium text-gray-400 mb-1.5">Assistant</div>
                 <div className="flex gap-1.5 py-1">

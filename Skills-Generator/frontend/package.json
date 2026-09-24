@@ -1,18 +1,21 @@
 {
   "name": "skills-generator-frontend",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "scripts": {
-    "build:css": "tailwindcss -i ./src/input.css -o ./public/styles.css --minify",
-    "watch:css": "tailwindcss -i ./src/input.css -o ./public/styles.css --watch",
-    "dev": "concurrently \"npm run watch:css\" \"http-server ./public -p 3000 -c-1 -P http://localhost:8000\"",
-    "start": "http-server ./public -p 3000 -c-1 -P http://localhost:8000"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "dompurify": "^3.1.0",
+    "highlight.js": "^11.12.0",
+    "marked": "^14.1.0"
   },
   "devDependencies": {
-    "concurrently": "^8.2.0",
-    "http-server": "^14.1.0",
-    "tailwindcss": "^3.4.0",
+    "autoprefixer": "^10.4.0",
     "postcss": "^8.4.0",
-    "autoprefixer": "^10.4.0"
+    "tailwindcss": "^3.4.0",
+    "vite": "^5.4.0"
   }
 }

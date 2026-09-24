@@ -27,3 +27,6 @@ Thumbs.db
 # Virtual env
 venv/
 myenv/
+
+# App logs / PID files (start.sh)
+logs/

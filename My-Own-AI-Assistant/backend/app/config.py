@@ -23,7 +23,7 @@ class Config:
     # IBM ICA Model Configuration
     IBM_ICA_API_KEY = os.getenv("IBM_ICA_API_KEY", "")
     IBM_ICA_ENDPOINT = os.getenv("IBM_ICA_ENDPOINT", "")
-    IBM_ICA_MODEL_ID = os.getenv("IBM_ICA_MODEL_ID", "claude-sonnet-5")
+    IBM_ICA_MODEL_ID = os.getenv("IBM_ICA_MODEL_ID", "claude-opus-5-5")
     IBM_ICA_GEMINI_MODEL_ID = os.getenv("IBM_ICA_GEMINI_MODEL_ID", "gemini-3.7-flash")
     IBM_ICA_INSECURE_TLS = os.getenv("IBM_ICA_INSECURE_TLS", "false").lower() in ("true", "1", "yes")
 
