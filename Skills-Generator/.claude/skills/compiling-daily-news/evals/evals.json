@@ -1,0 +1,61 @@
+{
+  "skill_name": "compiling-daily-news",
+  "evals": [
+    {
+      "id": 1,
+      "query": "Search the internet for the top 10 news stories from today.",
+      "expected_output": "A digest titled 'Top 10 News — Global — <today's date>' with 10 numbered entries, each with a bold headline, a 1–2 sentence neutral summary, and a source line with outlet, HH:MM time with timezone and a [link], ending with a one-line 'Sources & method' note.",
+      "files": [],
+      "expected_behavior": [
+        "Runs `date` first to establish today's date and timezone and tells the user the date and scope (Global) before searching",
+        "Runs 4–6 web searches combining the date and scope, including wire services or major outlets",
+        "Verifies publish times and drops any story that cannot be dated",
+        "Runs scripts/validate_digest.py and only presents the digest after it reports ok: true",
+        "Output follows templates/digest.md: title, numbered entries with bold headlines, source lines with '· [link](...)', and a 'Sources & method' line",
+        "No more than 2 items come from the same outlet and no duplicate events or URLs appear",
+        "Every URL comes from a search result or fetched page; no invented facts or times"
+      ]
+    },
+    {
+      "id": 2,
+      "query": "/compiling-daily-news Japan",
+      "expected_output": "A digest titled 'Top 10 News — Japan — <today's date>' focused on stories about or directly affecting Japan, using Japan-specific query recipes and outlets such as NHK World, Kyodo, Japan Times or Nikkei Asia, with times shown in the user's timezone.",
+      "files": [],
+      "expected_behavior": [
+        "Treats 'Japan' from $ARGUMENTS as the scope and states it before searching",
+        "Uses the country query recipes from reference/ranking-criteria.md (e.g. NHK World, Kyodo, Japan Times, Nikkei Asia, Reuters Japan)",
+        "Keeps only stories about Japan or directly affecting it, excluding generic global stories that merely mention it",
+        "Passes --tz-offset from the `date +%z` output and renders with --scope \"Japan\"",
+        "Developing or unconfirmed stories carry a label and appear as '[Developing]' or '[Unconfirmed]' in the headline",
+        "Validator returns ok: true before the digest is presented"
+      ]
+    },
+    {
+      "id": 3,
+      "query": "What's the biggest tech news today? Give me a top 10 briefing.",
+      "expected_output": "A topic-scoped digest (e.g. 'Top 10 News — Tech — <date>') of today's tech stories drawn from tier-1/tier-2 and specialist outlets, respecting the 3-per-sub-topic and 2-per-outlet caps; if fewer than 10 verifiable stories exist, the title uses the real count and a shortfall line explains the list was not padded.",
+      "files": [],
+      "expected_behavior": [
+        "Interprets the plain-language request as a tech topic scope",
+        "Searches sub-topics (AI, security, regulation, chips, devices, platforms) and specialist outlets such as The Verge, TechCrunch, Ars Technica or Reuters technology",
+        "Applies the sub-topic cap (at most 3 per sub-topic) and outlet cap (at most 2 per outlet)",
+        "Merges duplicate coverage of the same event and cites the most authoritative source, preferring original wire copy over republishers",
+        "If fewer than 10 stories can be verified, uses --expect N, titles the digest 'Top N News', includes the shortfall line and does not pad",
+        "Summaries are neutral, at most 60 words and drawn only from article or snippet text"
+      ]
+    },
+    {
+      "id": 4,
+      "query": "Give me today's top headlines for the UK. Some results I found were live blogs updated today about stories from last week.",
+      "expected_output": "A UK-scoped digest where live blogs are included only if they report a new development today (described in the summary, possibly labelled 'updated'), stale stories are replaced, and the validator's stale/duplicate errors are resolved before presenting.",
+      "files": [],
+      "expected_behavior": [
+        "Includes live blogs only when there is a new development today and describes that development",
+        "Uses the 'updated' label for items whose main development is an update to an older story",
+        "Replaces any item the validator flags as stale, undated or duplicate with the next-best verified candidate and re-runs validation",
+        "Cites original wire services (e.g. PA Media, Reuters) rather than republishers of syndicated copy",
+        "Presents the digest with date, scope 'UK' and a one-line sources & method note"
+      ]
+    }
+  ]
+}

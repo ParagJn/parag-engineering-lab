@@ -1,0 +1,589 @@
+"""
+Reusable IBM ICA (IBM watsonx Code Assistant) client for chat completions.
+Supports multiple endpoint paths, SSL configuration, and comprehensive error handling.
+"""
+
+import json
+import logging
+import os
+import socket
+import ssl
+import urllib.error
+import urllib.request
+from typing import Any, Iterator
+
+logger = logging.getLogger(__name__)
+
+
+class IBMICAError(RuntimeError):
+    """Base exception for IBM ICA client errors."""
+    pass
+
+
+class IBMICAConfigError(IBMICAError):
+    """Configuration or validation error."""
+    pass
+
+
+class IBMICAAuthError(IBMICAError):
+    """Authentication failure."""
+    pass
+
+
+class IBMICAConnectionError(IBMICAError):
+    """Network or connection error."""
+    pass
+
+
+class IBMICAResponseError(IBMICAError):
+    """HTTP response error."""
+    def __init__(self, message: str, http_code: int | None = None):
+        super().__init__(message)
+        self.http_code = http_code
+
+
+class IBMICAClient:
+    """
+    Client for IBM ICA chat completions API.
+    
+    Usage:
+        client = IBMICAClient(
+            endpoint="https://your-ibm-ica-url",
+            api_key="your-api-key",
+            model_id="claude-opus-5-5"
+        )
+        
+        result = client.chat([
+            {"role": "user", "content": "Hello!"}
+        ], max_tokens=100)
+        
+        print(result["text"])
+    """
+    
+    TIMEOUT = 60
+    CANDIDATE_PATHS = [
+        "/v1/chat/completions",
+        "/ai/v1/chat/completions",
+        "/chat/completions",
+    ]
+
+    def __init__(
+        self,
+        endpoint: str,
+        api_key: str,
+        model_id: str = "claude-opus-5-5",
+        timeout: int = TIMEOUT,
+        insecure_tls: bool | None = None,
+    ):
+        """
+        Initialize IBM ICA client.
+        
+        Args:
+            endpoint: Base URL of the IBM ICA endpoint
+            api_key: API key for authentication
+            model_id: Model identifier (default: claude-opus-5-5)
+            timeout: Request timeout in seconds
+            insecure_tls: Skip SSL verification (for testing only)
+        """
+        if not endpoint or not endpoint.strip():
+            raise IBMICAConfigError("IBM ICA endpoint is required.")
+        if not api_key or not api_key.strip():
+            raise IBMICAConfigError("IBM ICA API key is required.")
+
+        self.endpoint = endpoint.strip().rstrip("/")
+        self.api_key = api_key.strip()
+        self.model_id = model_id.strip() or "claude-opus-5-5"
+        self.timeout = timeout
+        
+        # Allow override or read from environment
+        if insecure_tls is None:
+            insecure_tls = (os.getenv("IBM_ICA_INSECURE_TLS") or "").strip().lower() in {
+                "1", "true", "yes", "y"
+            }
+        self.insecure_tls = insecure_tls
+        
+        self.ssl_context = self._build_ssl_context()
+        self.candidate_urls = self._build_candidate_urls(self.endpoint)
+        self.last_url: str | None = None
+
+    def _build_ssl_context(self) -> ssl.SSLContext:
+        """Build SSL context with certificate verification."""
+        if self.insecure_tls:
+            return ssl._create_unverified_context()
+
+        try:
+            import certifi
+            return ssl.create_default_context(cafile=certifi.where())
+        except Exception:
+            return ssl.create_default_context()
+
+    def _build_candidate_urls(self, endpoint: str) -> list[str]:
+        """Generate list of candidate endpoint URLs to try."""
+        base = endpoint.rstrip("/")
+        
+        if any(base.endswith(path) for path in self.CANDIDATE_PATHS):
+            candidates = [base]
+        else:
+            candidates = [base + path for path in self.CANDIDATE_PATHS]
+            candidates.append(base)
+
+        # Deduplicate while preserving order
+        deduped: list[str] = []
+        seen: set[str] = set()
+        for url in candidates:
+            if url not in seen:
+                seen.add(url)
+                deduped.append(url)
+        return deduped
+
+    def _call(self, url: str, payload: dict) -> tuple[int, str]:
+        """Make HTTP POST request to the API."""
+        body = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            url,
+            data=body,
+            method="POST",
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "Authorization": f"Bearer {self.api_key}",
+                "User-Agent": (
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/120.0.0.0 Safari/537.36"
+                ),
+            },
+        )
+
+        try:
+            with urllib.request.urlopen(
+                req, timeout=self.timeout, context=self.ssl_context
+            ) as resp:
+                return resp.status, resp.read().decode("utf-8", "replace")
+        except urllib.error.HTTPError as err:
+            detail = err.read().decode("utf-8", "replace")[:400]
+            message = f"HTTP {err.code} {err.reason}"
+            if detail:
+                message = f"{message}: {detail}"
+            
+            if err.code in (401, 403):
+                raise IBMICAAuthError(
+                    "Authentication failed (invalid key or auth scheme)."
+                ) from err
+            raise IBMICAResponseError(message, err.code) from err
+        except urllib.error.URLError as err:
+            reason = getattr(err, "reason", err)
+            if isinstance(reason, ssl.SSLCertVerificationError):
+                raise IBMICAConnectionError(
+                    "SSL certificate verification failed. "
+                    "Install certifi in your venv or set IBM_ICA_INSECURE_TLS=true "
+                    "for local connectivity testing."
+                ) from err
+            raise IBMICAConnectionError(f"Network error: {reason}") from err
+        except (TimeoutError, socket.timeout) as err:
+            raise IBMICAConnectionError(
+                "Request timed out while connecting to IBM ICA."
+            ) from err
+
+    def _stream_call(self, url: str, payload: dict):
+        """Open a streaming HTTP POST request and return the raw response object."""
+        body = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            url,
+            data=body,
+            method="POST",
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "text/event-stream",
+                "Authorization": f"Bearer {self.api_key}",
+                "User-Agent": (
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/120.0.0.0 Safari/537.36"
+                ),
+            },
+        )
+
+        try:
+            return urllib.request.urlopen(req, timeout=self.timeout, context=self.ssl_context)
+        except urllib.error.HTTPError as err:
+            detail = err.read().decode("utf-8", "replace")[:400]
+            message = f"HTTP {err.code} {err.reason}"
+            if detail:
+                message = f"{message}: {detail}"
+
+            if err.code in (401, 403):
+                raise IBMICAAuthError(
+                    "Authentication failed (invalid key or auth scheme)."
+                ) from err
+            raise IBMICAResponseError(message, err.code) from err
+        except urllib.error.URLError as err:
+            reason = getattr(err, "reason", err)
+            if isinstance(reason, ssl.SSLCertVerificationError):
+                raise IBMICAConnectionError(
+                    "SSL certificate verification failed. "
+                    "Install certifi in your venv or set IBM_ICA_INSECURE_TLS=true "
+                    "for local connectivity testing."
+                ) from err
+            raise IBMICAConnectionError(f"Network error: {reason}") from err
+        except (TimeoutError, socket.timeout) as err:
+            raise IBMICAConnectionError(
+                "Request timed out while connecting to IBM ICA."
+            ) from err
+
+    def chat_stream(
+        self,
+        messages: list[dict],
+        max_tokens: int = 100,
+        model_id: str | None = None,
+        tools: list[dict] | None = None,
+    ) -> Iterator[str]:
+        """
+        Send a streaming chat completion request, yielding text deltas as they
+        arrive over SSE.
+
+        If the gateway does not actually stream (e.g. it ignores `stream: true`
+        and returns one plain JSON body instead), this falls back to yielding
+        the full extracted text exactly once, so callers never have to special
+        case "streaming isn't really supported" — they just get fewer yields.
+        """
+        if not isinstance(messages, list) or not messages:
+            raise IBMICAConfigError("At least one message is required.")
+
+        payload = {
+            "model": model_id or self.model_id,
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "stream": True,
+        }
+        if tools:
+            payload["tools"] = tools
+
+        ordered_urls = [self.last_url] if self.last_url else []
+        ordered_urls.extend(url for url in self.candidate_urls if url != self.last_url)
+
+        resp = None
+        used_url = None
+        last_err: str | None = None
+        for url in ordered_urls:
+            try:
+                resp = self._stream_call(url, payload)
+                used_url = url
+                break
+            except IBMICAAuthError:
+                raise
+            except IBMICAResponseError as err:
+                last_err = str(err)
+                if err.http_code in (404, 405):
+                    continue
+                raise
+            except IBMICAConnectionError as err:
+                last_err = str(err)
+                continue
+
+        if resp is None:
+            if last_err:
+                raise IBMICAConnectionError(last_err)
+            raise IBMICAConnectionError("Could not reach a working chat endpoint.")
+
+        self.last_url = used_url
+        logger.info(
+            "chat_stream: connected to %s, response Content-Type=%s",
+            used_url, resp.headers.get("Content-Type"),
+        )
+
+        got_sse_data = False
+        chunk_count = 0
+        buffered_raw = bytearray()
+        try:
+            with resp:
+                for raw_line in resp:
+                    buffered_raw.extend(raw_line)
+                    line = raw_line.decode("utf-8", "replace").strip()
+                    if not line or not line.startswith("data:"):
+                        continue
+
+                    data_str = line[len("data:"):].strip()
+                    if data_str == "[DONE]":
+                        got_sse_data = True
+                        break
+
+                    try:
+                        chunk = json.loads(data_str)
+                    except json.JSONDecodeError:
+                        continue
+
+                    got_sse_data = True
+                    try:
+                        delta = chunk["choices"][0]["delta"].get("content")
+                    except (KeyError, IndexError, TypeError):
+                        delta = None
+                    if delta:
+                        chunk_count += 1
+                        yield delta
+        except (TimeoutError, socket.timeout) as err:
+            raise IBMICAConnectionError(
+                "Request timed out while streaming from IBM ICA."
+            ) from err
+
+        if not got_sse_data:
+            # Gateway ignored `stream: true`; treat the buffered body as a
+            # normal, non-streamed response and yield it as a single chunk.
+            logger.info(
+                "chat_stream: no SSE data detected (gateway likely ignored stream=true); "
+                "falling back to a single non-streamed chunk (%d bytes buffered)",
+                len(buffered_raw),
+            )
+            raw = bytes(buffered_raw).decode("utf-8", "replace")
+            text = self._extract_text(raw)
+            if text:
+                yield text
+        else:
+            logger.info("chat_stream: received %d real SSE delta chunk(s)", chunk_count)
+
+    @staticmethod
+    def _extract_text(raw: str) -> str:
+        """Extract text content from API response."""
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            return raw[:500]
+
+        # OpenAI-style response
+        try:
+            content = data["choices"][0]["message"]["content"]
+            if content:
+                return str(content).strip()
+        except (KeyError, IndexError, TypeError):
+            pass
+
+        # Anthropic-style response
+        try:
+            text_blocks = [
+                block["text"] for block in data["content"] if block.get("type") == "text"
+            ]
+            if text_blocks:
+                return "\n".join(text_blocks).strip()
+        except (KeyError, IndexError, TypeError):
+            pass
+
+        return json.dumps(data, indent=2)[:800]
+
+    @staticmethod
+    def _extract_tool_calls(raw: str) -> list[dict] | None:
+        """
+        Extract normalized tool calls from an API response, if any.
+
+        Returns a list of {"id", "name", "arguments"} dicts, or None if the
+        response contains no tool calls.
+        """
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            return None
+
+        # OpenAI-style response
+        try:
+            raw_calls = data["choices"][0]["message"].get("tool_calls")
+            if raw_calls:
+                calls = []
+                for call in raw_calls:
+                    fn = call.get("function", {})
+                    try:
+                        arguments = json.loads(fn.get("arguments") or "{}")
+                    except json.JSONDecodeError:
+                        arguments = {}
+                    calls.append({
+                        "id": call.get("id"),
+                        "name": fn.get("name"),
+                        "arguments": arguments,
+                    })
+                return calls or None
+        except (KeyError, IndexError, TypeError, AttributeError):
+            pass
+
+        # Anthropic-style response
+        try:
+            content_blocks = data.get("content")
+            if isinstance(content_blocks, list):
+                calls = [
+                    {
+                        "id": block.get("id"),
+                        "name": block.get("name"),
+                        "arguments": block.get("input", {}),
+                    }
+                    for block in content_blocks
+                    if block.get("type") == "tool_use"
+                ]
+                if calls:
+                    return calls
+        except (KeyError, TypeError, AttributeError):
+            pass
+
+        return None
+
+    @staticmethod
+    def _extract_raw_assistant_message(raw: str) -> dict | None:
+        """Extract the raw assistant message object, used to echo tool calls back verbatim."""
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            return None
+
+        # OpenAI-style response
+        try:
+            message = data["choices"][0]["message"]
+            if isinstance(message, dict):
+                return message
+        except (KeyError, IndexError, TypeError):
+            pass
+
+        # Anthropic-style response
+        if isinstance(data.get("content"), list):
+            return {"role": "assistant", "content": data["content"]}
+
+        return None
+
+    @staticmethod
+    def _estimate_tokens(text: str) -> int:
+        """Rough token estimate (4 chars ≈ 1 token)."""
+        return max(1, len(text) // 4)
+
+    @staticmethod
+    def _extract_usage(
+        raw: str, payload_messages: list[dict], reply_text: str
+    ) -> tuple[int, int, int, bool]:
+        """
+        Extract token usage from response.
+        
+        Returns:
+            (prompt_tokens, completion_tokens, total_tokens, is_estimated)
+        """
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            data = {}
+
+        usage = data.get("usage") if isinstance(data, dict) else None
+        if isinstance(usage, dict):
+            prompt_tokens = usage.get("prompt_tokens") or usage.get("input_tokens")
+            completion_tokens = usage.get("completion_tokens") or usage.get("output_tokens")
+            total_tokens = usage.get("total_tokens")
+
+            if isinstance(prompt_tokens, int) and isinstance(completion_tokens, int):
+                if not isinstance(total_tokens, int):
+                    total_tokens = prompt_tokens + completion_tokens
+                return prompt_tokens, completion_tokens, total_tokens, False
+
+        # Fallback to estimation
+        context_text = "\n".join(
+            f"{msg.get('role', '')}: {msg.get('content', '')}"
+            for msg in payload_messages
+            if isinstance(msg, dict)
+        )
+        prompt_tokens_est = IBMICAClient._estimate_tokens(context_text)
+        completion_tokens_est = IBMICAClient._estimate_tokens(reply_text)
+        total_tokens_est = prompt_tokens_est + completion_tokens_est
+        return prompt_tokens_est, completion_tokens_est, total_tokens_est, True
+
+    def _send_chat(
+        self, payload: dict, preferred_url: str | None = None
+    ) -> tuple[str, str]:
+        """
+        Send chat request, trying multiple endpoints if needed.
+        
+        Returns:
+            (raw_response, successful_url)
+        """
+        ordered_urls = [preferred_url] if preferred_url else []
+        ordered_urls.extend(url for url in self.candidate_urls if url != preferred_url)
+
+        last_err: str | None = None
+        for url in ordered_urls:
+            try:
+                _, raw = self._call(url, payload)
+                self.last_url = url
+                return raw, url
+            except IBMICAAuthError:
+                raise
+            except IBMICAResponseError as err:
+                last_err = str(err)
+                # Only continue for 404/405, otherwise re-raise
+                if err.http_code in (404, 405):
+                    continue
+                raise
+            except IBMICAConnectionError as err:
+                last_err = str(err)
+                continue
+
+        if last_err:
+            raise IBMICAConnectionError(last_err)
+        raise IBMICAConnectionError("Could not reach a working chat endpoint.")
+
+    def chat(
+        self,
+        messages: list[dict],
+        max_tokens: int = 100,
+        model_id: str | None = None,
+        tools: list[dict] | None = None,
+    ) -> dict[str, Any]:
+        """
+        Send chat completion request.
+
+        Args:
+            messages: List of message dicts with 'role' and 'content'
+            max_tokens: Maximum tokens to generate
+            model_id: Override model ID for this request
+            tools: Optional OpenAI-style tool/function definitions to offer the model
+
+        Returns:
+            Dictionary with keys:
+                - text: Extracted text response
+                - raw: Full JSON response
+                - url: Endpoint URL used
+                - prompt_tokens: Input tokens
+                - completion_tokens: Output tokens
+                - total_tokens: Sum of input + output
+                - estimated: Whether token counts are estimates
+                - tool_calls: Normalized list of {"id", "name", "arguments"}, or None
+                - raw_assistant_message: The raw assistant message object (to echo back
+                  verbatim in a follow-up request after executing tool calls), or None
+        """
+        if not isinstance(messages, list) or not messages:
+            raise IBMICAConfigError("At least one message is required.")
+
+        payload = {
+            "model": model_id or self.model_id,
+            "messages": messages,
+            "max_tokens": max_tokens,
+        }
+        if tools:
+            payload["tools"] = tools
+
+        raw, used_url = self._send_chat(payload, self.last_url)
+        reply = self._extract_text(raw)
+        prompt_tokens, completion_tokens, total_tokens, estimated = self._extract_usage(
+            raw, messages, reply
+        )
+
+        return {
+            "text": reply,
+            "raw": raw,
+            "url": used_url,
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": total_tokens,
+            "estimated": estimated,
+            "tool_calls": self._extract_tool_calls(raw),
+            "raw_assistant_message": self._extract_raw_assistant_message(raw),
+        }
+
+
+__all__ = [
+    "IBMICAClient",
+    "IBMICAError",
+    "IBMICAConfigError",
+    "IBMICAAuthError",
+    "IBMICAConnectionError",
+    "IBMICAResponseError",
+]

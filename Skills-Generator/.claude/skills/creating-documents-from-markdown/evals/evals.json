@@ -1,0 +1,39 @@
+{
+  "skill_name": "diagnosing-truncated-completions",
+  "evals": [
+    {
+      "id": 1,
+      "query": "My generated SKILL.md just contains a chat.completion JSON blob with finish_reason \"length\", empty content, and a thinking block with only a signature. What happened?",
+      "expected_output": "Explains that the thinking/reasoning budget consumed max_tokens so no content was produced, that the pipeline wrote the raw response instead of message.content, and recommends raising max_tokens or lowering the thinking budget plus validating non-empty content before writing.",
+      "files": [],
+      "expected_behavior": [
+        "Identifies reasoning/thinking consuming the token budget as the root cause",
+        "Notes the raw response object was written instead of the content field",
+        "Recommends a concrete config fix (max_tokens vs thinking budget)",
+        "Does not invent the missing SKILL.md content or decode the signature"
+      ]
+    },
+    {
+      "id": 2,
+      "query": "The API response I saved won't parse as JSON; it ends in the middle of a signature string. Can you tell me why my output is empty?",
+      "expected_output": "Runs or describes the inspection script's regex fallback, reports the payload was truncated on save/stream, extracts finish_reason and empty content, and recommends saving the full response and checking stream accumulation.",
+      "files": [],
+      "expected_behavior": [
+        "Recognizes the saved payload itself is truncated",
+        "Still extracts finish_reason/content signals despite invalid JSON",
+        "Recommends fixing the save/streaming code and retrying"
+      ]
+    },
+    {
+      "id": 3,
+      "query": "My completion has finish_reason length and the answer stops halfway through a paragraph. How do I get the full output?",
+      "expected_output": "Diagnoses output exceeding max_tokens (partial content, not a reasoning-only failure) and recommends raising max_tokens, shortening the requested output, or using chunking/continuation calls.",
+      "files": [],
+      "expected_behavior": [
+        "Distinguishes partial content from the empty-content reasoning case",
+        "Recommends raising max_tokens or chunking/continuation",
+        "Suggests a fail-fast check on finish_reason == length"
+      ]
+    }
+  ]
+}

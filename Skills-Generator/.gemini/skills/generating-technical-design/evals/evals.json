@@ -1,0 +1,41 @@
+[
+  {
+    "skills": [
+      "generating-technical-design"
+    ],
+    "query": "Analyze this full-stack Next.js and FastAPI repository and write a detailed technical design document in docs/architecture.md with component and sequence diagrams.",
+    "files": [],
+    "expected_behavior": [
+      "Executes or references `scripts/scan_repo.py` to identify repository manifest files (`package.json`, `pyproject.toml`) and directory topology.",
+      "Produces a structured Technical Design Document matching `templates/technical-design-doc.md` containing System Overview, High-Level Architecture, Component Breakdown, API Specs, and Sequence Diagrams.",
+      "Embeds valid Mermaid diagrams for high-level architecture (`graph TD`) and client-server request execution (`sequenceDiagram`) conforming to `reference/mermaid-conventions.md`.",
+      "Documents specific FastAPI routes, Pydantic schemas, and Next.js frontend communication patterns found in the codebase."
+    ]
+  },
+  {
+    "skills": [
+      "generating-technical-design"
+    ],
+    "query": "Create an architecture and technical design document for our Go microservice event consumer repository.",
+    "files": [],
+    "expected_behavior": [
+      "Analyzes Go entry points (`main.go`), Go module dependencies (`go.mod`), message broker bindings (Kafka/RabbitMQ/SQS), and datastore clients.",
+      "Structures the output according to the TDD template with detailed breakdowns of worker concurrency, consumer offset management, and failure/DLQ strategies.",
+      "Generates a Mermaid sequence diagram illustrating the end-to-end event consumption, message decoding, database persistence, and error handling loop.",
+      "Documents internal domain interfaces, struct definitions, configuration parameters, and telemetry metrics."
+    ]
+  },
+  {
+    "skills": [
+      "generating-technical-design"
+    ],
+    "query": "Generate a technical design doc for this repository. Make sure to detail all REST endpoints, database schemas, and background job flows.",
+    "files": [],
+    "expected_behavior": [
+      "Identifies API routes, data models/migrations, and background queue workers across the repository files.",
+      "Constructs an exhaustive REST API specification table detailing HTTP methods, URL endpoints, request payload schemas, and response status codes.",
+      "Embeds a syntactically valid Entity-Relationship Mermaid diagram (`erDiagram`) mapping primary entities, data types, keys, and relational cardinalities.",
+      "Outlines background job execution lifecycle, operational security, and fault tolerance measures."
+    ]
+  }
+]

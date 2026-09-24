@@ -1,465 +1,197 @@
-import os
-import io
+"""
+Skills Generator API.
+
+API only — the Vite frontend (http://localhost:5173) proxies /api here.
+Run from the project root:  uvicorn main:app --app-dir backend --port 8000
+
+Generation, regeneration and testing stream progress as Server-Sent Events.
+"""
+
 import json
-import uuid
-import shutil
-import zipfile
-from datetime import datetime
-from pathlib import Path
+import logging
 
-from fastapi import FastAPI, HTTPException
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi import APIRouter, FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from dotenv import load_dotenv
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
 
-import openai
-import anthropic
-import google.generativeai as genai
+import generator
+import skill_store
+from config import config
 
-# ---------------------------------------------------------------------------
-# Config
-# ---------------------------------------------------------------------------
-BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(dotenv_path=BASE_DIR / ".env")
+# INFO-level logging so IBM ICA client diagnostics show up in the console
+logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message)s")
+logger = logging.getLogger(__name__)
 
-SKILLS_DIR = BASE_DIR / "skills"
-ARCHIVE_DIR = SKILLS_DIR / ".archive"
-SKILLS_DIR.mkdir(exist_ok=True)
-ARCHIVE_DIR.mkdir(exist_ok=True)
+config.ensure_directories()
 
-METADATA_FILE = SKILLS_DIR / ".metadata.json"
-
-# LLM clients
-azure_openai_client = openai.AzureOpenAI(
-    azure_endpoint=os.getenv("AZURE_OPENAI_GPT54_BASE"),
-    api_key=os.getenv("AZURE_OPENAI_GPT54_KEY"),
-    api_version=os.getenv("AZURE_OPENAI_GPT54_VERSION"),
-)
-anthropic_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-
-# ---------------------------------------------------------------------------
-# FastAPI app
-# ---------------------------------------------------------------------------
 app = FastAPI(title="Skills Generator")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=config.CORS_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# ---------------------------------------------------------------------------
-# Metadata helpers
-# ---------------------------------------------------------------------------
-
-def _load_meta() -> dict:
-    if METADATA_FILE.exists():
-        return json.loads(METADATA_FILE.read_text())
-    return {}
-
-
-def _save_meta(data: dict):
-    METADATA_FILE.write_text(json.dumps(data, indent=2))
-
-
-def _skill_file(m: dict) -> Path:
-    """Return the path to the skill content file, handling both old and new formats."""
-    # New format: skill_dir/SKILL.md
-    if "skill_dir" in m:
-        return SKILLS_DIR / m["skill_dir"] / "SKILL.md"
-    # Legacy format: flat file
-    return SKILLS_DIR / m["filename"]
-
-
-# ---------------------------------------------------------------------------
-# LLM helpers
-# ---------------------------------------------------------------------------
-GENERATE_PROMPT = """You are an expert AI skill/prompt engineer. Convert the user's idea into a fully structured, professional skill definition for the **{platform}** platform.
-
-Output ONLY raw markdown in exactly this structure (no code fences):
-
----
-name: skill-name-in-kebab-case
-description: One-line description of the skill.
-license: Complete terms in LICENSE.txt
----
-
-# Skill Title
-
-## Overview
-
-2-3 sentence overview of what this skill does and who it's for.
-
-**Keywords**: comma, separated, keywords
-
-## Core Framework
-
-### [Section Name]
-- Key point
-- Key point
-
-(Add sections as needed)
-
-## Features
-
-- Feature 1
-- Feature 2
-
-## Output Format
-
-- Describe the expected output
-
-## Instructions
-
-- Instruction 1
-- Instruction 2
-
-## Constraints
-
-- Constraint 1
-- Constraint 2
-
----
-User's idea:
-{thought}
-"""
-
-USAGE_NOTES_PROMPT = """You are a friendly AI instructor. Given the skill definition below, generate a concise **"How to Use This Skill"** guide for someone who has never used AI skills before.
-
-Format your response as:
-
-## How to Use This Skill
-
-A 1-2 sentence summary of what this skill does in plain language.
-
-### Getting Started
-1. Step-by-step instructions (3-5 steps)
-2. Keep each step to one short sentence
-
-### Example Prompt
-Provide one ready-to-use example prompt the user can copy-paste.
-
-### Tips for Best Results
-- 3-4 practical tips
-- Written for beginners
-
----
-Skill definition:
-{skill_content}
-"""
-
-TEST_PROMPT = """You are testing an AI skill. Given the skill definition below, create a realistic test case, execute it by producing the expected output, and evaluate the result.
-
-Format your response as:
-
-## Test Case
-**Input:** A realistic test input for this skill
-
-## Expected Behavior
-What the skill should do with this input
-
-## Test Output
-The actual output the skill would produce
-
-## Test Result
-✅ PASS — Brief explanation
-
----
-Skill definition:
-{skill_content}
-"""
-
-
-async def _call_llm(platform: str, prompt: str) -> str:
-    if platform == "chatgpt":
-        resp = azure_openai_client.chat.completions.create(
-            model=os.getenv("AZURE_OPENAI_GPT54_DEPLOYMENT", "gpt-5.4-common"),
-            messages=[{"role": "user", "content": prompt}],
-            reasoning_effort="high",
-        )
-        return resp.choices[0].message.content
-    elif platform == "anthropic":
-        resp = anthropic_client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=4000,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return resp.content[0].text
-    elif platform == "gemini":
-        model = genai.GenerativeModel("gemini-2.0-flash")
-        resp = model.generate_content(prompt)
-        return resp.text
-    raise HTTPException(status_code=400, detail="Invalid platform")
-
-
-PLATFORM_SKILL_DIRS = {
-    "anthropic": BASE_DIR / ".claude" / "skills",
-    "gemini":    BASE_DIR / ".gemini" / "skills",
-}
-
-
-def _save_skill(content: str, platform: str, thought: str, skill_id: str | None = None) -> dict:
-    # Parse name from front-matter
-    skill_name = "untitled-skill"
-    for line in content.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("name:"):
-            skill_name = stripped.split(":", 1)[1].strip()
-            break
-
-    skill_id = skill_id or uuid.uuid4().hex[:8]
-
-    # Save as a directory with SKILL.md (Anthropic-compatible format)
-    skill_dir = SKILLS_DIR / skill_name
-    skill_dir.mkdir(exist_ok=True)
-    (skill_dir / "SKILL.md").write_text(content)
-
-    # Copy to platform-specific skills folder (.claude/skills/ or .gemini/skills/)
-    if platform in PLATFORM_SKILL_DIRS:
-        target = PLATFORM_SKILL_DIRS[platform] / skill_name
-        target.mkdir(parents=True, exist_ok=True)
-        (target / "SKILL.md").write_text(content)
-
-    meta = _load_meta()
-    meta[skill_id] = {
-        "id": skill_id,
-        "name": skill_name,
-        "skill_dir": skill_name,
-        "platform": platform,
-        "thought": thought,
-        "created_at": datetime.now().isoformat(),
-        "archived": False,
-        "usage_notes": "",
-    }
-    _save_meta(meta)
-    return {"id": skill_id, "name": skill_name, "content": content, "skill_dir": skill_name, "platform": platform, "usage_notes": ""}
+router = APIRouter(prefix=config.API_PREFIX)
 
 
 # ---------------------------------------------------------------------------
 # Request models
 # ---------------------------------------------------------------------------
 
+class GenerateOptions(BaseModel):
+    invocation: str = "auto"       # auto | slash-only | background
+    scripts: str = "auto"          # auto | yes | no
+    script_language: str = "python"  # python | bash | node
+
+
 class GenerateRequest(BaseModel):
-    thought: str
+    thought: str = Field(min_length=1)
     platform: str  # anthropic | gemini | chatgpt
+    options: GenerateOptions = GenerateOptions()
 
 
-class UpdateSkillRequest(BaseModel):
-    content: str
+class RegenerateRequest(BaseModel):
+    options: GenerateOptions | None = None
+
+
+class UpdateFileRequest(BaseModel):
+    content: str = Field(min_length=1)
+
+
+class InstallRequest(BaseModel):
+    overwrite: bool = False
 
 
 # ---------------------------------------------------------------------------
-# API routes
+# Helpers
 # ---------------------------------------------------------------------------
 
-@app.post("/api/generate")
-async def generate_skill(req: GenerateRequest):
-    prompt = GENERATE_PROMPT.format(platform=req.platform, thought=req.thought)
-    try:
-        content = await _call_llm(req.platform, prompt)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    result = _save_skill(content, req.platform, req.thought)
+def _sse(events) -> StreamingResponse:
+    async def stream():
+        async for event in events:
+            yield f"data: {json.dumps(event)}\n\n"
 
-    # Generate usage notes
-    try:
-        notes_prompt = USAGE_NOTES_PROMPT.format(skill_content=content)
-        usage_notes = await _call_llm(req.platform, notes_prompt)
-        meta = _load_meta()
-        meta[result["id"]]["usage_notes"] = usage_notes
-        _save_meta(meta)
-        result["usage_notes"] = usage_notes
-    except Exception:
-        pass  # Non-critical — skill is already saved
-    return result
-
-
-@app.get("/api/skills")
-async def list_skills():
-    meta = _load_meta()
-    out = []
-    for sid, m in meta.items():
-        if m.get("archived"):
-            continue
-        fp = _skill_file(m)
-        content = fp.read_text() if fp.exists() else ""
-        out.append({**m, "content": content})
-    return sorted(out, key=lambda x: x.get("created_at", ""), reverse=True)
-
-
-@app.get("/api/skills/{skill_id}")
-async def get_skill(skill_id: str):
-    meta = _load_meta()
-    if skill_id not in meta:
-        raise HTTPException(status_code=404, detail="Skill not found")
-    m = meta[skill_id]
-    fp = _skill_file(m)
-    content = fp.read_text() if fp.exists() else ""
-    return {**m, "content": content, "usage_notes": m.get("usage_notes", "")}
-
-
-@app.put("/api/skills/{skill_id}")
-async def update_skill(skill_id: str, req: UpdateSkillRequest):
-    meta = _load_meta()
-    if skill_id not in meta:
-        raise HTTPException(status_code=404, detail="Skill not found")
-    m = meta[skill_id]
-    fp = _skill_file(m)
-    if not fp.exists():
-        raise HTTPException(status_code=404, detail="Skill file not found")
-    fp.write_text(req.content)
-    # Keep platform-specific skills folder in sync
-    skill_name = m.get("skill_dir", m["name"])
-    platform_dir = PLATFORM_SKILL_DIRS.get(m.get("platform", ""))
-    if platform_dir:
-        target = platform_dir / skill_name
-        if target.is_dir():
-            (target / "SKILL.md").write_text(req.content)
-    return {**m, "content": req.content}
-
-
-@app.delete("/api/skills/{skill_id}")
-async def delete_skill(skill_id: str):
-    meta = _load_meta()
-    if skill_id not in meta:
-        raise HTTPException(status_code=404, detail="Skill not found")
-    m = meta[skill_id]
-    skill_name = m.get("skill_dir", m.get("name", ""))
-    # Remove skill directory (or legacy file)
-    skill_dir = SKILLS_DIR / skill_name
-    if skill_dir.is_dir():
-        shutil.rmtree(str(skill_dir))
-    elif "filename" in m:
-        fp = SKILLS_DIR / m["filename"]
-        if fp.exists():
-            fp.unlink()
-    # Also remove from platform-specific skills folder if present
-    for platform_dir in PLATFORM_SKILL_DIRS.values():
-        p = platform_dir / skill_name
-        if p.is_dir():
-            shutil.rmtree(str(p))
-    del meta[skill_id]
-    _save_meta(meta)
-    return {"status": "deleted"}
-
-
-@app.post("/api/skills/{skill_id}/archive")
-async def archive_skill(skill_id: str):
-    meta = _load_meta()
-    if skill_id not in meta:
-        raise HTTPException(status_code=404, detail="Skill not found")
-    m = meta[skill_id]
-    skill_dir = SKILLS_DIR / m.get("skill_dir", m.get("name", ""))
-    dst = ARCHIVE_DIR / m.get("skill_dir", m.get("name", ""))
-    if skill_dir.is_dir():
-        shutil.move(str(skill_dir), str(dst))
-    elif "filename" in m:
-        src = SKILLS_DIR / m["filename"]
-        if src.exists():
-            shutil.move(str(src), str(ARCHIVE_DIR / m["filename"]))
-    meta[skill_id]["archived"] = True
-    _save_meta(meta)
-    return {"status": "archived"}
-
-
-@app.post("/api/skills/{skill_id}/regenerate")
-async def regenerate_skill(skill_id: str):
-    meta = _load_meta()
-    if skill_id not in meta:
-        raise HTTPException(status_code=404, detail="Skill not found")
-    m = meta[skill_id]
-    thought, platform = m["thought"], m["platform"]
-
-    # Remove old artefacts
-    old_skill_name = m.get("skill_dir", m.get("name", ""))
-    old_dir = SKILLS_DIR / old_skill_name
-    if old_dir.is_dir():
-        shutil.rmtree(str(old_dir))
-    elif "filename" in m:
-        old_fp = SKILLS_DIR / m["filename"]
-        if old_fp.exists():
-            old_fp.unlink()
-    # Also remove old platform-specific skills folder entry if present
-    for platform_dir in PLATFORM_SKILL_DIRS.values():
-        p = platform_dir / old_skill_name
-        if p.is_dir():
-            shutil.rmtree(str(p))
-    del meta[skill_id]
-    _save_meta(meta)
-
-    prompt = GENERATE_PROMPT.format(platform=platform, thought=thought)
-    try:
-        content = await _call_llm(platform, prompt)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    result = _save_skill(content, platform, thought)
-
-    # Generate usage notes
-    try:
-        notes_prompt = USAGE_NOTES_PROMPT.format(skill_content=content)
-        usage_notes = await _call_llm(platform, notes_prompt)
-        meta = _load_meta()
-        meta[result["id"]]["usage_notes"] = usage_notes
-        _save_meta(meta)
-        result["usage_notes"] = usage_notes
-    except Exception:
-        pass
-    return result
-
-
-@app.get("/api/skills/{skill_id}/download")
-async def download_skill(skill_id: str):
-    meta = _load_meta()
-    if skill_id not in meta:
-        raise HTTPException(status_code=404, detail="Skill not found")
-    m = meta[skill_id]
-    skill_name = m["name"]
-    fp = _skill_file(m)
-    if not fp.exists():
-        raise HTTPException(status_code=404, detail="Skill file not found")
-
-    # Create a zip in memory: skill-name/SKILL.md
-    buf = io.BytesIO()
-    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr(f"{skill_name}/SKILL.md", fp.read_text())
-    buf.seek(0)
     return StreamingResponse(
-        buf,
-        media_type="application/zip",
-        headers={"Content-Disposition": f'attachment; filename="{skill_name}.zip"'},
+        stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
 
-@app.post("/api/skills/{skill_id}/test")
-async def test_skill(skill_id: str):
-    meta = _load_meta()
-    if skill_id not in meta:
-        raise HTTPException(status_code=404, detail="Skill not found")
-    m = meta[skill_id]
-    fp = _skill_file(m)
-    if not fp.exists():
-        raise HTTPException(status_code=404, detail="Skill file not found")
-
-    prompt = TEST_PROMPT.format(skill_content=fp.read_text())
+def _get_or_404(skill_id: str) -> dict:
     try:
-        result = await _call_llm(m["platform"], prompt)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    return {"test_result": result, "platform": m["platform"]}
+        return skill_store.get_skill(skill_id)
+    except skill_store.SkillNotFound:
+        raise HTTPException(status_code=404, detail="Skill not found")
+
+
+def _store_call(fn, *args, **kwargs):
+    try:
+        return fn(*args, **kwargs)
+    except skill_store.SkillNotFound:
+        raise HTTPException(status_code=404, detail="Not found")
+    except skill_store.InstallConflict as e:
+        raise HTTPException(
+            status_code=409,
+            detail=f"{e.path} already exists and was not installed by this app. Overwrite it?",
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # ---------------------------------------------------------------------------
-# Serve frontend
+# Routes
 # ---------------------------------------------------------------------------
-FRONTEND_DIR = BASE_DIR / "frontend" / "public"
 
-app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
+@router.get("/health")
+async def health():
+    return {"status": "ok"}
 
 
-@app.get("/")
-async def root():
-    return FileResponse(str(FRONTEND_DIR / "index.html"))
+@router.get("/models")
+async def models():
+    """Which ICA model generates each platform's skills (for UI labels)."""
+    return config.MODEL_CHOICES
+
+
+@router.post("/generate")
+async def generate_skill(req: GenerateRequest):
+    if req.platform not in config.MODEL_CHOICES:
+        raise HTTPException(status_code=400, detail=f"Invalid platform: {req.platform}")
+    return _sse(generator.generate_events(req.platform, req.thought.strip(), req.options.model_dump()))
+
+
+@router.get("/skills")
+async def list_skills():
+    return skill_store.list_skills()
+
+
+@router.get("/skills/{skill_id}")
+async def get_skill(skill_id: str):
+    return _get_or_404(skill_id)
+
+
+@router.delete("/skills/{skill_id}")
+async def delete_skill(skill_id: str):
+    _store_call(skill_store.delete_skill, skill_id)
+    return {"status": "deleted"}
+
+
+@router.post("/skills/{skill_id}/archive")
+async def archive_skill(skill_id: str):
+    _store_call(skill_store.archive_skill, skill_id)
+    return {"status": "archived"}
+
+
+@router.post("/skills/{skill_id}/regenerate")
+async def regenerate_skill(skill_id: str, req: RegenerateRequest | None = None):
+    """Also the "Upgrade to full bundle" action for older single-file skills (same id)."""
+    m = _get_or_404(skill_id)
+    options = req.options.model_dump() if req and req.options else m.get("options")
+    # Generate first; the old version is only replaced once the new one exists
+    return _sse(generator.generate_events(m["platform"], m["thought"], options, skill_id))
+
+
+@router.put("/skills/{skill_id}/files/{path:path}")
+async def update_file(skill_id: str, path: str, req: UpdateFileRequest):
+    return _store_call(skill_store.update_file, skill_id, path, req.content)
+
+
+@router.delete("/skills/{skill_id}/files/{path:path}")
+async def delete_file(skill_id: str, path: str):
+    return _store_call(skill_store.delete_file, skill_id, path)
+
+
+@router.post("/skills/{skill_id}/validate")
+async def validate_skill(skill_id: str):
+    return _store_call(skill_store.revalidate, skill_id)
+
+
+@router.post("/skills/{skill_id}/install")
+async def install_skill(skill_id: str, req: InstallRequest | None = None):
+    return _store_call(skill_store.install_personal, skill_id, bool(req and req.overwrite))
+
+
+@router.delete("/skills/{skill_id}/install")
+async def uninstall_skill(skill_id: str):
+    return _store_call(skill_store.uninstall_personal, skill_id)
+
+
+@router.get("/skills/{skill_id}/download")
+async def download_skill(skill_id: str):
+    name, data = _store_call(skill_store.zip_bundle, skill_id)
+    return Response(
+        content=data,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{name}.zip"'},
+    )
+
+
+@router.post("/skills/{skill_id}/test")
+async def test_skill(skill_id: str):
+    _get_or_404(skill_id)
+    return _sse(generator.test_events(skill_id))
+
+
+app.include_router(router)
