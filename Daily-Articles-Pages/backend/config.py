@@ -21,7 +21,7 @@ class Settings(BaseSettings):
 
     ibm_ica_endpoint: str = ""
     ibm_ica_api_key: str = ""
-    ibm_ica_model_id: str = "claude-sonnet-5"
+    ibm_ica_model_id: str = "claude-opus-5-5"
     ibm_ica_gemini_model_id: str = ""
 
     model_config = SettingsConfigDict(
