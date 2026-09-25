@@ -11,6 +11,9 @@ export interface Message {
   svg_version?: number | null;
 }
 
+/** Experimental animated export formats for an SVG image. */
+export type SvgExportFormat = 'mp4' | 'gif';
+
 /** The SVG image the next SVG prompt will edit. */
 export interface SvgEditTarget {
   svgImageId: string;
@@ -20,6 +23,7 @@ export interface SvgEditTarget {
 export interface MessageAttachment {
   attachment_id: string;
   filename: string;
+  mime_type?: string | null;
 }
 
 export type ModelProvider = 'claude' | 'gemini' | 'openai';

@@ -1,9 +1,39 @@
 // Composer component for message input
 
-import React, { useState, useRef, useImperativeHandle, forwardRef } from 'react';
+import React, { useState, useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import type { ModelProvider, SvgEditTarget } from '../types';
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+const DOCUMENT_EXTENSIONS = ['.txt', '.md', '.doc', '.docx', '.pdf'];
+const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
+
+const isImageFile = (file: File) => IMAGE_EXTENSIONS.some(ext => file.name.toLowerCase().endsWith(ext));
+
+/** Attachment chip; images show a thumbnail. */
+const FileChip: React.FC<{ file: File; onRemove: () => void }> = ({ file, onRemove }) => {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isImageFile(file)) return;
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  return (
+    <div className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-lg text-xs text-gray-700">
+      {previewUrl && <img src={previewUrl} alt="" className="w-8 h-8 object-cover rounded" />}
+      <span className="truncate max-w-[160px]">{file.name}</span>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="text-gray-400 hover:text-gray-700 leading-none"
+      >
+        ×
+      </button>
+    </div>
+  );
+};
 
 interface ComposerProps {
   onSend: (content: string, files: File[]) => void;
@@ -65,16 +95,12 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(({
     if (e.target.files) {
       const selectedFiles = Array.from(e.target.files);
       const typeValidFiles = selectedFiles.filter(file => {
-        const ext = file.name.toLowerCase();
-        return ext.endsWith('.txt') ||
-               ext.endsWith('.md') ||
-               ext.endsWith('.doc') ||
-               ext.endsWith('.docx') ||
-               ext.endsWith('.pdf');
+        const name = file.name.toLowerCase();
+        return [...DOCUMENT_EXTENSIONS, ...IMAGE_EXTENSIONS].some(ext => name.endsWith(ext));
       });
 
       if (typeValidFiles.length !== selectedFiles.length) {
-        alert('Only text documents (.txt, .md, .pdf, .doc, .docx) are allowed');
+        alert('Only documents (.txt, .md, .pdf, .doc, .docx) and images (.png, .jpg, .gif, .webp) are allowed');
       }
 
       const validFiles = typeValidFiles.filter(file => file.size <= MAX_FILE_SIZE_BYTES);
@@ -85,6 +111,38 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(({
       }
 
       setFiles(validFiles);
+    }
+  };
+
+  // Pasted images become attachments (read by Claude, then answered by the selected model)
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    if (svgMode) return;
+
+    const images = Array.from(e.clipboardData.items)
+      .filter(item => item.kind === 'file' && item.type.startsWith('image/'))
+      .map(item => item.getAsFile())
+      .filter((file): file is File => file !== null);
+    if (images.length === 0) return;
+
+    // Image-only clipboard (e.g. a screenshot): don't let the browser paste anything else.
+    // If there's text too (copied from a web page), the text still pastes normally.
+    if (!e.clipboardData.getData('text/plain')) {
+      e.preventDefault();
+    }
+
+    const stamp = new Date().toISOString().replace(/\D/g, '').slice(0, 14);
+    const named = images.map((file, i) => {
+      const ext = file.type.split('/')[1]?.replace('jpeg', 'jpg') || 'png';
+      return new File([file], `pasted-image-${stamp}${images.length > 1 ? `-${i + 1}` : ''}.${ext}`, { type: file.type });
+    });
+
+    const oversized = named.filter(file => file.size > MAX_FILE_SIZE_BYTES);
+    if (oversized.length > 0) {
+      alert('Pasted image exceeds the 5MB limit and was not attached.');
+    }
+    const accepted = named.filter(file => file.size <= MAX_FILE_SIZE_BYTES);
+    if (accepted.length > 0) {
+      setFiles(prev => [...prev, ...accepted]);
     }
   };
 
@@ -99,16 +157,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(({
           {files.length > 0 && (
             <div className="flex flex-wrap gap-2 px-4 pt-4">
               {files.map((file, index) => (
-                <div key={index} className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-lg text-xs text-gray-700">
-                  <span className="truncate max-w-[160px]">{file.name}</span>
-                  <button
-                    type="button"
-                    onClick={() => removeFile(index)}
-                    className="text-gray-400 hover:text-gray-700 leading-none"
-                  >
-                    ×
-                  </button>
-                </div>
+                <FileChip key={`${file.name}-${index}`} file={file} onRemove={() => removeFile(index)} />
               ))}
             </div>
           )}
@@ -133,6 +182,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(({
             value={content}
             onChange={(e) => setContent(e.target.value)}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             placeholder={
               svgEditTarget ? `Describe the changes to make to v${svgEditTarget.version}...`
               : svgMode ? 'Describe the SVG image to generate...'
@@ -152,7 +202,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(({
                 onChange={handleFileChange}
                 className="hidden"
                 multiple
-                accept=".txt,.md,.pdf,.doc,.docx"
+                accept=".txt,.md,.pdf,.doc,.docx,.png,.jpg,.jpeg,.gif,.webp"
               />
               {!svgMode && (
               <button
@@ -160,7 +210,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(({
                 onClick={() => fileInputRef.current?.click()}
                 disabled={disabled}
                 className="p-2 rounded-full text-gray-500 hover:bg-gray-100 disabled:opacity-50 transition-colors"
-                title="Attach document (.txt, .md, .pdf, .doc, .docx)"
+                title="Attach document or image (or paste an image into the box)"
               >
                 <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -234,7 +284,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(({
         <div className="mt-2 text-xs text-gray-400 text-center">
           {svgMode
             ? 'SVG mode: the selected model will draw your prompt as a downloadable SVG image'
-            : 'Supports .txt, .md, .pdf, .doc, .docx attachments (max 5MB)'}
+            : 'Attach .txt, .md, .pdf, .doc, .docx, or paste/attach images (max 5MB)'}
         </div>
       </form>
     </div>

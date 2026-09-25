@@ -11,6 +11,8 @@ from ..config import config
 from ..models import Attachment, AttachmentImage, AttachmentStatus
 from ..repositories import AttachmentRepository
 from .extraction_service import get_extraction_service
+from .image_understanding_service import get_image_understanding_service
+from .model_service import ModelRateLimitError
 
 
 class AttachmentService:
@@ -23,6 +25,7 @@ class AttachmentService:
         """Initialize attachment service."""
         self.repository = repository or AttachmentRepository()
         self.extraction_service = get_extraction_service()
+        self.image_understanding_service = get_image_understanding_service()
     
     async def create_attachment(
         self,
@@ -91,8 +94,20 @@ class AttachmentService:
             attachment.status = AttachmentStatus.PROCESSING
             self.repository.update(attachment)
             
-            # Extract embedded images first, so the markdown can note how many were found
             file_path = Path(attachment.stored_path)
+
+            # Images: Claude converts them to Markdown. The image itself is not
+            # passed on, so the selected model works from that Markdown.
+            if file_path.suffix.lower() in config.IMAGE_EXTENSIONS:
+                markdown_content = await self.image_understanding_service.image_to_markdown(
+                    file_path, attachment.mime_type, attachment.filename
+                )
+                self._save_markdown(attachment, markdown_content)
+                attachment.status = AttachmentStatus.READY
+                self.repository.update(attachment)
+                return
+
+            # Extract embedded images first, so the markdown can note how many were found
             extracted_images = self.extraction_service.extract_images(
                 file_path,
                 attachment.mime_type,
@@ -119,22 +134,27 @@ class AttachmentService:
                 image_count=len(images),
             )
 
-            # Save markdown
-            markdown_path = self.repository.get_content_markdown_path(attachment.attachment_id)
-            with open(markdown_path, "w", encoding="utf-8") as f:
-                f.write(markdown_content)
-
-            # Update attachment
-            attachment.content_markdown_path = str(markdown_path)
+            self._save_markdown(attachment, markdown_content)
             attachment.images = images
             attachment.status = AttachmentStatus.READY
             self.repository.update(attachment)
             
+        except ModelRateLimitError:
+            attachment.status = AttachmentStatus.FAILED
+            self.repository.update(attachment)
+            raise
         except Exception as e:
             # Mark as failed
             attachment.status = AttachmentStatus.FAILED
             self.repository.update(attachment)
             raise RuntimeError(f"Failed to process attachment: {str(e)}") from e
+
+    def _save_markdown(self, attachment: Attachment, markdown_content: str):
+        """Write extracted markdown and point the attachment at it."""
+        markdown_path = self.repository.get_content_markdown_path(attachment.attachment_id)
+        with open(markdown_path, "w", encoding="utf-8") as f:
+            f.write(markdown_content)
+        attachment.content_markdown_path = str(markdown_path)
     
     def get_attachment(self, attachment_id: str) -> Optional[Attachment]:
         """Get attachment by ID."""

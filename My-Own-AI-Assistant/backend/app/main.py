@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import config
-from .routers import attachments_router, messages_router, sessions_router
+from .routers import attachment_files_router, attachments_router, messages_router, sessions_router
 from .svg_api import router as svg_router
 
 # INFO-level logging so streaming diagnostics (see ibm_ica_client.chat_stream)
@@ -36,6 +36,7 @@ app.add_middleware(
 app.include_router(sessions_router, prefix=config.API_PREFIX)
 app.include_router(messages_router, prefix=config.API_PREFIX)
 app.include_router(attachments_router, prefix=config.API_PREFIX)
+app.include_router(attachment_files_router, prefix=config.API_PREFIX)
 app.include_router(svg_router, prefix=config.API_PREFIX)
 
 

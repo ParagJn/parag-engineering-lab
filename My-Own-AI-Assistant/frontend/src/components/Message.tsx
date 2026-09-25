@@ -1,6 +1,6 @@
 // Message component for displaying chat messages
 
-import React from 'react';
+import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
@@ -8,7 +8,7 @@ import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { apiService } from '../services/api';
-import type { Message as MessageType, SvgEditTarget } from '../types';
+import type { Message as MessageType, SvgEditTarget, SvgExportFormat } from '../types';
 
 // Allow the model's "web-sourced" attribution span through sanitization,
 // on top of the default (GitHub-style) allowed HTML.
@@ -20,6 +20,8 @@ const sanitizeSchema = {
   },
 };
 
+const IMAGE_FILE_PATTERN = /\.(png|jpe?g|gif|webp)$/i;
+
 interface MessageProps {
   message: MessageType;
   onEditSvg?: (target: SvgEditTarget) => void;
@@ -29,6 +31,30 @@ interface MessageProps {
 export const Message: React.FC<MessageProps> = ({ message, onEditSvg, isSvgEditTarget = false }) => {
   const isUser = message.role === 'user';
   const svgImageId = message.svg_image_id;
+  const sentImages = (message.attachments || []).filter((att) =>
+    IMAGE_FILE_PATTERN.test(att.filename) || att.mime_type?.startsWith('image/')
+  );
+  const [exporting, setExporting] = useState<SvgExportFormat | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  const handleExport = async (format: SvgExportFormat) => {
+    if (!svgImageId) return;
+    setExporting(format);
+    setExportError(null);
+    try {
+      const blob = await apiService.exportSvgImage(svgImageId, format);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${svgImageId}.${format}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : 'Export failed');
+    } finally {
+      setExporting(null);
+    }
+  };
 
   const handleDownload = () => {
     const blob = new Blob([message.content], { type: 'text/markdown' });
@@ -86,6 +112,21 @@ export const Message: React.FC<MessageProps> = ({ message, onEditSvg, isSvgEditT
                   {isSvgEditTarget ? 'Editing' : 'Edit'}
                 </button>
               )}
+              {(['mp4', 'gif'] as const).map((format) => (
+                <button
+                  key={format}
+                  type="button"
+                  onClick={() => handleExport(format)}
+                  disabled={exporting !== null}
+                  title={`Experimental: render the image (with any animations) as ${format.toUpperCase()}`}
+                  className="flex items-center gap-1.5 text-xs font-medium text-gray-700 border border-gray-200 hover:bg-gray-50 disabled:opacity-50 rounded-full px-3 py-1.5 transition-colors"
+                >
+                  <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
+                  </svg>
+                  {exporting === format ? 'Rendering…' : format.toUpperCase()}
+                </button>
+              ))}
               <a
                 href={apiService.svgImageUrl(svgImageId, true)}
                 className="flex items-center gap-1.5 text-xs font-medium text-white bg-gray-900 hover:bg-gray-700 rounded-full px-3 py-1.5 transition-colors shrink-0"
@@ -97,12 +138,38 @@ export const Message: React.FC<MessageProps> = ({ message, onEditSvg, isSvgEditT
               </a>
             </div>
           </div>
+          {exportError && (
+            <div className="px-4 py-2 border-t border-red-100 bg-red-50 text-xs text-red-700">
+              {exportError}
+            </div>
+          )}
         </div>
       ) : isUser ? (
-        <div className="flex justify-end">
-          <div className="max-w-[85%] bg-gray-100 rounded-2xl px-4 py-2.5 whitespace-pre-wrap text-gray-900 leading-relaxed">
-            {message.content}
-          </div>
+        <div className="flex flex-col items-end gap-2">
+          {sentImages.length > 0 && (
+            <div className="flex flex-wrap justify-end gap-2 max-w-[85%]">
+              {sentImages.map((att) => (
+                <a
+                  key={att.attachment_id}
+                  href={apiService.attachmentImageUrl(att.attachment_id)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={att.filename}
+                >
+                  <img
+                    src={apiService.attachmentImageUrl(att.attachment_id)}
+                    alt={att.filename}
+                    className="h-32 max-w-[240px] object-cover rounded-xl border border-gray-200 hover:opacity-90 transition-opacity"
+                  />
+                </a>
+              ))}
+            </div>
+          )}
+          {message.content && (
+            <div className="max-w-[85%] bg-gray-100 rounded-2xl px-4 py-2.5 whitespace-pre-wrap text-gray-900 leading-relaxed">
+              {message.content}
+            </div>
+          )}
         </div>
       ) : (
         <div className="markdown">

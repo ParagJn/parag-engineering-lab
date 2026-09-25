@@ -250,7 +250,9 @@ function App() {
       }
     } catch (err) {
       console.error('Failed to upload attachment:', err);
-      setError('Failed to upload attachment. Please try again.');
+      const detail = (err as any)?.response?.data?.detail;
+      setError(detail ? `Failed to upload attachment: ${detail}` : 'Failed to upload attachment. Please try again.');
+      composerRef.current?.restoreContent(content);
       setIsLoading(false);
       return;
     }

@@ -49,9 +49,11 @@ class Config:
     
     # File upload settings
     MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+    # Images are read by the Claude model and converted to Markdown
+    IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
     ALLOWED_EXTENSIONS = {
         ".pdf", ".docx", ".doc", ".txt", ".md", ".markdown"
-    }
+    } | IMAGE_EXTENSIONS
     
     @classmethod
     def validate(cls):

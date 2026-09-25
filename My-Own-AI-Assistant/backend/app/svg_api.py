@@ -24,6 +24,7 @@ from .ibm_ica_client import IBMICAError
 from .models import Message, Session
 from .repositories import SessionRepository
 from .services import get_message_service, get_model_service, get_session_service
+from .svg_export import ExportFormat, SvgExportError, export_svg
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,9 @@ SVG_SYSTEM_PROMPT = (
     "- Use a white / light background by default (a full-size white <rect> as the "
     "first element). Only use a dark background if the user explicitly asks for one.\n"
     "- No markdown fences, no explanation, no <script>, no external resources.\n"
+    "- If the user asks for animation or motion, animate with SMIL (<animate>, "
+    "<animateTransform>) or CSS @keyframes in a <style> block, looping seamlessly "
+    "with cycles of 10 seconds or less. Never use JavaScript.\n"
     "- When asked to edit an existing SVG, return the COMPLETE revised SVG, keeping "
     "everything the user didn't ask to change."
 )
@@ -245,4 +249,27 @@ async def get_svg_image(svg_image_id: str, download: bool = Query(False)):
         filename=f"{svg_image_id}.svg" if download else None,
         content_disposition_type="attachment" if download else "inline",
         headers={"Content-Security-Policy": "script-src 'none'"},
+    )
+
+
+@router.get("/svg-images/{svg_image_id}/export")
+async def export_svg_image(svg_image_id: str, fmt: ExportFormat = Query(..., alias="format")):
+    """Experimental: render the SVG (including its animations) to MP4 or GIF for download."""
+    if not SVG_ID_PATTERN.match(svg_image_id):
+        raise HTTPException(status_code=400, detail="Invalid SVG image ID")
+
+    path = _svg_path(svg_image_id)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="SVG image not found")
+
+    try:
+        out_path = await export_svg(path, fmt)
+    except SvgExportError as e:
+        logger.warning("SVG export (%s) failed for %s: %s", fmt, svg_image_id, e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return FileResponse(
+        out_path,
+        media_type="video/mp4" if fmt == "mp4" else "image/gif",
+        filename=f"{svg_image_id}.{fmt}",
     )

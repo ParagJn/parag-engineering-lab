@@ -18,6 +18,7 @@ class MessageAttachment(BaseModel):
     """Attachment reference in a message."""
     attachment_id: str
     filename: str
+    mime_type: Optional[str] = None
 
 
 class Message(BaseModel):

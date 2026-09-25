@@ -9,6 +9,7 @@ import type {
   Attachment,
   UpdateSessionRequest,
   SvgImageResponse,
+  SvgExportFormat,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -173,7 +174,34 @@ export const apiService = {
     return response.data;
   },
 
+  /** Experimental: render the SVG (with its animations) to MP4/GIF. Can take several seconds. */
+  async exportSvgImage(svgImageId: string, format: SvgExportFormat): Promise<Blob> {
+    try {
+      const response = await api.get(`/svg-images/${svgImageId}/export`, {
+        params: { format },
+        responseType: 'blob',
+      });
+      return response.data;
+    } catch (err) {
+      // With responseType 'blob', the JSON error body arrives as a Blob too
+      const data = (err as any)?.response?.data;
+      let detail: string | undefined;
+      if (data instanceof Blob) {
+        try {
+          detail = JSON.parse(await data.text())?.detail;
+        } catch {
+          // ignore — non-JSON error body
+        }
+      }
+      throw new Error(detail || `${format.toUpperCase()} export failed`);
+    }
+  },
+
   svgImageUrl(svgImageId: string, download = false): string {
     return `${API_BASE_URL}/api/svg-images/${svgImageId}${download ? '?download=true' : ''}`;
+  },
+
+  attachmentImageUrl(attachmentId: string): string {
+    return `${API_BASE_URL}/api/attachments/${attachmentId}/image`;
   },
 };
