@@ -27,6 +27,9 @@ class Message(BaseModel):
     content: str = Field(..., description="Message content")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     attachments: list[MessageAttachment] = Field(default_factory=list)
+    svg_image_id: Optional[str] = Field(default=None, description="Generated SVG image ID, if any")
+    svg_parent_id: Optional[str] = Field(default=None, description="SVG image this one was edited from")
+    svg_version: Optional[int] = Field(default=None, description="Version number within an SVG edit chain")
     
     class Config:
         use_enum_values = True

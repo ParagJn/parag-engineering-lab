@@ -6,6 +6,15 @@ export interface Message {
   content: string;
   created_at: string;
   attachments: MessageAttachment[];
+  svg_image_id?: string | null;
+  svg_parent_id?: string | null;
+  svg_version?: number | null;
+}
+
+/** The SVG image the next SVG prompt will edit. */
+export interface SvgEditTarget {
+  svgImageId: string;
+  version: number;
 }
 
 export interface MessageAttachment {
@@ -13,7 +22,7 @@ export interface MessageAttachment {
   filename: string;
 }
 
-export type ModelProvider = 'claude' | 'gemini';
+export type ModelProvider = 'claude' | 'gemini' | 'openai';
 
 export interface Session {
   session_id: string;
@@ -54,6 +63,12 @@ export interface Attachment {
 export interface MessageRequest {
   content: string;
   attachment_ids?: string[];
+}
+
+export interface SvgImageResponse {
+  session_id: string;
+  svg_image_id: string;
+  message: Message;
 }
 
 export interface ChatResponse {

@@ -1,7 +1,7 @@
 // Composer component for message input
 
 import React, { useState, useRef, useImperativeHandle, forwardRef } from 'react';
-import type { ModelProvider } from '../types';
+import type { ModelProvider, SvgEditTarget } from '../types';
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
@@ -12,6 +12,12 @@ interface ComposerProps {
   onModelChange: (model: ModelProvider) => void;
   webSearchEnabled: boolean;
   onWebSearchToggle: (enabled: boolean) => void;
+  /** SVG image mode — the prompt is drawn as an SVG instead of answered as chat. */
+  svgMode: boolean;
+  onSvgModeToggle: (enabled: boolean) => void;
+  /** When set (and in SVG mode), the next prompt edits this image. */
+  svgEditTarget: SvgEditTarget | null;
+  onClearSvgEdit: () => void;
 }
 
 export interface ComposerHandle {
@@ -26,6 +32,10 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(({
   onModelChange,
   webSearchEnabled,
   onWebSearchToggle,
+  svgMode,
+  onSvgModeToggle,
+  svgEditTarget,
+  onClearSvgEdit,
 }, ref) => {
   const [content, setContent] = useState('');
   const [files, setFiles] = useState<File[]>([]);
@@ -103,11 +113,31 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(({
             </div>
           )}
 
+          {svgEditTarget && (
+            <div className="flex px-4 pt-4">
+              <div className="flex items-center gap-2 bg-gray-900 text-white px-3 py-1.5 rounded-lg text-xs">
+                <span>Editing SVG v{svgEditTarget.version}</span>
+                <button
+                  type="button"
+                  onClick={onClearSvgEdit}
+                  title="Stop editing — next prompt creates a new image"
+                  className="text-gray-300 hover:text-white leading-none"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          )}
+
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Message the assistant..."
+            placeholder={
+              svgEditTarget ? `Describe the changes to make to v${svgEditTarget.version}...`
+              : svgMode ? 'Describe the SVG image to generate...'
+              : 'Message the assistant...'
+            }
             disabled={disabled}
             className="w-full px-5 pt-4 pb-2 resize-none bg-transparent text-gray-900 placeholder-gray-400 leading-relaxed disabled:opacity-60"
             style={{ minHeight: '52px', maxHeight: '200px' }}
@@ -124,6 +154,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(({
                 multiple
                 accept=".txt,.md,.pdf,.doc,.docx"
               />
+              {!svgMode && (
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -135,6 +166,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
               </button>
+              )}
 
               <select
                 value={model}
@@ -144,8 +176,10 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(({
               >
                 <option value="claude">Claude Opus 5.5</option>
                 <option value="gemini">Gemini 3.7 Flash</option>
+                <option value="openai">GPT-5.6 Sol</option>
               </select>
 
+              {!svgMode && (
               <button
                 type="button"
                 onClick={() => onWebSearchToggle(!webSearchEnabled)}
@@ -163,6 +197,26 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(({
                 </svg>
                 Web search
               </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => onSvgModeToggle(!svgMode)}
+                disabled={disabled}
+                title="Generate an SVG image from your prompt"
+                className={`flex items-center gap-1.5 text-xs font-medium rounded-full pl-2.5 pr-3 py-1.5 border transition-colors disabled:opacity-50 ${
+                  svgMode
+                    ? 'bg-gray-900 text-white border-gray-900'
+                    : 'text-gray-600 bg-transparent border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth={2} />
+                  <circle cx="8.5" cy="8.5" r="1.5" strokeWidth={2} />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 15l-5-5L5 21" />
+                </svg>
+                SVG image
+              </button>
             </div>
 
             <button
@@ -178,7 +232,9 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(({
         </div>
 
         <div className="mt-2 text-xs text-gray-400 text-center">
-          Supports .txt, .md, .pdf, .doc, .docx attachments (max 5MB)
+          {svgMode
+            ? 'SVG mode: the selected model will draw your prompt as a downloadable SVG image'
+            : 'Supports .txt, .md, .pdf, .doc, .docx attachments (max 5MB)'}
         </div>
       </form>
     </div>

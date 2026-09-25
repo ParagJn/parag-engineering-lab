@@ -4,7 +4,7 @@ import { useRef, useEffect, forwardRef } from 'react';
 import { Message } from './Message';
 import { Composer, type ComposerHandle } from './Composer';
 import { RateLimitTimer, type RateLimitInfo } from './RateLimitTimer';
-import type { Message as MessageType, ModelProvider } from '../types';
+import type { Message as MessageType, ModelProvider, SvgEditTarget } from '../types';
 
 interface ChatWindowProps {
   messages: MessageType[];
@@ -17,6 +17,11 @@ interface ChatWindowProps {
   rateLimitInfo: RateLimitInfo | null;
   onCancelRateLimitWait: () => void;
   streamingText: string | null;
+  svgMode: boolean;
+  onSvgModeToggle: (enabled: boolean) => void;
+  svgEditTarget: SvgEditTarget | null;
+  onEditSvg: (target: SvgEditTarget) => void;
+  onClearSvgEdit: () => void;
 }
 
 export const ChatWindow = forwardRef<ComposerHandle, ChatWindowProps>(({
@@ -30,6 +35,11 @@ export const ChatWindow = forwardRef<ComposerHandle, ChatWindowProps>(({
   rateLimitInfo,
   onCancelRateLimitWait,
   streamingText,
+  svgMode,
+  onSvgModeToggle,
+  svgEditTarget,
+  onEditSvg,
+  onClearSvgEdit,
 }, ref) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -71,6 +81,10 @@ export const ChatWindow = forwardRef<ComposerHandle, ChatWindowProps>(({
               onModelChange={onModelChange}
               webSearchEnabled={webSearchEnabled}
               onWebSearchToggle={onWebSearchToggle}
+              svgMode={svgMode}
+              onSvgModeToggle={onSvgModeToggle}
+              svgEditTarget={svgEditTarget}
+              onClearSvgEdit={onClearSvgEdit}
             />
           </div>
         </div>
@@ -78,7 +92,12 @@ export const ChatWindow = forwardRef<ComposerHandle, ChatWindowProps>(({
         <>
           <div className="flex-1 overflow-y-auto py-8">
             {displayMessages.map((message) => (
-              <Message key={message.id} message={message} />
+              <Message
+                key={message.id}
+                message={message}
+                onEditSvg={isLoading ? undefined : onEditSvg}
+                isSvgEditTarget={!!message.svg_image_id && message.svg_image_id === svgEditTarget?.svgImageId}
+              />
             ))}
             {isLoading && !rateLimitInfo && streamingText === null && (
               <div className="max-w-3xl mx-auto px-8">
@@ -105,6 +124,10 @@ export const ChatWindow = forwardRef<ComposerHandle, ChatWindowProps>(({
             onModelChange={onModelChange}
             webSearchEnabled={webSearchEnabled}
             onWebSearchToggle={onWebSearchToggle}
+            svgMode={svgMode}
+            onSvgModeToggle={onSvgModeToggle}
+            svgEditTarget={svgEditTarget}
+            onClearSvgEdit={onClearSvgEdit}
           />
         </>
       )}

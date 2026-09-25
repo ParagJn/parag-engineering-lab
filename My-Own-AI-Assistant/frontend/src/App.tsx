@@ -4,7 +4,7 @@ import { ChatWindow } from './components/ChatWindow';
 import type { ComposerHandle } from './components/Composer';
 import type { RateLimitInfo } from './components/RateLimitTimer';
 import { apiService } from './services/api';
-import type { ModelProvider, Session, SessionListItem } from './types';
+import type { ModelProvider, Session, SessionListItem, SvgEditTarget } from './types';
 
 const RATE_LIMIT_WAIT_SECONDS = 90;
 
@@ -15,6 +15,8 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [rateLimitInfo, setRateLimitInfo] = useState<RateLimitInfo | null>(null);
   const [streamingText, setStreamingText] = useState<string | null>(null);
+  const [svgMode, setSvgMode] = useState(false);
+  const [svgEditTarget, setSvgEditTarget] = useState<SvgEditTarget | null>(null);
 
   const composerRef = useRef<ComposerHandle>(null);
   const countdownIntervalRef = useRef<number | null>(null);
@@ -157,8 +159,82 @@ function App() {
     }, 1000);
   };
 
+  // Edits refer to images in the open session, so drop the target when it changes
+  useEffect(() => {
+    setSvgEditTarget(null);
+  }, [currentSession?.session_id]);
+
+  const handleSvgModeToggle = (enabled: boolean) => {
+    setSvgMode(enabled);
+    if (!enabled) setSvgEditTarget(null);
+  };
+
+  const handleEditSvg = (target: SvgEditTarget) => {
+    setSvgMode(true);
+    setSvgEditTarget(target);
+  };
+
+  const handleGenerateSvg = async (prompt: string) => {
+    if (!currentSession || !prompt.trim()) return;
+
+    const previousSession = currentSession;
+    setIsLoading(true);
+    setError(null);
+
+    // Show the prompt right away while the model draws
+    setCurrentSession({
+      ...currentSession,
+      messages: [
+        ...currentSession.messages,
+        {
+          id: 'pending-svg-prompt',
+          role: 'user',
+          content: prompt,
+          created_at: new Date().toISOString(),
+          attachments: [],
+        },
+      ],
+    });
+
+    try {
+      const result = await apiService.generateSvgImage(
+        currentSession.session_id,
+        prompt,
+        svgEditTarget?.svgImageId,
+      );
+      // Keep refining: the next prompt edits the version just produced
+      if (svgEditTarget) {
+        setSvgEditTarget({
+          svgImageId: result.svg_image_id,
+          version: result.message.svg_version ?? svgEditTarget.version + 1,
+        });
+      }
+      const updatedSession = await apiService.getSession(currentSession.session_id);
+      setCurrentSession(updatedSession);
+      await loadSessions();
+    } catch (err) {
+      console.error('Failed to generate SVG image:', err);
+      setCurrentSession(previousSession);
+      composerRef.current?.restoreContent(prompt);
+      const status = (err as any)?.response?.status;
+      const detail = (err as any)?.response?.data?.detail;
+      setError(
+        status === 429
+          ? 'Rate-limited by the model provider. Your prompt was restored — try again shortly.'
+          : detail ? `Failed to generate SVG image: ${detail}` : 'Failed to generate SVG image. Please try again.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSendMessage = async (content: string, files: File[]) => {
     if (!currentSession) return;
+
+    if (svgMode) {
+      await handleGenerateSvg(content);
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
@@ -274,6 +350,11 @@ function App() {
             rateLimitInfo={rateLimitInfo}
             onCancelRateLimitWait={handleCancelRateLimitWait}
             streamingText={streamingText}
+            svgMode={svgMode}
+            onSvgModeToggle={handleSvgModeToggle}
+            svgEditTarget={svgMode ? svgEditTarget : null}
+            onEditSvg={handleEditSvg}
+            onClearSvgEdit={() => setSvgEditTarget(null)}
           />
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center bg-white px-6">

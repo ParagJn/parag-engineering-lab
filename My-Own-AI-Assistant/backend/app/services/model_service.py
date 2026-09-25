@@ -21,14 +21,17 @@ SEARCH_WEB_TOOL = {
         "description": (
             "Search the web for up-to-date or external information you don't already know, "
             "such as current events, recent data, or anything outside your training data. "
-            "Use this whenever answering the user's request requires current information."
+            "Use this whenever answering the user's request requires current information. "
+            "Returns up to 5 DuckDuckGo results, each with title, url and a short snippet "
+            "(snippets only, not full page text). On failure it returns an error entry "
+            "instead of results; say so rather than guessing."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "query": {
                     "type": "string",
-                    "description": "The search query to run.",
+                    "description": "A concise keyword search query; include names, versions or dates when relevant.",
                 },
             },
             "required": ["query"],
@@ -80,7 +83,7 @@ class ModelService:
             messages: List of conversation messages
             attachments_context: Optional context from attachments
             max_tokens: Maximum tokens to generate
-            model: Model provider choice ("claude" or "gemini")
+            model: Model provider choice ("claude", "gemini", or "openai")
             images: Optional list of {filename, mime_type, data (base64)} dicts to attach
                 to the current turn for vision analysis
             web_search_enabled: Whether to offer the model a "search_web" tool it can
@@ -153,11 +156,6 @@ class ModelService:
                 "name": "search_web",
                 "content": tool_result_text,
             })
-
-        follow_up_messages.append({
-            "role": "user",
-            "content": f"(Reminder: {self.ATTRIBUTION_INSTRUCTION})",
-        })
 
         return follow_up_messages, all_results
 

@@ -36,6 +36,9 @@ class MessageService:
         self,
         session: Session,
         content: str,
+        svg_image_id: str | None = None,
+        svg_parent_id: str | None = None,
+        svg_version: int | None = None,
     ) -> Message:
         """Add an assistant message to the session."""
         message = Message(
@@ -44,6 +47,9 @@ class MessageService:
             content=content,
             created_at=datetime.utcnow(),
             attachments=[],
+            svg_image_id=svg_image_id,
+            svg_parent_id=svg_parent_id,
+            svg_version=svg_version,
         )
         
         session.messages.append(message)

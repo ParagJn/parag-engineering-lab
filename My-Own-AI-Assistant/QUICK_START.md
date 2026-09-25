@@ -75,7 +75,7 @@ python Test-IBM-ICA-Client.py
 Expected output:
 ```
 Endpoint: https://api.nextgen-beta.ica.ibm.com/ica
-Model:    claude-sonnet-5
+Model:    claude-opus-5-5
 SSL Mode: VERIFIED
 
 Interactive chat started. Press Ctrl+C to exit.

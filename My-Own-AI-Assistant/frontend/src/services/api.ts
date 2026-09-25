@@ -8,6 +8,7 @@ import type {
   ChatResponse,
   Attachment,
   UpdateSessionRequest,
+  SvgImageResponse,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -161,5 +162,18 @@ export const apiService = {
   async getAttachment(sessionId: string, attachmentId: string): Promise<Attachment> {
     const response = await api.get(`/sessions/${sessionId}/attachments/${attachmentId}`);
     return response.data;
+  },
+
+  // SVG images — pass baseSvgImageId to edit an existing image
+  async generateSvgImage(sessionId: string, prompt: string, baseSvgImageId?: string): Promise<SvgImageResponse> {
+    const response = await api.post(`/sessions/${sessionId}/svg-images`, {
+      prompt,
+      base_svg_image_id: baseSvgImageId ?? null,
+    });
+    return response.data;
+  },
+
+  svgImageUrl(svgImageId: string, download = false): string {
+    return `${API_BASE_URL}/api/svg-images/${svgImageId}${download ? '?download=true' : ''}`;
   },
 };
