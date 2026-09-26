@@ -124,15 +124,14 @@ cd backend
 # Activate virtual environment
 source "$VENV_PATH/bin/activate"
 
-# Check if requirements are installed
-if ! pip show fastapi > /dev/null 2>&1; then
-    echo "📥 Installing backend dependencies..."
-    pip install -r requirements.txt
-    if [ $? -ne 0 ]; then
-        echo "❌ ERROR: Failed to install backend dependencies."
-        cd ..
-        exit 1
-    fi
+# Install/upgrade requirements every start so version bumps in requirements.txt
+# get picked up (quick no-op when everything already matches)
+echo "📥 Checking backend dependencies..."
+pip install -q -r requirements.txt
+if [ $? -ne 0 ]; then
+    echo "❌ ERROR: Failed to install backend dependencies."
+    cd ..
+    exit 1
 fi
 
 # Check if .env file exists

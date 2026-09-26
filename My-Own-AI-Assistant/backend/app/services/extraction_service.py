@@ -5,6 +5,27 @@ from pathlib import Path
 from typing import Protocol
 
 
+_markitdown = None
+
+
+def _markitdown_convert(path: Path) -> str | None:
+    """
+    Convert a document to Markdown with MarkItDown (keeps headings, lists and
+    tables far better than raw text extraction). Returns None if MarkItDown is
+    unavailable, fails, or produces no text, so callers can fall back.
+    """
+    global _markitdown
+    try:
+        if _markitdown is None:
+            from markitdown import MarkItDown
+
+            _markitdown = MarkItDown(enable_plugins=False)
+        text = _markitdown.convert(str(path)).text_content or ""
+    except Exception:
+        return None
+    return text if text.strip() else None
+
+
 class ExtractedImage:
     """An image extracted from a document."""
 
@@ -58,7 +79,18 @@ class PDFExtractor:
         return mime_type == "application/pdf" or filename.lower().endswith(".pdf")
     
     def extract(self, path: Path) -> str:
-        """Extract text from PDF."""
+        """Extract text from PDF: MarkItDown first, PyPDF2 as fallback."""
+        markdown = _markitdown_convert(path)
+        if markdown:
+            # pdfminer separates pages with form feeds; keep page headings so the
+            # model can point to where something came from
+            pages = [page.strip() for page in markdown.split("\f")]
+            if len(pages) > 1:
+                return "\n\n".join(
+                    f"## Page {num}\n\n{text}" for num, text in enumerate(pages, 1) if text
+                )
+            return markdown.strip()
+
         try:
             import PyPDF2
             
@@ -108,7 +140,11 @@ class DocxExtractor:
         )
     
     def extract(self, path: Path) -> str:
-        """Extract text from DOCX."""
+        """Extract text from DOCX: MarkItDown first (keeps tables), python-docx as fallback."""
+        markdown = _markitdown_convert(path)
+        if markdown:
+            return markdown.strip()
+
         try:
             import docx
             
@@ -190,6 +226,44 @@ class ExtractionService:
 
         # No extractor found
         return f"# {filename}\n\n**Type:** {mime_type}\n\nNo extractor available for this file type."
+
+    @staticmethod
+    def pdf_has_text(file_path: Path) -> bool:
+        """True if any page of the PDF has a text layer (False for scanned / image-only PDFs)."""
+        try:
+            import pypdfium2 as pdfium
+
+            pdf = pdfium.PdfDocument(str(file_path))
+            try:
+                for page in pdf:
+                    if page.get_textpage().get_text_range().strip():
+                        return True
+            finally:
+                pdf.close()
+        except Exception:
+            # Can't tell; assume text so the normal extraction path runs
+            return True
+        return False
+
+    @staticmethod
+    def render_pdf_pages(file_path: Path, max_pages: int, scale: float = 2.0) -> tuple[list[bytes], int]:
+        """Render the first `max_pages` pages as PNG bytes. Returns (pngs, total page count)."""
+        import io
+
+        import pypdfium2 as pdfium
+
+        pdf = pdfium.PdfDocument(str(file_path))
+        try:
+            total = len(pdf)
+            pngs: list[bytes] = []
+            for index in range(min(total, max_pages)):
+                image = pdf[index].render(scale=scale).to_pil()
+                buffer = io.BytesIO()
+                image.save(buffer, format="PNG")
+                pngs.append(buffer.getvalue())
+            return pngs, total
+        finally:
+            pdf.close()
 
     def extract_images(self, file_path: Path, mime_type: str) -> list[ExtractedImage]:
         """Extract embedded images from a file, if the matching extractor supports it."""

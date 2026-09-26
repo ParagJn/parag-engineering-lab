@@ -191,7 +191,7 @@ My-Own-AI-Assistant/
 Adjust in `backend/app/config.py`:
 - `MODEL_CHOICES`: Maps a provider key (`claude`, `gemini`) to its underlying model ID
 - `MAX_TOKENS`: Maximum response length (default: 100,000)
-- `MODEL_TIMEOUT`: API timeout in seconds (default: 60)
+- `MODEL_TIMEOUT`: API timeout in seconds (default: 180)
 - `MAX_FILE_SIZE`: Upload limit (default: 5MB)
 
 ### Supported File Types

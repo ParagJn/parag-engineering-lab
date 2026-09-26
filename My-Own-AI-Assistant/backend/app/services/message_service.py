@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 
 from ..models import Message, MessageAttachment, MessageRole, Session
-from ..repositories import SessionRepository
+from ..repositories import AttachmentRepository, SessionRepository
 
 
 class MessageService:
@@ -26,16 +26,33 @@ class MessageService:
             role=MessageRole.USER,
             content=content,
             created_at=datetime.utcnow(),
-            attachments=[],
+            attachments=self._message_attachments(attachment_ids or []),
         )
         
         session.messages.append(message)
         return message
+
+    def _message_attachments(self, attachment_ids: list[str]) -> list[MessageAttachment]:
+        """Record which files were sent with a message, so the chat can show them."""
+        repository = AttachmentRepository()
+        attachments = []
+        for attachment_id in attachment_ids:
+            attachment = repository.get(attachment_id)
+            if attachment:
+                attachments.append(MessageAttachment(
+                    attachment_id=attachment.attachment_id,
+                    filename=attachment.filename,
+                    mime_type=attachment.mime_type,
+                ))
+        return attachments
     
     def add_assistant_message(
         self,
         session: Session,
         content: str,
+        svg_image_id: str | None = None,
+        svg_parent_id: str | None = None,
+        svg_version: int | None = None,
     ) -> Message:
         """Add an assistant message to the session."""
         message = Message(
@@ -44,6 +61,9 @@ class MessageService:
             content=content,
             created_at=datetime.utcnow(),
             attachments=[],
+            svg_image_id=svg_image_id,
+            svg_parent_id=svg_parent_id,
+            svg_version=svg_version,
         )
         
         session.messages.append(message)

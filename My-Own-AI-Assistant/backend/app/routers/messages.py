@@ -59,7 +59,7 @@ def _build_attachments_context(attachment_ids: list[str]) -> tuple[str | None, l
                 attachment_images.extend(attachment_service.get_attachment_images(att_id))
 
         if context_parts:
-            attachments_context = "## Attached Documents\n\n" + "\n\n".join(context_parts)
+            attachments_context = "## Attached Documents and Images\n\n" + "\n\n".join(context_parts)
 
     return attachments_context, attachment_images
 

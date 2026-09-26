@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#f1f4fb"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#4f46e5"/>
+      <stop offset="0.5" stop-color="#7c3aed"/>
+      <stop offset="1" stop-color="#06b6d4"/>
+    </linearGradient>
+    <linearGradient id="orbA" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6366f1"/>
+      <stop offset="1" stop-color="#a855f7"/>
+    </linearGradient>
+    <linearGradient id="orbB" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#06b6d4"/>
+      <stop offset="1" stop-color="#3b82f6"/>
+    </linearGradient>
+    <linearGradient id="orbC" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f472b6"/>
+      <stop offset="1" stop-color="#fb923c"/>
+    </linearGradient>
+    <radialGradient id="glow1" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#a5b4fc" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#a5b4fc" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#67e8f9" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#67e8f9" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="dots" width="36" height="36" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="2" fill="#c7cde0"/>
+    </pattern>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="24" stdDeviation="30" flood-color="#312e81" flood-opacity="0.18"/>
+    </filter>
+    <clipPath id="rightClip">
+      <rect x="960" y="0" width="960" height="1080"/>
+    </clipPath>
+  </defs>
+
+  <rect width="1920" height="1080" fill="#ffffff"/>
+  <rect width="1920" height="1080" fill="url(#bg)"/>
+
+  <!-- soft glows -->
+  <circle cx="1480" cy="380" r="520" fill="url(#glow1)"/>
+  <circle cx="1700" cy="860" r="420" fill="url(#glow2)"/>
+  <circle cx="180" cy="980" r="360" fill="url(#glow1)" opacity="0.5"/>
+
+  <!-- dot grid -->
+  <rect x="1060" y="90" width="760" height="900" fill="url(#dots)" opacity="0.55"/>
+
+  <!-- right-side illustration -->
+  <g clip-path="url(#rightClip)">
+    <!-- orbit rings -->
+    <g fill="none" stroke="#6366f1" stroke-opacity="0.22" stroke-width="2">
+      <ellipse cx="1440" cy="540" rx="380" ry="380"/>
+      <ellipse cx="1440" cy="540" rx="290" ry="290" stroke-dasharray="6 14"/>
+      <ellipse cx="1440" cy="540" rx="470" ry="470" stroke-opacity="0.12"/>
+    </g>
+
+    <!-- main orbs -->
+    <g filter="url(#shadow)">
+      <circle cx="1400" cy="500" r="210" fill="url(#orbA)">
+        <animateTransform attributeName="transform" type="translate" values="0 0;0 -14;0 0" dur="8s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="1610" cy="690" r="130" fill="url(#orbB)" opacity="0.95">
+        <animateTransform attributeName="transform" type="translate" values="0 0;10 8;0 0" dur="7s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="1220" cy="740" r="78" fill="url(#orbC)">
+        <animateTransform attributeName="transform" type="translate" values="0 0;-8 -10;0 0" dur="6s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+
+    <!-- glass card -->
+    <g filter="url(#shadow)">
+      <rect x="1270" y="560" width="360" height="220" rx="28" fill="#ffffff" fill-opacity="0.72" stroke="#ffffff" stroke-width="2"/>
+      <rect x="1302" y="594" width="120" height="14" rx="7" fill="#c7d2fe"/>
+      <rect x="1302" y="620" width="80" height="10" rx="5" fill="#e0e7ff"/>
+      <polyline points="1302,740 1352,712 1402,724 1452,678 1502,690 1552,640 1598,618" fill="none" stroke="url(#accent)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="1598" cy="618" r="9" fill="#06b6d4" stroke="#ffffff" stroke-width="4"/>
+    </g>
+
+    <!-- small orbiting satellites -->
+    <circle cx="1440" cy="160" r="12" fill="#7c3aed">
+      <animateTransform attributeName="transform" type="rotate" from="0 1440 540" to="360 1440 540" dur="10s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="1730" cy="540" r="8" fill="#06b6d4">
+      <animateTransform attributeName="transform" type="rotate" from="0 1440 540" to="-360 1440 540" dur="10s" repeatCount="indefinite"/>
+    </circle>
+
+    <!-- sparkles -->
+    <g fill="#4f46e5">
+      <path d="M1180 260 l8 22 22 8 -22 8 -8 22 -8 -22 -22 -8 22 -8z" opacity="0.8"/>
+      <path d="M1760 300 l5 14 14 5 -14 5 -5 14 -5 -14 -14 -5 14 -5z" fill="#f472b6"/>
+      <path d="M1740 930 l6 16 16 6 -16 6 -6 16 -6 -16 -16 -6 16 -6z" fill="#06b6d4" opacity="0.8"/>
+    </g>
+  </g>
+
+  <!-- left content -->
+  <g font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif">
+    <!-- tag pill -->
+    <rect x="140" y="300" width="250" height="48" rx="24" fill="#eef2ff" stroke="#c7d2fe"/>
+    <circle cx="170" cy="324" r="7" fill="#4f46e5"/>
+    <text x="188" y="331" font-size="20" font-weight="600" fill="#4338ca" letter-spacing="2">PRESENTATION</text>
+
+    <text x="140" y="470" font-size="104" font-weight="800" fill="#111827" letter-spacing="-2">Your Presentation</text>
+    <text x="140" y="590" font-size="104" font-weight="800" fill="url(#accent)" letter-spacing="-2">Title Here</text>
+
+    <rect x="144" y="632" width="140" height="8" rx="4" fill="url(#accent)"/>
+
+    <text x="140" y="712" font-size="34" font-weight="400" fill="#4b5563">Subtitle or tagline that sets the stage</text>
+
+    <!-- presenter -->
+    <circle cx="170" cy="830" r="30" fill="url(#orbA)"/>
+    <text x="170" y="840" font-size="24" font-weight="700" fill="#ffffff" text-anchor="middle">A</text>
+    <text x="220" y="822" font-size="24" font-weight="700" fill="#1f2937">Presenter Name</text>
+    <text x="220" y="854" font-size="20" fill="#6b7280">Organization · Date</text>
+  </g>
+
+  <!-- bottom accent line -->
+  <rect x="0" y="1068" width="1920" height="12" fill="url(#accent)"/>
+</svg>

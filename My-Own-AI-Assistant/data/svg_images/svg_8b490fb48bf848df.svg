@@ -1,0 +1,332 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" width="100%" height="100%">
+  <defs>
+    <!-- Background Grid Pattern -->
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.75" opacity="0.6"/>
+    </pattern>
+
+    <!-- Glowing Filters -->
+    <filter id="glow-cyan" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    
+    <filter id="glow-purple" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+
+    <filter id="card-shadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+
+    <!-- Gradients -->
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#090d16"/>
+      <stop offset="50%" stop-color="#0d1527"/>
+      <stop offset="100%" stop-color="#070a12"/>
+    </linearGradient>
+
+    <linearGradient id="gateway-zone-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1e1b4b" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.6"/>
+    </linearGradient>
+
+    <linearGradient id="card-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.95"/>
+    </linearGradient>
+
+    <linearGradient id="card-grad-gateway" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2e1065" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#1e1b4b" stop-opacity="0.9"/>
+    </linearGradient>
+
+    <!-- Arrow Markers -->
+    <marker id="arrow-forward" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9 z" fill="#38bdf8"/>
+    </marker>
+    <marker id="arrow-return" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9 z" fill="#10b981"/>
+    </marker>
+    <marker id="arrow-vault" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9 z" fill="#c084fc"/>
+    </marker>
+  </defs>
+
+  <!-- Background Base -->
+  <rect width="1280" height="800" fill="url(#bg-grad)"/>
+  <rect width="1280" height="800" fill="url(#grid)"/>
+
+  <!-- ==================== HEADER ==================== -->
+  <g transform="translate(60, 36)">
+    <!-- Brand Icon -->
+    <rect x="0" y="0" width="40" height="40" rx="10" fill="#3b82f6" fill-opacity="0.15" stroke="#3b82f6" stroke-width="1.5"/>
+    <path d="M12 20 L28 20 M20 12 L20 28 M15 15 L25 25" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"/>
+    
+    <text x="52" y="22" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="700" letter-spacing="0.5">PAYMENT GATEWAY ARCHITECTURE</text>
+    <text x="52" y="38" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="400">High-Level Data Flow, Tokenization Lifecycle &amp; Multi-Party Settlement</text>
+
+    <!-- Header Badges -->
+    <g transform="translate(940, 6)">
+      <rect x="0" y="0" width="220" height="28" rx="14" fill="#064e3b" fill-opacity="0.4" stroke="#059669" stroke-width="1"/>
+      <circle cx="14" cy="14" r="4" fill="#10b981"/>
+      <text x="26" y="18" fill="#34d399" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" letter-spacing="0.5">PCI-DSS SCOPE SECURED</text>
+    </g>
+  </g>
+
+  <!-- ==================== SWIMLANE CONTAINERS ==================== -->
+
+  <!-- Lane 1: Client & Merchant Zone -->
+  <rect x="50" y="95" width="280" height="580" rx="16" fill="#0f172a" fill-opacity="0.4" stroke="#334155" stroke-width="1" stroke-dasharray="6 6"/>
+  <text x="70" y="125" fill="#64748b" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" letter-spacing="1.5">CLIENT &amp; MERCHANT TIER</text>
+
+  <!-- Lane 2: Payment Gateway Boundary (PCI DSS HIGHLIGHT) -->
+  <rect x="360" y="95" width="470" height="580" rx="16" fill="url(#gateway-zone-grad)" stroke="#8b5cf6" stroke-width="1.5"/>
+  <rect x="375" y="110" width="165" height="22" rx="6" fill="#7c3aed" fill-opacity="0.2" stroke="#a78bfa" stroke-width="1"/>
+  <text x="383" y="125" fill="#ddd6fe" font-family="system-ui, -apple-system, sans-serif" font-size="10.5" font-weight="700" letter-spacing="1">PAYMENT GATEWAY CORE</text>
+
+  <!-- Lane 3: Financial & Interbank Network -->
+  <rect x="860" y="95" width="370" height="580" rx="16" fill="#0f172a" fill-opacity="0.4" stroke="#334155" stroke-width="1" stroke-dasharray="6 6"/>
+  <text x="880" y="125" fill="#64748b" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" letter-spacing="1.5">BANKING &amp; SCHEME NETWORKS</text>
+
+  <!-- ==================== NODES / COMPONENTS ==================== -->
+
+  <!-- 1. CUSTOMER APP / BROWSER -->
+  <g transform="translate(70, 160)" filter="url(#card-shadow)">
+    <rect width="240" height="135" rx="12" fill="url(#card-grad)" stroke="#38bdf8" stroke-width="1.5"/>
+    <rect x="12" y="12" width="36" height="36" rx="8" fill="#0284c7" fill-opacity="0.2" stroke="#38bdf8" stroke-width="1"/>
+    <!-- Device Icon -->
+    <path d="M25 20 H35 A2 2 0 0 1 37 22 V38 A2 2 0 0 1 35 40 H25 A2 2 0 0 1 23 38 V22 A2 2 0 0 1 25 20 Z M28 36 H32" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round"/>
+    
+    <text x="58" y="28" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700">Customer / Client</text>
+    <text x="58" y="44" fill="#38bdf8" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="500">Checkout Web / Mobile SDK</text>
+
+    <!-- Inner Data Pill -->
+    <rect x="12" y="62" width="216" height="60" rx="6" fill="#090d16" fill-opacity="0.8" stroke="#1e293b" stroke-width="1"/>
+    <text x="22" y="80" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-size="10.5">Payload: <tspan fill="#f1f5f9">Raw Cardholder Data</tspan></text>
+    <text x="22" y="96" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-size="10.5">Security: <tspan fill="#34d399">Client-Side JWE Encrypted</tspan></text>
+    <text x="22" y="112" fill="#64748b" font-family="monospace" font-size="9.5">POST /v1/tokens (Direct-to-GW)</text>
+  </g>
+
+  <!-- 2. MERCHANT BACKEND -->
+  <g transform="translate(70, 430)" filter="url(#card-shadow)">
+    <rect width="240" height="135" rx="12" fill="url(#card-grad)" stroke="#475569" stroke-width="1"/>
+    <rect x="12" y="12" width="36" height="36" rx="8" fill="#334155" fill-opacity="0.4" stroke="#64748b" stroke-width="1"/>
+    <!-- Server Icon -->
+    <path d="M22 21 H38 V26 H22 Z M22 28 H38 V33 H22 Z M22 35 H38 V40 H22 Z M35 23.5 A0.5 0.5 0 1 1 35 24.5 M35 30.5 A0.5 0.5 0 1 1 35 31.5" fill="none" stroke="#94a3b8" stroke-width="1.5"/>
+
+    <text x="58" y="28" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="700">Merchant Server</text>
+    <text x="58" y="44" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="500">Order Management System</text>
+
+    <!-- Details -->
+    <rect x="12" y="62" width="216" height="60" rx="6" fill="#090d16" fill-opacity="0.8" stroke="#1e293b" stroke-width="1"/>
+    <text x="22" y="80" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-size="10.5">Scope: <tspan fill="#f87171">Never Sees Raw PAN</tspan></text>
+    <text x="22" y="96" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-size="10.5">Stores: <tspan fill="#cbd5e1">Order ID + Payment Token</tspan></text>
+    <text x="22" y="112" fill="#64748b" font-family="monospace" font-size="9.5">POST /v1/charges {tok_xyz}</text>
+  </g>
+
+  <!-- ==================== GATEWAY INTERNAL MICROSERVICES ==================== -->
+
+  <!-- 3A. API & TLS Termination -->
+  <g transform="translate(380, 160)" filter="url(#card-shadow)">
+    <rect width="200" height="90" rx="10" fill="url(#card-grad-gateway)" stroke="#8b5cf6" stroke-width="1.2"/>
+    <rect x="10" y="10" width="28" height="28" rx="6" fill="#6d28d9" fill-opacity="0.4" stroke="#a78bfa" stroke-width="1"/>
+    <path d="M18 24 L24 18 L30 24 M24 18 V30" fill="none" stroke="#ddd6fe" stroke-width="1.5" stroke-linecap="round"/>
+    <text x="46" y="24" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="12.5" font-weight="700">API Gateway</text>
+    <text x="46" y="37" fill="#c4b5fd" font-family="system-ui, -apple-system, sans-serif" font-size="10">Ingress &amp; Rate Limiting</text>
+    <text x="12" y="68" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-size="9.5">• Mutual TLS 1.3 Termination</text>
+    <text x="12" y="80" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-size="9.5">• Signature &amp; Idempotency Valid</text>
+  </g>
+
+  <!-- 3B. Tokenization Engine & Secure Vault -->
+  <g transform="translate(615, 160)" filter="url(#card-shadow)">
+    <rect width="200" height="90" rx="10" fill="url(#card-grad-gateway)" stroke="#c084fc" stroke-width="1.2"/>
+    <rect x="10" y="10" width="28" height="28" rx="6" fill="#6d28d9" fill-opacity="0.4" stroke="#c084fc" stroke-width="1"/>
+    <!-- Lock Icon -->
+    <path d="M19 22 V18 A5 5 0 0 1 29 18 V22 M16 22 H32 V32 H16 Z" fill="none" stroke="#e9d5ff" stroke-width="1.5"/>
+    <text x="46" y="24" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="12.5" font-weight="700">Token Vault (HSM)</text>
+    <text x="46" y="37" fill="#c084fc" font-family="system-ui, -apple-system, sans-serif" font-size="10">Detokenization Engine</text>
+    <text x="12" y="68" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-size="9.5">• Hardware Security Module</text>
+    <text x="12" y="80" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-size="9.5">• PAN ↔ Ephemeral Nonce map</text>
+  </g>
+
+  <!-- 3C. Fraud, Risk & ML Analysis -->
+  <g transform="translate(380, 340)" filter="url(#card-shadow)">
+    <rect width="200" height="90" rx="10" fill="url(#card-grad-gateway)" stroke="#8b5cf6" stroke-width="1.2"/>
+    <rect x="10" y="10" width="28" height="28" rx="6" fill="#6d28d9" fill-opacity="0.4" stroke="#a78bfa" stroke-width="1"/>
+    <!-- Shield/AI Icon -->
+    <path d="M24 16 L31 19 V25 C31 29 24 33 24 33 C24 33 17 29 17 25 V19 Z" fill="none" stroke="#ddd6fe" stroke-width="1.5"/>
+    <text x="46" y="24" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="12.5" font-weight="700">Risk &amp; Fraud Engine</text>
+    <text x="46" y="37" fill="#c4b5fd" font-family="system-ui, -apple-system, sans-serif" font-size="10">Real-time ML Scoring</text>
+    <text x="12" y="68" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-size="9.5">• Device fingerprint &amp; Geo check</text>
+    <text x="12" y="80" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-size="9.5">• 3DS 2.0 / SCA Challenge Trigger</text>
+  </g>
+
+  <!-- 3D. Smart Routing & Protocol Adapter -->
+  <g transform="translate(615, 340)" filter="url(#card-shadow)">
+    <rect width="200" height="90" rx="10" fill="url(#card-grad-gateway)" stroke="#8b5cf6" stroke-width="1.2"/>
+    <rect x="10" y="10" width="28" height="28" rx="6" fill="#6d28d9" fill-opacity="0.4" stroke="#a78bfa" stroke-width="1"/>
+    <!-- Route Icon -->
+    <path d="M17 20 H24 A3 3 0 0 1 27 23 V27 A3 3 0 0 0 30 30 H33 M30 17 L33 20 L30 23" fill="none" stroke="#ddd6fe" stroke-width="1.5" stroke-linecap="round"/>
+    <text x="46" y="24" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="12.5" font-weight="700">Smart Router &amp; ISO</text>
+    <text x="46" y="37" fill="#c4b5fd" font-family="system-ui, -apple-system, sans-serif" font-size="10">Protocol Transformer</text>
+    <text x="12" y="68" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-size="9.5">• JSON to ISO 8583 / AS2805</text>
+    <text x="12" y="80" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-size="9.5">• Dynamic Acquirer Routing</text>
+  </g>
+
+  <!-- 3E. Transaction DB & Webhook Dispatcher -->
+  <g transform="translate(495, 510)" filter="url(#card-shadow)">
+    <rect width="200" height="85" rx="10" fill="url(#card-grad-gateway)" stroke="#6366f1" stroke-width="1"/>
+    <rect x="10" y="10" width="28" height="28" rx="6" fill="#4338ca" fill-opacity="0.4" stroke="#818cf8" stroke-width="1"/>
+    <!-- DB Icon -->
+    <path d="M18 19 C18 17.5 21 16 24 16 C27 16 30 17.5 30 19 C30 20.5 27 22 24 22 C21 22 18 20.5 18 19 Z M18 23 C18 24.5 21 26 24 26 C27 26 30 24.5 30 23 M18 27 C18 28.5 21 30 24 30 C27 30 30 28.5 30 27" fill="none" stroke="#a5b4fc" stroke-width="1.4"/>
+    <text x="46" y="24" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700">Event Store &amp; Webhooks</text>
+    <text x="46" y="37" fill="#a5b4fc" font-family="system-ui, -apple-system, sans-serif" font-size="10">Settlement Ledger</text>
+    <text x="12" y="66" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-size="9.5">• Async webhook events trigger</text>
+  </g>
+
+  <!-- ==================== BANKING & CARD NETWORK NODES ==================== -->
+
+  <!-- 4. ACQUIRER BANK / PROCESSOR -->
+  <g transform="translate(880, 160)" filter="url(#card-shadow)">
+    <rect width="200" height="90" rx="10" fill="url(#card-grad)" stroke="#0ea5e9" stroke-width="1.2"/>
+    <rect x="10" y="10" width="28" height="28" rx="6" fill="#0369a1" fill-opacity="0.3" stroke="#38bdf8" stroke-width="1"/>
+    <!-- Bank Icon -->
+    <path d="M16 30 H32 M17 25 V30 M21 25 V30 M27 25 V30 M31 25 V30 M15 23 L24 17 L33 23 Z" fill="none" stroke="#38bdf8" stroke-width="1.4"/>
+    <text x="46" y="24" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="12.5" font-weight="700">Acquirer / Processor</text>
+    <text x="46" y="37" fill="#38bdf8" font-family="system-ui, -apple-system, sans-serif" font-size="10">Merchant Acquiring Bank</text>
+    <text x="12" y="68" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-size="9.5">• Batch Capture &amp; Clearing</text>
+    <text x="12" y="80" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-size="9.5">• Card Brand Handshake</text>
+  </g>
+
+  <!-- 5. CARD NETWORKS (SCHEMES) -->
+  <g transform="translate(880, 340)" filter="url(#card-shadow)">
+    <rect width="200" height="90" rx="10" fill="url(#card-grad)" stroke="#f59e0b" stroke-width="1.2"/>
+    <rect x="10" y="10" width="28" height="28" rx="6" fill="#b45309" fill-opacity="0.3" stroke="#fbbf24" stroke-width="1"/>
+    <!-- Credit Card Globe Icon -->
+    <circle cx="22" cy="24" r="6" fill="none" stroke="#fbbf24" stroke-width="1.3"/>
+    <circle cx="28" cy="24" r="6" fill="none" stroke="#f59e0b" stroke-width="1.3"/>
+    <text x="46" y="24" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="12.5" font-weight="700">Card Networks</text>
+    <text x="46" y="37" fill="#fbbf24" font-family="system-ui, -apple-system, sans-serif" font-size="10">Visa, Mastercard, Amex</text>
+    <text x="12" y="68" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-size="9.5">• Inter-network Interchange</text>
+    <text x="12" y="80" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-size="9.5">• Directory Server (3DS 2)</text>
+  </g>
+
+  <!-- 6. ISSUING BANK -->
+  <g transform="translate(880, 510)" filter="url(#card-shadow)">
+    <rect width="200" height="90" rx="10" fill="url(#card-grad)" stroke="#10b981" stroke-width="1.2"/>
+    <rect x="10" y="10" width="28" height="28" rx="6" fill="#047857" fill-opacity="0.3" stroke="#34d399" stroke-width="1"/>
+    <!-- Safe / Auth Icon -->
+    <path d="M16 20 H32 V32 H16 Z M24 24 A2 2 0 1 0 24 28 A2 2 0 1 0 24 24" fill="none" stroke="#34d399" stroke-width="1.4"/>
+    <text x="46" y="24" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="12.5" font-weight="700">Issuing Bank</text>
+    <text x="46" y="37" fill="#34d399" font-family="system-ui, -apple-system, sans-serif" font-size="10">Customer Account Holder</text>
+    <text x="12" y="68" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-size="9.5">• Funds Authorization Check</text>
+    <text x="12" y="80" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-size="9.5">• Generates Auth / Decline Code</text>
+  </g>
+
+
+  <!-- ==================== FLOW PATHS & DATA CONNECTORS ==================== -->
+
+  <!-- STEP 1: Client to Gateway (Tokenization Request) -->
+  <path d="M 310 190 L 380 190" fill="none" stroke="#38bdf8" stroke-width="2.5" marker-end="url(#arrow-forward)"/>
+  <g transform="translate(315, 168)">
+    <rect x="-8" y="-9" width="60" height="18" rx="9" fill="#0369a1" stroke="#38bdf8" stroke-width="1"/>
+    <text x="22" y="4" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="9.5" font-weight="700" text-anchor="middle">1. Tokenize</text>
+  </g>
+
+  <!-- STEP 1b: Token Vault Sync -->
+  <path d="M 580 195 L 615 195" fill="none" stroke="#c084fc" stroke-width="2" stroke-dasharray="4 3" marker-end="url(#arrow-vault)"/>
+
+  <!-- STEP 2: Vault Returns Token to Client, Client gives Token to Merchant Backend -->
+  <path d="M 190 295 L 190 430" fill="none" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrow-forward)"/>
+  <g transform="translate(200, 355)">
+    <rect x="0" y="-10" width="95" height="20" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+    <text x="47" y="4" fill="#38bdf8" font-family="system-ui, -apple-system, sans-serif" font-size="9.5" font-weight="600" text-anchor="middle">2. Submit Order (tok)</text>
+  </g>
+
+  <!-- STEP 3: Merchant Backend to Gateway Charge API -->
+  <path d="M 310 480 L 380 405" fill="none" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrow-forward)"/>
+  <g transform="translate(315, 435)">
+    <rect x="-6" y="-9" width="70" height="18" rx="9" fill="#0369a1" stroke="#38bdf8" stroke-width="1"/>
+    <text x="29" y="4" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="9.5" font-weight="700" text-anchor="middle">3. Auth Charge</text>
+  </g>
+
+  <!-- Internal GW Flow: Risk to Router -->
+  <path d="M 580 385 L 615 385" fill="none" stroke="#a855f7" stroke-width="2" marker-end="url(#arrow-forward)"/>
+
+  <!-- STEP 4: Router to Acquirer Bank -->
+  <path d="M 815 355 L 880 235" fill="none" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrow-forward)"/>
+  <g transform="translate(810, 280)">
+    <rect x="-6" y="-9" width="75" height="18" rx="9" fill="#0369a1" stroke="#38bdf8" stroke-width="1"/>
+    <text x="31" y="4" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="700" text-anchor="middle">4. ISO 8583 Req</text>
+  </g>
+
+  <!-- STEP 5: Acquirer to Card Network -->
+  <path d="M 980 250 L 980 340" fill="none" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrow-forward)"/>
+  <g transform="translate(990, 290)">
+    <rect x="0" y="-9" width="70" height="18" rx="9" fill="#b45309" fill-opacity="0.8" stroke="#fbbf24" stroke-width="1"/>
+    <text x="35" y="4" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="700" text-anchor="middle">5. Inter-Switch</text>
+  </g>
+
+  <!-- STEP 6: Card Network to Issuing Bank -->
+  <path d="M 980 430 L 980 510" fill="none" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrow-forward)"/>
+  <g transform="translate(990, 465)">
+    <rect x="0" y="-9" width="78" height="18" rx="9" fill="#065f46" stroke="#34d399" stroke-width="1"/>
+    <text x="39" y="4" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="700" text-anchor="middle">6. Authorize PAN</text>
+  </g>
+
+  <!-- ==================== REVERSE RESPONSE FLOW (EMERALD) ==================== -->
+
+  <!-- STEP 7: Issuer Response up to Card Network then back to GW Database/Router -->
+  <path d="M 930 510 C 930 460 930 460 930 430" fill="none" stroke="#10b981" stroke-width="2" stroke-dasharray="5 3" marker-end="url(#arrow-return)"/>
+  
+  <path d="M 880 395 C 840 430 780 480 695 530" fill="none" stroke="#10b981" stroke-width="2" stroke-dasharray="5 3" marker-end="url(#arrow-return)"/>
+  <g transform="translate(775, 465)">
+    <rect x="-8" y="-9" width="82" height="18" rx="9" fill="#064e3b" stroke="#10b981" stroke-width="1"/>
+    <text x="33" y="4" fill="#a7f3d0" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="700" text-anchor="middle">7. Auth Approved</text>
+  </g>
+
+  <!-- STEP 8: Webhook Notification to Merchant Backend -->
+  <path d="M 495 550 L 310 520" fill="none" stroke="#10b981" stroke-width="2" stroke-dasharray="5 3" marker-end="url(#arrow-return)"/>
+  <g transform="translate(355, 545)">
+    <rect x="-5" y="-9" width="95" height="18" rx="9" fill="#064e3b" stroke="#10b981" stroke-width="1"/>
+    <text x="42" y="4" fill="#a7f3d0" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="700" text-anchor="middle">8. Webhook: charge.ok</text>
+  </g>
+
+  <!-- STEP 9: Merchant Confirm to Customer UI -->
+  <path d="M 120 430 L 120 295" fill="none" stroke="#10b981" stroke-width="2" stroke-dasharray="5 3" marker-end="url(#arrow-return)"/>
+  <g transform="translate(45, 355)">
+    <rect x="-8" y="-10" width="85" height="20" rx="6" fill="#064e3b" stroke="#10b981" stroke-width="1"/>
+    <text x="34" y="4" fill="#a7f3d0" font-family="system-ui, -apple-system, sans-serif" font-size="9.5" font-weight="600" text-anchor="middle">9. Order Success</text>
+  </g>
+
+  <!-- ==================== FOOTER / DATA FLOW LEGEND ==================== -->
+  <g transform="translate(60, 705)">
+    <!-- Legend Box -->
+    <rect width="1160" height="60" rx="10" fill="#0b1120" stroke="#1e293b" stroke-width="1"/>
+
+    <!-- Legend Items -->
+    <!-- Item 1 -->
+    <g transform="translate(25, 22)">
+      <line x1="0" y1="8" x2="35" y2="8" stroke="#38bdf8" stroke-width="2.5" marker-end="url(#arrow-forward)"/>
+      <text x="45" y="12" fill="#e2e8f0" font-family="system-ui, -apple-system, sans-serif" font-size="11.5" font-weight="600">Inbound Request Flow</text>
+      <text x="180" y="12" fill="#64748b" font-family="system-ui, -apple-system, sans-serif" font-size="11">(Synchronous / REST &amp; ISO 8583)</text>
+    </g>
+
+    <!-- Item 2 -->
+    <g transform="translate(420, 22)">
+      <line x1="0" y1="8" x2="35" y2="8" stroke="#10b981" stroke-width="2" stroke-dasharray="5 3" marker-end="url(#arrow-return)"/>
+      <text x="45" y="12" fill="#e2e8f0" font-family="system-ui, -apple-system, sans-serif" font-size="11.5" font-weight="600">Auth / Response Flow</text>
+      <text x="185" y="12" fill="#64748b" font-family="system-ui, -apple-system, sans-serif" font-size="11">(Async Webhook + Result Code)</text>
+    </g>
+
+    <!-- Item 3 -->
+    <g transform="translate(810, 22)">
+      <rect x="0" y="0" width="16" height="16" rx="4" fill="#7c3aed" fill-opacity="0.3" stroke="#a78bfa" stroke-width="1.5"/>
+      <text x="24" y="12" fill="#e2e8f0" font-family="system-ui, -apple-system, sans-serif" font-size="11.5" font-weight="600">PCI Encrypted Zone</text>
+      <text x="145" y="12" fill="#64748b" font-family="system-ui, -apple-system, sans-serif" font-size="11">(AES-256 Vault &amp; TLS 1.3)</text>
+    </g>
+  </g>
+
+</svg>

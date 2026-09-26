@@ -19,22 +19,25 @@ class Config:
     DATA_DIR = BASE_DIR / "data"
     SESSIONS_DIR = DATA_DIR / "sessions"
     DOCUMENTS_DIR = DATA_DIR / "documents"
+    SVG_IMAGES_DIR = DATA_DIR / "svg_images"
     
     # IBM ICA Model Configuration
     IBM_ICA_API_KEY = os.getenv("IBM_ICA_API_KEY", "")
     IBM_ICA_ENDPOINT = os.getenv("IBM_ICA_ENDPOINT", "")
     IBM_ICA_MODEL_ID = os.getenv("IBM_ICA_MODEL_ID", "claude-opus-5-5")
     IBM_ICA_GEMINI_MODEL_ID = os.getenv("IBM_ICA_GEMINI_MODEL_ID", "gemini-3.7-flash")
+    IBM_ICA_OPENAI_MODEL_ID = os.getenv("IBM_ICA_OPENAI_MODEL_ID", "gpt-5.6-sol")
     IBM_ICA_INSECURE_TLS = os.getenv("IBM_ICA_INSECURE_TLS", "false").lower() in ("true", "1", "yes")
 
     # Model provider choice -> underlying model_id
     MODEL_CHOICES = {
         "claude": IBM_ICA_MODEL_ID,
         "gemini": IBM_ICA_GEMINI_MODEL_ID,
+        "openai": IBM_ICA_OPENAI_MODEL_ID,
     }
     
     # Model settings
-    MODEL_TIMEOUT = int(os.getenv("MODEL_TIMEOUT", "60"))
+    MODEL_TIMEOUT = int(os.getenv("MODEL_TIMEOUT", "180"))
     MAX_TOKENS = int(os.getenv("MAX_TOKENS", "100000"))
     
     # API settings
@@ -46,9 +49,11 @@ class Config:
     
     # File upload settings
     MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+    # Images are read by the Claude model and converted to Markdown
+    IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
     ALLOWED_EXTENSIONS = {
         ".pdf", ".docx", ".doc", ".txt", ".md", ".markdown"
-    }
+    } | IMAGE_EXTENSIONS
     
     @classmethod
     def validate(cls):
@@ -68,6 +73,7 @@ class Config:
         """Ensure required directories exist."""
         cls.SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
         cls.DOCUMENTS_DIR.mkdir(parents=True, exist_ok=True)
+        cls.SVG_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
 
 
 config = Config()

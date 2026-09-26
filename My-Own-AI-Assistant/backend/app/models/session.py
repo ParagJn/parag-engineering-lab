@@ -14,7 +14,7 @@ class Session(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     title: str = Field(default="New conversation", description="Session title")
-    model: str = Field(default="claude", description="Model provider: claude or gemini")
+    model: str = Field(default="claude", description="Model provider: claude, gemini, or openai")
     web_search_enabled: bool = Field(default=False, description="Whether the web search tool is enabled")
     messages: list[Message] = Field(default_factory=list)
     attachment_ids: list[str] = Field(default_factory=list)
