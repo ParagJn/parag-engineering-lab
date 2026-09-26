@@ -10,6 +10,11 @@ import type {
   UpdateSessionRequest,
   SvgImageResponse,
   SvgExportFormat,
+  ProjectSummary,
+  ProjectDetail,
+  ProjectDocument,
+  ProjectUpdateRequest,
+  SearchResponse,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -40,8 +45,10 @@ interface StreamMessageCallbacks {
 
 export const apiService = {
   // Sessions
-  async createSession(): Promise<{ session_id: string; created_at: string; updated_at: string; title: string }> {
-    const response = await api.post('/sessions');
+  async createSession(
+    projectId?: string | null,
+  ): Promise<{ session_id: string; created_at: string; updated_at: string; title: string; project_id?: string | null }> {
+    const response = await api.post('/sessions', projectId ? { project_id: projectId } : undefined);
     return response.data;
   },
 
@@ -65,6 +72,63 @@ export const apiService = {
 
   async renameSession(sessionId: string, newTitle: string): Promise<void> {
     await api.patch(`/sessions/${sessionId}`, { title: newTitle });
+  },
+
+  async moveSessionToProject(sessionId: string, projectId: string | null): Promise<void> {
+    await api.patch(`/sessions/${sessionId}`, { project_id: projectId });
+  },
+
+  // Projects
+  async listProjects(): Promise<ProjectSummary[]> {
+    const response = await api.get('/projects');
+    return response.data;
+  },
+
+  async createProject(name: string, description = '', instructions = ''): Promise<ProjectDetail> {
+    const response = await api.post('/projects', { name, description, instructions });
+    return response.data;
+  },
+
+  async getProject(projectId: string): Promise<ProjectDetail> {
+    const response = await api.get(`/projects/${projectId}`);
+    return response.data;
+  },
+
+  async updateProject(projectId: string, request: ProjectUpdateRequest): Promise<ProjectDetail> {
+    const response = await api.patch(`/projects/${projectId}`, request);
+    return response.data;
+  },
+
+  async deleteProject(projectId: string, deleteChats = false): Promise<void> {
+    await api.delete(`/projects/${projectId}`, { params: { delete_chats: deleteChats } });
+  },
+
+  async uploadProjectDocument(projectId: string, file: File): Promise<ProjectDocument> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post(`/projects/${projectId}/documents`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  /** Pin a file already uploaded in a chat to a project */
+  async pinDocumentToProject(projectId: string, attachmentId: string): Promise<ProjectDocument> {
+    const response = await api.post(`/projects/${projectId}/documents/${attachmentId}`);
+    return response.data;
+  },
+
+  async removeProjectDocument(projectId: string, attachmentId: string): Promise<void> {
+    await api.delete(`/projects/${projectId}/documents/${attachmentId}`);
+  },
+
+  // Search
+  async search(query: string, projectId?: string | null, signal?: AbortSignal): Promise<SearchResponse> {
+    const response = await api.get('/search', {
+      params: { q: query, ...(projectId ? { project_id: projectId } : {}) },
+      signal,
+    });
+    return response.data;
   },
 
   // Messages

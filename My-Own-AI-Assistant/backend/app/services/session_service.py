@@ -15,12 +15,13 @@ class SessionService:
         """Initialize session service."""
         self.repository = repository or SessionRepository()
     
-    def create_session(self) -> Session:
-        """Create a new session."""
+    def create_session(self, project_id: Optional[str] = None) -> Session:
+        """Create a new session, optionally inside a project."""
         session_id = self._generate_session_id()
         
         session = Session(
             session_id=session_id,
+            project_id=project_id,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
             title="New conversation",

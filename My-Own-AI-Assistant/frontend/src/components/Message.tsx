@@ -26,14 +26,28 @@ interface MessageProps {
   message: MessageType;
   onEditSvg?: (target: SvgEditTarget) => void;
   isSvgEditTarget?: boolean;
+  /** Files already pinned to the chat's project */
+  pinnedAttachmentIds?: Set<string>;
+  /** Set when the chat is in a project: offers to pin a sent file to it */
+  onPinAttachment?: (attachmentId: string) => void;
+  /** Briefly highlighted after jumping here from search */
+  highlighted?: boolean;
 }
 
-export const Message: React.FC<MessageProps> = ({ message, onEditSvg, isSvgEditTarget = false }) => {
+export const Message: React.FC<MessageProps> = ({
+  message,
+  onEditSvg,
+  isSvgEditTarget = false,
+  pinnedAttachmentIds,
+  onPinAttachment,
+  highlighted = false,
+}) => {
   const isUser = message.role === 'user';
   const svgImageId = message.svg_image_id;
-  const sentImages = (message.attachments || []).filter((att) =>
-    IMAGE_FILE_PATTERN.test(att.filename) || att.mime_type?.startsWith('image/')
-  );
+  const isImage = (att: { filename: string; mime_type?: string | null }) =>
+    IMAGE_FILE_PATTERN.test(att.filename) || !!att.mime_type?.startsWith('image/');
+  const sentImages = (message.attachments || []).filter(isImage);
+  const sentFiles = (message.attachments || []).filter((att) => !isImage(att));
   const [exporting, setExporting] = useState<SvgExportFormat | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
 
@@ -67,7 +81,12 @@ export const Message: React.FC<MessageProps> = ({ message, onEditSvg, isSvgEditT
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-8 mb-8 animate-fadeIn">
+    <div
+      id={`msg-${message.id}`}
+      className={`max-w-3xl mx-auto px-8 mb-8 animate-fadeIn scroll-mt-6 rounded-xl transition-colors duration-700 ${
+        highlighted ? 'bg-yellow-50 ring-1 ring-yellow-200 py-3' : ''
+      }`}
+    >
       <div className={`flex items-center gap-2 text-xs font-medium text-gray-400 mb-1.5 ${isUser ? 'justify-end' : ''}`}>
         <span>{isUser ? 'You' : 'Assistant'}</span>
         {!isUser && message.content && !svgImageId && (
@@ -163,6 +182,38 @@ export const Message: React.FC<MessageProps> = ({ message, onEditSvg, isSvgEditT
                   />
                 </a>
               ))}
+            </div>
+          )}
+          {sentFiles.length > 0 && (
+            <div className="flex flex-wrap justify-end gap-2 max-w-[85%]">
+              {sentFiles.map((att) => {
+                const pinned = pinnedAttachmentIds?.has(att.attachment_id);
+                return (
+                  <div
+                    key={att.attachment_id}
+                    className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 text-xs text-gray-700 border border-gray-200 rounded-lg bg-white"
+                  >
+                    <svg className="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span className="truncate max-w-[200px]" title={att.filename}>{att.filename}</span>
+                    {pinned ? (
+                      <span className="px-1.5 text-[11px] text-gray-400" title="This file is in the project's documents">
+                        In project
+                      </span>
+                    ) : onPinAttachment ? (
+                      <button
+                        type="button"
+                        onClick={() => onPinAttachment(att.attachment_id)}
+                        className="px-1.5 py-0.5 text-[11px] font-medium text-gray-600 rounded hover:bg-gray-100 hover:text-gray-900"
+                        title="Add to the project's documents, so every chat in the project can use it"
+                      >
+                        Pin to project
+                      </button>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
           )}
           {message.content && (

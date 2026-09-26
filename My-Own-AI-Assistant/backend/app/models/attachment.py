@@ -25,6 +25,7 @@ class AttachmentImage(BaseModel):
 class Attachment(BaseModel):
     """File attachment."""
     attachment_id: str = Field(..., description="Unique attachment ID")
+    session_id: Optional[str] = Field(None, description="Chat the file was uploaded in")
     filename: str = Field(..., description="Original filename")
     mime_type: str = Field(..., description="MIME type")
     size_bytes: int = Field(..., description="File size in bytes")
