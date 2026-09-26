@@ -46,7 +46,11 @@ SVG_SYSTEM_PROMPT = (
     "<animateTransform>) or CSS @keyframes in a <style> block, looping seamlessly "
     "with cycles of 10 seconds or less. Never use JavaScript.\n"
     "- When asked to edit an existing SVG, return the COMPLETE revised SVG, keeping "
-    "everything the user didn't ask to change."
+    "everything the user didn't ask to change.\n"
+    "- For charts, diagrams, maps or anything factual, use the labels, numbers and facts "
+    "the user supplied. Don't invent data values, statistics, names or relationships; if "
+    "something needed is missing, use an obvious placeholder label (e.g. \"Value A\", "
+    "\"TBD\") rather than a made-up figure."
 )
 
 

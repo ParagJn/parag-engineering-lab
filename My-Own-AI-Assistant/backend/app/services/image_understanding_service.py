@@ -27,7 +27,18 @@ IMAGE_TO_MARKDOWN_PROMPT = (
     "(A -> B, with labels), plus grouping/hierarchy.\n"
     "- Charts -> chart type, axes, series, and the data values you can read.\n"
     "- Screenshots of apps/UI -> layout, sections, and the state of controls.\n"
-    "- Photos/illustrations -> subjects, setting, colours, notable details.\n"
+    "- Photos/illustrations -> subjects, setting, colours, notable details.\n\n"
+    "Accuracy rules (a wrong description is worse than an incomplete one):\n"
+    "- Describe only what is actually visible. Never invent text, numbers, labels, "
+    "connections or details to make the description feel complete.\n"
+    "- If text is too small, blurry, cut off or ambiguous, write [illegible] or "
+    "[unclear: best reading?] instead of guessing. Don't correct apparent typos; "
+    "transcribe what is there.\n"
+    "- Chart values: give only values you can actually read (from labels or clear "
+    "gridlines). Mark visual estimates with ~ and say they are approximate.\n"
+    "- Keep observation apart from interpretation. If you add an inference (what the "
+    "image is probably for, who a logo belongs to), label it clearly as an inference.\n"
+    "- Don't identify real people from their faces.\n"
     "Respond with the Markdown only, no preamble."
 )
 
@@ -36,12 +47,27 @@ class ImageUnderstandingService:
     """Turns an image into Markdown using the Claude model."""
 
     async def image_to_markdown(self, image_path: Path, mime_type: str, filename: str) -> str:
-        data = base64.b64encode(image_path.read_bytes()).decode("ascii")
+        text = await self.describe_image(image_path.read_bytes(), mime_type)
+
+        markdown = f"# {filename}\n\n"
+        markdown += f"**Type:** {mime_type} (image)\n\n"
+        markdown += (
+            "_This image was converted to Markdown by an image-reading model; "
+            "you are seeing its description, not the image itself._\n\n"
+        )
+        markdown += "---\n\n"
+        markdown += text
+        return markdown
+
+    async def describe_image(self, data: bytes, mime_type: str, context: str | None = None) -> str:
+        """Return the Markdown rendition of raw image bytes. `context` tells the model what the image is."""
+        prompt = f"{context}\n\n{IMAGE_TO_MARKDOWN_PROMPT}" if context else IMAGE_TO_MARKDOWN_PROMPT
+        encoded = base64.b64encode(data).decode("ascii")
         messages = [{
             "role": "user",
             "content": [
-                {"type": "text", "text": IMAGE_TO_MARKDOWN_PROMPT},
-                {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{data}"}},
+                {"type": "text", "text": prompt},
+                {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{encoded}"}},
             ],
         }]
 
@@ -58,15 +84,7 @@ class ImageUnderstandingService:
                 raise ModelRateLimitError(str(e)) from e
             raise RuntimeError(f"Image understanding failed: {str(e)}") from e
 
-        markdown = f"# {filename}\n\n"
-        markdown += f"**Type:** {mime_type} (image)\n\n"
-        markdown += (
-            "_This image was converted to Markdown by an image-reading model; "
-            "you are seeing its description, not the image itself._\n\n"
-        )
-        markdown += "---\n\n"
-        markdown += result["text"]
-        return markdown
+        return result["text"]
 
 
 # Singleton instance

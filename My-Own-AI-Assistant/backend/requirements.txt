@@ -1,23 +1,27 @@
 # Backend requirements
+# Minimum versions (not exact pins): the venv is shared with other projects, so
+# installing these must never downgrade packages they depend on.
 
 # FastAPI and server
-fastapi==0.115.12
-uvicorn[standard]==0.34.2
-python-multipart==0.0.20
-python-dotenv==1.0.1
+fastapi>=0.115.12
+uvicorn[standard]>=0.34.2
+python-multipart>=0.0.20
+python-dotenv>=1.1.1
 
 # Data validation
-pydantic==2.10.6
+pydantic>=2.11.9
 
-# Document extraction
-PyPDF2==3.0.1
-python-docx==1.1.2
+# Document extraction (MarkItDown first; PyPDF2/python-docx as fallback and for embedded images)
+markitdown[pdf,docx]>=0.1.8
+PyPDF2>=3.0.1
+pypdfium2>=5.3.0
+python-docx>=1.2.0
 
 # Experimental SVG -> MP4/GIF export (also run: playwright install chromium; needs ffmpeg)
-playwright==1.63.0
+playwright>=1.63.0
 
 # Web search tool
-ddgs==9.16.0
+ddgs>=9.16.0
 
 # Optional dependencies
-certifi==2024.12.14
+certifi>=2024.12.14
