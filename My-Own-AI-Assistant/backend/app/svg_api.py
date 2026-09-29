@@ -20,7 +20,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from .config import config
-from .ibm_ica_client import IBMICAError
+from .ibm_ica_client import IBMICAError, IBMICATimeoutError
 from .models import Message, Session
 from .repositories import SessionRepository
 from .services import get_message_service, get_model_service, get_session_service
@@ -186,6 +186,16 @@ async def generate_svg_image(session_id: str, request: SvgImageRequest):
             messages=model_messages,
             max_tokens=SVG_MAX_TOKENS,
             model_id=config.MODEL_CHOICES.get(session.model, config.IBM_ICA_MODEL_ID),
+            timeout=config.SVG_TIMEOUT,
+        )
+    except IBMICATimeoutError:
+        logger.warning("SVG generation timed out for session %s", session_id)
+        raise HTTPException(
+            status_code=504,
+            detail=(
+                f"The model didn't finish the SVG within {config.SVG_TIMEOUT} seconds. "
+                "Try a simpler or shorter request, or raise SVG_TIMEOUT in backend/.env."
+            ),
         )
     except IBMICAError as e:
         if getattr(e, "http_code", None) == 429:

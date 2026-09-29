@@ -205,7 +205,7 @@ async def startup_event():
     try:
         ibm_endpoint = os.getenv("IBM_ICA_ENDPOINT")
         ibm_api_key = os.getenv("IBM_ICA_API_KEY")
-        ibm_model_id = os.getenv("IBM_ICA_MODEL_ID", "claude-sonnet-5")
+        ibm_model_id = os.getenv("IBM_ICA_MODEL_ID", "claude-opus-5-5")
         
         if ibm_endpoint and ibm_api_key:
             ibm_ica_client = IBMICAClient(
@@ -813,7 +813,7 @@ async def generate_sow(
         logger.info(f"Generating {len(section_prompts)} SoW sections concurrently...")
         loop = asyncio.get_running_loop()
         results = await asyncio.gather(*[
-            loop.run_in_executor(None, generate_with_active_provider, prompt, 6000)
+            loop.run_in_executor(None, generate_with_active_provider, prompt, 16000)
             for _, prompt in section_prompts
         ])
 
@@ -1148,9 +1148,9 @@ async def generate_isbd(request: ISBDGenerationRequest):
         prompts = _build_isbd_prompts(request.sow_content)
         loop = asyncio.get_running_loop()
         approach_raw, assumptions_raw, risks_raw = await asyncio.gather(*[
-            loop.run_in_executor(None, generate_with_active_provider, prompts["approach"], 2000),
-            loop.run_in_executor(None, generate_with_active_provider, prompts["assumptions"], 1500),
-            loop.run_in_executor(None, generate_with_active_provider, prompts["risks"], 1500),
+            loop.run_in_executor(None, generate_with_active_provider, prompts["approach"], 16000),
+            loop.run_in_executor(None, generate_with_active_provider, prompts["assumptions"], 16000),
+            loop.run_in_executor(None, generate_with_active_provider, prompts["risks"], 16000),
         ])
 
         approach_json = _extract_json(approach_raw) or {}

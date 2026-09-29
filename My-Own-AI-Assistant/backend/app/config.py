@@ -39,6 +39,8 @@ class Config:
     
     # Model settings
     MODEL_TIMEOUT = int(os.getenv("MODEL_TIMEOUT", "180"))
+    # SVG replies are long single responses (up to 16k tokens), so allow more time
+    SVG_TIMEOUT = int(os.getenv("SVG_TIMEOUT", "600"))
     MAX_TOKENS = int(os.getenv("MAX_TOKENS", "100000"))
     
     # API settings

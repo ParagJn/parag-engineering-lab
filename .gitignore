@@ -36,6 +36,10 @@ dist/
 **/sessions/*.json
 **/config.json
 
+# My-Own-AI-Assistant — chat database and its backups (chats are private, like sessions/*.json)
+My-Own-AI-Assistant/data/assistant.db*
+My-Own-AI-Assistant/data/backups/
+
 # Agentic-Procurement — API keys in settings
 Agentic-Procurement/data/settings.json
 

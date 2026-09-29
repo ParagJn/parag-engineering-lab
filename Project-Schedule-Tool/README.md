@@ -40,6 +40,7 @@ A professional, AI-powered web application designed to create, manage, and visua
 * **Draft Validation**: Prevents saving with default or empty project names to avoid "Untitled" clutter
 * **Separate SoW Storage**: SoW files stored independently as `SoW-Draft-{ProjectName}.json` in `drafts/` folder
 * **Project Drafts**: Regular project saves as `{ProjectName}_draft.json` for work-in-progress
+* **Archive / Unarchive** 🆕: Move a draft out of the active Dashboard list into an `archive/` folder with one click; a "View Archive" dialog lists archived drafts and restores any of them back to `drafts/`
 * **Dashboard Overview**: Clean dashboard view showing only project drafts (SoW files filtered out)
 * **Load Existing Plans**: Open saved plans from Dashboard with full task and metadata restoration
 * **Browser LocalStorage**: Store plans locally with metadata, timestamps, and quick access
@@ -48,9 +49,17 @@ A professional, AI-powered web application designed to create, manage, and visua
 ### 5. Consulting-Grade Excel Export
 * **Excel Formulas**: Inserts live formula bindings (`ROUND`, division, additions) instead of static values
 * **Gantt Renderings**: Merges weekly cells and formats them with matching colors and FTE labels
+* **Totals Row** 🆕: Bold summary row beneath the schedule grid with live `SUM` formulas for Est. Hours, Est. Days, Est. Weeks, and Man Days, set off by a full-width top border
 * **Page Layout Setup**: Landscape orientation, fit-to-width print properties, auto-fit columns, borders, and frozen panes
 * **Professional Formatting**: Headers, borders, color schemes optimized for executive presentations
 * **Resource Allocation**: Clear FTE (Full-Time Equivalent) displays per task and week
+
+### 6. AI-Generated ISBD Slide Deck 🆕
+* **One-Click Generation**: "Generate ISBD Content" button inside the SoW Draft modal builds a 5-slide PowerPoint (.pptx) grounded in the already-generated SoW text
+* **Slide Structure**: Approach & Scope (with an auto-generated flow diagram), blank Schedule and Cost slides left for manual input, Assumptions & Dependencies, and a Risks table
+* **Local Mermaid Rendering**: Approach slide's flow diagram is rendered locally via `mmdc` (Mermaid CLI) from an AI-generated flowchart definition and embedded as an image — the slide degrades gracefully (no diagram) if `mmdc` isn't installed
+* **Consistent Styling**: Calibri font throughout, sized per slide role (titles, subheaders, bullets)
+* **JSON Persistence**: Parsed slide content (bullets, dependencies, risks, mermaid definition) is saved to `drafts/isbd_draft_{ProjectName}.json` alongside the .pptx so it can be inspected or reused without re-calling the AI
 
 ### 7. Public Holiday Adjustment 🆕
 * **Region-Specific Holiday Lists**: Configure Victoria, Australia and India public holidays on the Settings page — paste raw text copied from any webpage/spreadsheet and the AI extracts a clean date/name list for the current year
@@ -67,6 +76,7 @@ A professional, AI-powered web application designed to create, manage, and visua
 * **Provider Settings API**: RESTful endpoints for provider selection and status checking 🆕
 * **Settings Persistence**: Provider preference stored in `backend/settings.json` and survives restarts 🆕
 * **AI-Powered Holiday Parsing**: `/holidays/parse` endpoint uses the active AI provider to extract structured date/name holiday lists from pasted raw text 🆕
+* **ISBD Slide Generation**: `/generate/isbd` endpoint condenses the SoW into slide-ready bullets via the active AI provider, renders the approach diagram, builds the .pptx, and persists the parsed content as JSON 🆕
 * **Multi-Model Support**: Architecture supports OpenAI, Google Gemini, Azure OpenAI, and Anthropic
 * **OAuth 2.0 Authentication**: Automatic token management, caching, and refresh for SAP AI Core
 * **Orchestration API**: Uses SAP AI Core orchestration format v2 for advanced prompt engineering
@@ -82,7 +92,7 @@ A professional, AI-powered web application designed to create, manage, and visua
 ```
 Project-Schedule-Tool/
 ├── backend/                          # AI-powered FastAPI backend
-│   ├── main.py                       # FastAPI app with SoW + holiday parsing endpoints
+│   ├── main.py                       # FastAPI app with SoW + holiday parsing + ISBD generation endpoints
 │   ├── llm_client.py                 # Universal LLM client (SAP AI Core, OpenAI, etc.)
 │   ├── config.json                   # Multi-provider model configuration
 │   ├── data/                         # Saved public holiday lists ✨ NEW
@@ -115,6 +125,7 @@ Project-Schedule-Tool/
 │   ├── services/
 │   │   ├── api/
 │   │   │   ├── sowApi.ts             # SoW generation API client ✨ NEW
+│   │   │   ├── isbdApi.ts            # ISBD slide deck generation API client 🆕
 │   │   │   ├── exportApi.ts          # Export functionality
 │   │   │   ├── mockApi.ts            # Mock data for development
 │   │   │   └── projectApi.ts         # Project CRUD operations
@@ -130,7 +141,9 @@ Project-Schedule-Tool/
 │   └── main.tsx                      # Application entry point
 ├── drafts/                           # Auto-generated draft storage
 │   ├── {ProjectName}_draft.json      # Regular project drafts (on Dashboard)
-│   └── SoW-Draft-{ProjectName}.json  # SoW documents (separate storage) ✨ NEW
+│   ├── SoW-Draft-{ProjectName}.json  # SoW documents (separate storage) ✨ NEW
+│   └── isbd_draft_{ProjectName}.json # Persisted ISBD slide content (separate storage) 🆕
+├── archive/                          # Archived drafts, moved out of drafts/ via Dashboard 🆕
 ├── Instructions/                     # Feature documentation and planning docs
 ├── start.sh                          # Unified startup script (backend + frontend)
 ├── vite.config.ts                    # Vite configuration with draft API endpoints
@@ -188,7 +201,7 @@ SAP_AI_CORE_API_BASE=https://api.ai.your-region.aws.ml.hana.ondemand.com/v2
 
 # IBM ICA Configuration (NEW - Optional)
 IBM_ICA_API_KEY=your-ibm-ica-api-key
-IBM_ICA_MODEL_ID=claude-sonnet-5
+IBM_ICA_MODEL_ID=claude-opus-5-5
 IBM_ICA_ENDPOINT=https://api.nextgen-beta.ica.ibm.com/ica
 
 # Optional: Other LLM Providers
@@ -295,11 +308,26 @@ python main.py
 - Click to view → No regeneration, instant display
 - Click **"Regenerate"** in modal → Creates fresh SoW and overwrites existing file
 
+### Generating an ISBD Slide Deck 🆕
+1. Generate (or load) a SoW draft for the project first — the ISBD deck is grounded in that content
+2. In the SoW modal, click **"Generate ISBD Content"**
+3. The AI condenses the SoW into slide bullets and a small flow diagram; a 5-slide `.pptx` downloads automatically:
+   - **Slide 1**: Approach & Scope, with a locally-rendered Mermaid flow diagram
+   - **Slides 2–3**: Schedule and Cost — title only, left blank for manual input
+   - **Slide 4**: Assumptions & Dependencies
+   - **Slide 5**: Risks table
+4. The parsed content is also saved to `drafts/isbd_draft_{ProjectName}.json` so it can be reviewed or reused without re-running the AI
+
 ### Auto-Save Behavior
 - Project drafts auto-save every **2 minutes**
 - Only saves when project has a unique name (not "New Project Schedule")
 - Saves to `drafts/{ProjectName}_draft.json`
 - SoW files stored separately and not affected by project deletion
+
+### Archiving Drafts 🆕
+1. On the Dashboard, click the **Archive** icon on any draft row to move it into the `archive/` folder (it disappears from the active list)
+2. Click **"View Archive"** (top right of the Dashboard) to see all archived drafts
+3. Click **"Move to Draft"** on an archived row to restore it back to `drafts/` and the active Dashboard list
 
 ### Configuring & Applying Public Holidays 🆕
 1. Go to **Settings** → **Public Holidays**, pick a region (Victoria, Australia or India), click **"Add / Update Holidays"**, and paste the raw holiday text
@@ -316,6 +344,7 @@ python main.py
    - Task metadata (activities, hours, FTEs, dependencies)
    - Gantt chart with colored weekly cells
    - Live Excel formulas for calculations
+   - A bold **Totals row** summing Est. Hours, Est. Days, Est. Weeks, and Man Days 🆕
    - Professional formatting ready for presentations
 
 ---
@@ -447,6 +476,31 @@ Expected response:
   { "holidays": [{ "date": "2026-01-01", "name": "New Year's Day" }, ...] }
   ```
 
+### ISBD Slide Generation API 🆕
+**POST** `/generate/isbd`
+- **Description**: Generate a 5-slide ISBD PowerPoint deck grounded in an already-generated SoW, render its approach diagram locally via Mermaid CLI, and persist the parsed content as JSON
+- **Request Body**:
+  ```json
+  {
+    "project_name": "PCR-001",
+    "customer": "AusNet",
+    "sow_content": "## Background and Context\n\n..."
+  }
+  ```
+- **Response**: Binary `.pptx` file stream (`Content-Disposition: attachment`)
+
+### Draft Archive API 🆕
+**GET** `/api/list-archive`
+- **Description**: List drafts currently in the `archive/` folder (same shape as `/api/list-drafts`)
+
+**POST** `/api/archive-draft`
+- **Description**: Move a draft from `drafts/` to `archive/`
+- **Request Body**: `{ "filename": "PCR-001_draft.json" }`
+
+**POST** `/api/unarchive-draft`
+- **Description**: Move a draft from `archive/` back to `drafts/`
+- **Request Body**: `{ "filename": "PCR-001_draft.json" }`
+
 ### Other Endpoints
 - **GET** `/health` - Backend health check
 - **POST** `/generate/tasks` - AI-powered task generation (future)
@@ -468,6 +522,7 @@ Full API documentation available at [http://localhost:8000/docs](http://localhos
 - **Vite** 8.1.5 - Build tool and dev server
 - **ExcelJS** - Excel export
 - **docx** - Word document generation ✨ NEW
+- **file-saver** - Client-side download of generated `.pptx`/`.docx` files 🆕
 
 ### Backend
 - **Python** 3.9+
@@ -478,6 +533,8 @@ Full API documentation available at [http://localhost:8000/docs](http://localhos
 - **Claude 4.7 Opus** - SAP AI Core model
 - **Claude Sonnet 5** - IBM ICA model 🆕
 - **OAuth 2.0** - SAP authentication
+- **python-pptx** - ISBD PowerPoint deck generation 🆕
+- **Mermaid CLI (`mmdc`)** - Optional local rendering of the ISBD approach flow diagram; if not on `PATH`, the diagram is skipped and generation still succeeds 🆕
 
 ---
 
