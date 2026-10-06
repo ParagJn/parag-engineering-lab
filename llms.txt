@@ -1,0 +1,11 @@
+# Parag Jain
+
+> AI Solutions Architect and GenAI consultant with 24+ years of enterprise consulting experience. Available for full-time, contract, and advisory engagements in Generative AI, LLMs, Agentic RAG, and Cloud Architecture.
+
+Parag Jain is a Lead Architect and GenAI Account Partner at IBM Consulting. He designs and delivers enterprise GenAI productivity assets — LLM-based enterprise assistants, agentic AI frameworks, and scalable data platforms across Banking, Healthcare, Automotive, and Logistics.
+
+## Pages
+
+- [Home](https://paragjn.github.io/parag-engineering-lab/): Overview, capabilities, featured GenAI assets, projects, signature engagements, and contact.
+- [Executive Summary](https://paragjn.github.io/parag-engineering-lab/executive-summary/): Crawlable one-page summary.
+- [Engineering Lab](https://paragjn.github.io/parag-engineering-lab/projects.html): Full catalogue of AI-powered projects.
