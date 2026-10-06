@@ -1,0 +1,198 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1360 460" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#64748b"/>
+    </marker>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4"/>
+    </filter>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#0f172a" flood-opacity="0.15"/>
+    </filter>
+    <!-- Reusable gear icon (uses currentColor) -->
+    <g id="gear">
+      <circle r="9" fill="none" stroke="currentColor" stroke-width="5" stroke-dasharray="3.5 3.57"/>
+      <circle r="7.5" fill="currentColor"/>
+      <circle r="3" fill="#ffffff"/>
+    </g>
+    <style>
+      .edge{fill:none;stroke:#64748b;stroke-width:2.5;stroke-dasharray:6 5;animation:flow 0.8s linear infinite}
+      @keyframes flow{to{stroke-dashoffset:-11}}
+      .t1{font-size:15px;font-weight:700;fill:#0f172a;text-anchor:middle}
+      .t2{font-size:12.5px;fill:#334155;text-anchor:middle}
+      .plabel{font-size:11px;font-weight:600;fill:#475569;text-anchor:middle}
+      .card{fill:#f8fafc;stroke:#cbd5e1;stroke-width:1.5}
+      .tether{stroke:#cbd5e1;stroke-width:1.5;stroke-dasharray:2 3}
+    </style>
+  </defs>
+
+  <rect width="1360" height="460" fill="#ffffff"/>
+  <text x="680" y="48" text-anchor="middle" font-size="22" font-weight="700" fill="#0f172a">Data Flow: Source → Target</text>
+  <text x="680" y="72" text-anchor="middle" font-size="13" fill="#64748b">Medallion pipeline simulation</text>
+
+  <g transform="translate(0,40)">
+    <!-- Edges -->
+    <path id="e1" class="edge" d="M180 160 L228 160" marker-end="url(#arr)"/>
+    <path id="e2" class="edge" d="M370 160 L418 160" marker-end="url(#arr)"/>
+    <path id="e3" class="edge" d="M560 160 L608 160" marker-end="url(#arr)"/>
+    <path id="e4" class="edge" d="M750 160 L798 160" marker-end="url(#arr)"/>
+    <path id="e5" class="edge" d="M940 160 L988 160" marker-end="url(#arr)"/>
+    <path id="e6" class="edge" d="M1130 160 L1178 160" marker-end="url(#arr)"/>
+    <path id="e7" class="edge" d="M490 195 L490 288" marker-end="url(#arr)"/>
+
+    <!-- ===== Processing icons ===== -->
+    <!-- Stage 1: Bronze → Silver (interlocking gears) -->
+    <g>
+      <text class="plabel" x="394" y="58">Cleanse / Validate</text>
+      <line class="tether" x1="394" y1="114" x2="394" y2="154"/>
+      <rect class="card" x="366" y="66" width="56" height="48" rx="10">
+        <animate attributeName="stroke" values="#cbd5e1;#b8732e;#cbd5e1;#cbd5e1" keyTimes="0;0.05;0.12;1" dur="8s" begin="1.3s" repeatCount="indefinite"/>
+      </rect>
+      <g transform="translate(384,86)">
+        <g>
+          <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="4s" repeatCount="indefinite"/>
+          <use href="#gear" color="#b8732e"/>
+        </g>
+      </g>
+      <g transform="translate(401,100)">
+        <g>
+          <animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="2.8s" repeatCount="indefinite"/>
+          <use href="#gear" color="#8795a4" transform="scale(0.7)"/>
+        </g>
+      </g>
+    </g>
+
+    <!-- Stage 2: Silver → Sync (filter funnel + gear) -->
+    <g>
+      <text class="plabel" x="584" y="58">Model / Transform</text>
+      <line class="tether" x1="584" y1="114" x2="584" y2="154"/>
+      <rect class="card" x="556" y="66" width="56" height="48" rx="10">
+        <animate attributeName="stroke" values="#cbd5e1;#7c3aed;#cbd5e1;#cbd5e1" keyTimes="0;0.05;0.12;1" dur="8s" begin="2.3s" repeatCount="indefinite"/>
+      </rect>
+      <!-- falling records -->
+      <circle cx="570" cy="72" r="2.2" fill="#8795a4">
+        <animate attributeName="cy" values="72;86" dur="1.2s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0;1;0" dur="1.2s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="578" cy="72" r="2.2" fill="#8795a4">
+        <animate attributeName="cy" values="72;86" dur="1.2s" begin="0.6s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0;1;0" dur="1.2s" begin="0.6s" repeatCount="indefinite"/>
+      </circle>
+      <path d="M562,82 L586,82 L577,93 L577,102 L571,105 L571,93 Z" fill="#7c3aed" opacity="0.85"/>
+      <circle cx="574" cy="108" r="1.8" fill="#7c3aed">
+        <animate attributeName="opacity" values="0;1;0" dur="1.2s" begin="0.3s" repeatCount="indefinite"/>
+      </circle>
+      <g transform="translate(599,98)">
+        <g>
+          <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="3s" repeatCount="indefinite"/>
+          <use href="#gear" color="#7c3aed" transform="scale(0.75)"/>
+        </g>
+      </g>
+    </g>
+
+    <!-- Stage 3: Sync → Gold (gear + sync arrows) -->
+    <g>
+      <text class="plabel" x="774" y="58">Upsert / Aggregate</text>
+      <line class="tether" x1="774" y1="114" x2="774" y2="154"/>
+      <rect class="card" x="746" y="66" width="56" height="48" rx="10">
+        <animate attributeName="stroke" values="#cbd5e1;#c9960c;#cbd5e1;#cbd5e1" keyTimes="0;0.05;0.12;1" dur="8s" begin="3.3s" repeatCount="indefinite"/>
+      </rect>
+      <g transform="translate(763,88)">
+        <g>
+          <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="4s" repeatCount="indefinite"/>
+          <use href="#gear" color="#c9960c"/>
+        </g>
+      </g>
+      <g transform="translate(787,100)">
+        <g>
+          <animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="2.5s" repeatCount="indefinite"/>
+          <path d="M-7,-2 A7.3,7.3 0 0 1 6,-3.5" fill="none" stroke="#7c3aed" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M3,-7 L7.5,-3 L2.5,-1 Z" fill="#7c3aed"/>
+          <path d="M7,2 A7.3,7.3 0 0 1 -6,3.5" fill="none" stroke="#7c3aed" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M-3,7 L-7.5,3 L-2.5,1 Z" fill="#7c3aed"/>
+        </g>
+      </g>
+    </g>
+
+    <!-- Nodes -->
+    <g filter="url(#shadow)">
+      <rect x="40" y="125" width="140" height="70" rx="12" fill="#e0f2fe" stroke="#0284c7" stroke-width="2"/>
+      <rect x="230" y="125" width="140" height="70" rx="12" fill="#f8e5d2" stroke="#b8732e" stroke-width="2"/>
+      <rect x="420" y="125" width="140" height="70" rx="12" fill="#eef1f4" stroke="#8795a4" stroke-width="2"/>
+      <rect x="610" y="125" width="140" height="70" rx="12" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+      <rect x="800" y="125" width="140" height="70" rx="12" fill="#fdf3cf" stroke="#c9960c" stroke-width="2"/>
+      <rect x="990" y="125" width="140" height="70" rx="12" fill="#ffe4de" stroke="#ff3621" stroke-width="2"/>
+      <rect x="1180" y="125" width="140" height="70" rx="12" fill="#fff8d6" stroke="#d9ae00" stroke-width="2"/>
+      <rect x="420" y="290" width="140" height="70" rx="12" fill="#ccfbf1" stroke="#0d9488" stroke-width="2"/>
+    </g>
+
+    <!-- Pulses (8s cycle) -->
+    <g fill="none" stroke-width="6" opacity="0" filter="url(#glow)">
+      <rect x="40" y="125" width="140" height="70" rx="12" stroke="#0284c7"><animate attributeName="opacity" values="0;0.9;0;0" keyTimes="0;0.05;0.12;1" dur="8s" begin="0s" repeatCount="indefinite"/></rect>
+      <rect x="230" y="125" width="140" height="70" rx="12" stroke="#b8732e"><animate attributeName="opacity" values="0;0.9;0;0" keyTimes="0;0.05;0.12;1" dur="8s" begin="1s" repeatCount="indefinite"/></rect>
+      <rect x="420" y="125" width="140" height="70" rx="12" stroke="#8795a4"><animate attributeName="opacity" values="0;0.9;0;0" keyTimes="0;0.05;0.12;1" dur="8s" begin="2s" repeatCount="indefinite"/></rect>
+      <rect x="610" y="125" width="140" height="70" rx="12" stroke="#7c3aed"><animate attributeName="opacity" values="0;0.9;0;0" keyTimes="0;0.05;0.12;1" dur="8s" begin="3s" repeatCount="indefinite"/></rect>
+      <rect x="420" y="290" width="140" height="70" rx="12" stroke="#0d9488"><animate attributeName="opacity" values="0;0.9;0;0" keyTimes="0;0.05;0.12;1" dur="8s" begin="3s" repeatCount="indefinite"/></rect>
+      <rect x="800" y="125" width="140" height="70" rx="12" stroke="#c9960c"><animate attributeName="opacity" values="0;0.9;0;0" keyTimes="0;0.05;0.12;1" dur="8s" begin="4s" repeatCount="indefinite"/></rect>
+      <rect x="990" y="125" width="140" height="70" rx="12" stroke="#ff3621"><animate attributeName="opacity" values="0;0.9;0;0" keyTimes="0;0.05;0.12;1" dur="8s" begin="5s" repeatCount="indefinite"/></rect>
+      <rect x="1180" y="125" width="140" height="70" rx="12" stroke="#d9ae00"><animate attributeName="opacity" values="0;0.9;0;0" keyTimes="0;0.05;0.12;1" dur="8s" begin="6s" repeatCount="indefinite"/></rect>
+    </g>
+
+    <!-- Labels -->
+    <text class="t1" x="110" y="155">Sources</text><text class="t2" x="110" y="175">(OT + SaaS)</text>
+    <text class="t1" x="300" y="155">Bronze</text><text class="t2" x="300" y="175">Raw</text>
+    <text class="t1" x="490" y="155">Silver</text><text class="t2" x="490" y="175">3NF Model</text>
+    <text class="t1" x="680" y="165">ADF / CDC Sync</text>
+    <text class="t1" x="870" y="155">Gold</text><text class="t2" x="870" y="175">Delta Lake</text>
+    <text class="t1" x="1060" y="165">Databricks SQL</text>
+    <text class="t1" x="1250" y="155">Power BI</text><text class="t2" x="1250" y="175">Reports</text>
+    <text class="t1" x="490" y="330">Ops Dashboards</text>
+
+    <!-- Data packets -->
+    <g>
+      <circle r="6" fill="#0284c7" opacity="0">
+        <animateMotion dur="8s" begin="0.3s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;0.0875;1" calcMode="linear"><mpath href="#e1"/></animateMotion>
+        <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;0.0875;0.09;1" dur="8s" begin="0.3s" repeatCount="indefinite"/>
+      </circle>
+      <circle r="6" fill="#b8732e" opacity="0">
+        <animateMotion dur="8s" begin="1.3s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;0.0875;1" calcMode="linear"><mpath href="#e2"/></animateMotion>
+        <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;0.0875;0.09;1" dur="8s" begin="1.3s" repeatCount="indefinite"/>
+      </circle>
+      <circle r="6" fill="#64748b" opacity="0">
+        <animateMotion dur="8s" begin="2.3s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;0.0875;1" calcMode="linear"><mpath href="#e3"/></animateMotion>
+        <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;0.0875;0.09;1" dur="8s" begin="2.3s" repeatCount="indefinite"/>
+      </circle>
+      <circle r="6" fill="#64748b" opacity="0">
+        <animateMotion dur="8s" begin="2.3s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;0.0875;1" calcMode="linear"><mpath href="#e7"/></animateMotion>
+        <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;0.0875;0.09;1" dur="8s" begin="2.3s" repeatCount="indefinite"/>
+      </circle>
+      <circle r="6" fill="#7c3aed" opacity="0">
+        <animateMotion dur="8s" begin="3.3s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;0.0875;1" calcMode="linear"><mpath href="#e4"/></animateMotion>
+        <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;0.0875;0.09;1" dur="8s" begin="3.3s" repeatCount="indefinite"/>
+      </circle>
+      <circle r="6" fill="#c9960c" opacity="0">
+        <animateMotion dur="8s" begin="4.3s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;0.0875;1" calcMode="linear"><mpath href="#e5"/></animateMotion>
+        <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;0.0875;0.09;1" dur="8s" begin="4.3s" repeatCount="indefinite"/>
+      </circle>
+      <circle r="6" fill="#ff3621" opacity="0">
+        <animateMotion dur="8s" begin="5.3s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;0.0875;1" calcMode="linear"><mpath href="#e6"/></animateMotion>
+        <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;0.0875;0.09;1" dur="8s" begin="5.3s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+
+    <!-- Legend -->
+    <g font-size="12" fill="#475569">
+      <circle cx="800" cy="320" r="6" fill="#64748b"/>
+      <text x="814" y="324">Data packet in transit</text>
+      <line x1="970" y1="320" x2="1010" y2="320" class="edge"/>
+      <text x="1020" y="324">Continuous flow</text>
+      <g transform="translate(1135,320)">
+        <g>
+          <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="4s" repeatCount="indefinite"/>
+          <use href="#gear" color="#64748b" transform="scale(0.7)"/>
+        </g>
+      </g>
+      <text x="1150" y="324">Processing step</text>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,227 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 64 64"
+  role="img"
+  aria-labelledby="title desc"
+>
+  <title id="title">Technology Articles</title>
+  <desc id="desc">A black and gold icon showing an animated technology article list being generated</desc>
+
+  <style>
+    .gold-doc {
+      stroke-dasharray: 140;
+      animation: drawDoc 3.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+    .gold-fold {
+      stroke-dasharray: 20;
+      animation: drawFold 3.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+    .dot {
+      transform-box: fill-box;
+      transform-origin: center;
+    }
+    .dot-1 {
+      animation: popDot1 3.5s ease-out infinite;
+    }
+    .line-1 {
+      stroke-dasharray: 13;
+      animation: drawLine1 3.5s ease-out infinite;
+    }
+    .dot-2 {
+      animation: popDot2 3.5s ease-out infinite;
+    }
+    .line-2 {
+      stroke-dasharray: 13;
+      animation: drawLine2 3.5s ease-out infinite;
+    }
+    .dot-3 {
+      animation: popDot3 3.5s ease-out infinite;
+    }
+    .line-3 {
+      stroke-dasharray: 9;
+      animation: drawLine3 3.5s ease-out infinite;
+    }
+    .circuit-1 {
+      stroke-dasharray: 10;
+      animation: drawCircuit1 3.5s ease-out infinite;
+    }
+    .circuit-dot-1 {
+      animation: popCircuitDot1 3.5s ease-out infinite;
+    }
+    .circuit-2 {
+      stroke-dasharray: 6;
+      animation: drawCircuit2 3.5s ease-out infinite;
+    }
+    .circuit-dot-2 {
+      animation: popCircuitDot2 3.5s ease-out infinite;
+    }
+    .glow-group {
+      animation: pulseGlow 3.5s ease-in-out infinite;
+    }
+
+    @keyframes drawDoc {
+      0% { stroke-dashoffset: 140; opacity: 0.2; }
+      14%, 86% { stroke-dashoffset: 0; opacity: 1; }
+      94%, 100% { stroke-dashoffset: 0; opacity: 0.2; }
+    }
+    @keyframes drawFold {
+      0%, 8% { stroke-dashoffset: 20; opacity: 0; }
+      18%, 86% { stroke-dashoffset: 0; opacity: 1; }
+      94%, 100% { stroke-dashoffset: 20; opacity: 0; }
+    }
+    @keyframes popDot1 {
+      0%, 14% { transform: scale(0); opacity: 0; }
+      19% { transform: scale(1.35); opacity: 1; }
+      23%, 86% { transform: scale(1); opacity: 1; }
+      93%, 100% { transform: scale(0); opacity: 0; }
+    }
+    @keyframes drawLine1 {
+      0%, 19% { stroke-dashoffset: 13; opacity: 0; }
+      21% { opacity: 1; }
+      29%, 86% { stroke-dashoffset: 0; opacity: 1; }
+      93%, 100% { stroke-dashoffset: 13; opacity: 0; }
+    }
+    @keyframes popDot2 {
+      0%, 29% { transform: scale(0); opacity: 0; }
+      34% { transform: scale(1.35); opacity: 1; }
+      38%, 86% { transform: scale(1); opacity: 1; }
+      93%, 100% { transform: scale(0); opacity: 0; }
+    }
+    @keyframes drawLine2 {
+      0%, 34% { stroke-dashoffset: 13; opacity: 0; }
+      36% { opacity: 1; }
+      44%, 86% { stroke-dashoffset: 0; opacity: 1; }
+      93%, 100% { stroke-dashoffset: 13; opacity: 0; }
+    }
+    @keyframes popDot3 {
+      0%, 44% { transform: scale(0); opacity: 0; }
+      49% { transform: scale(1.35); opacity: 1; }
+      53%, 86% { transform: scale(1); opacity: 1; }
+      93%, 100% { transform: scale(0); opacity: 0; }
+    }
+    @keyframes drawLine3 {
+      0%, 49% { stroke-dashoffset: 9; opacity: 0; }
+      51% { opacity: 1; }
+      58%, 86% { stroke-dashoffset: 0; opacity: 1; }
+      93%, 100% { stroke-dashoffset: 9; opacity: 0; }
+    }
+    @keyframes drawCircuit1 {
+      0%, 58% { stroke-dashoffset: 10; opacity: 0; }
+      60% { opacity: 1; }
+      67%, 86% { stroke-dashoffset: 0; opacity: 1; }
+      93%, 100% { stroke-dashoffset: 10; opacity: 0; }
+    }
+    @keyframes popCircuitDot1 {
+      0%, 65% { transform: scale(0); opacity: 0; }
+      70% { transform: scale(1.35); opacity: 1; }
+      74%, 86% { transform: scale(1); opacity: 1; }
+      93%, 100% { transform: scale(0); opacity: 0; }
+    }
+    @keyframes drawCircuit2 {
+      0%, 63% { stroke-dashoffset: 6; opacity: 0; }
+      65% { opacity: 1; }
+      72%, 86% { stroke-dashoffset: 0; opacity: 1; }
+      93%, 100% { stroke-dashoffset: 6; opacity: 0; }
+    }
+    @keyframes popCircuitDot2 {
+      0%, 70% { transform: scale(0); opacity: 0; }
+      75% { transform: scale(1.35); opacity: 1; }
+      79%, 86% { transform: scale(1); opacity: 1; }
+      93%, 100% { transform: scale(0); opacity: 0; }
+    }
+    @keyframes pulseGlow {
+      0%, 72% { filter: drop-shadow(0 0 0px rgba(212, 175, 55, 0)); }
+      80%, 86% { filter: drop-shadow(0 0 1.5px rgba(212, 175, 55, 0.8)); }
+      94%, 100% { filter: drop-shadow(0 0 0px rgba(212, 175, 55, 0)); }
+    }
+  </style>
+
+  <!-- Background -->
+  <rect
+    x="2"
+    y="2"
+    width="60"
+    height="60"
+    rx="12"
+    fill="#0A0A0A"
+    stroke="#D4AF37"
+    stroke-width="2"
+  />
+
+  <g class="glow-group">
+    <!-- Article document -->
+    <path
+      class="gold-doc"
+      d="M15 13h25l9 9v29H15V13Z"
+      fill="none"
+      stroke="#D4AF37"
+      stroke-width="2.5"
+      stroke-linejoin="round"
+      stroke-linecap="round"
+    />
+
+    <!-- Folded corner -->
+    <path
+      class="gold-fold"
+      d="M40 13v9h9"
+      fill="none"
+      stroke="#D4AF37"
+      stroke-width="2.5"
+      stroke-linejoin="round"
+      stroke-linecap="round"
+    />
+
+    <!-- Article list item 1 -->
+    <circle class="dot dot-1" cx="22" cy="29" r="2" fill="#D4AF37" />
+    <path
+      class="line-1"
+      d="M28 29h13"
+      stroke="#D4AF37"
+      stroke-width="2.5"
+      stroke-linecap="round"
+    />
+
+    <!-- Article list item 2 -->
+    <circle class="dot dot-2" cx="22" cy="37" r="2" fill="#D4AF37" />
+    <path
+      class="line-2"
+      d="M28 37h13"
+      stroke="#D4AF37"
+      stroke-width="2.5"
+      stroke-linecap="round"
+    />
+
+    <!-- Article list item 3 -->
+    <circle class="dot dot-3" cx="22" cy="45" r="2" fill="#D4AF37" />
+    <path
+      class="line-3"
+      d="M28 45h9"
+      stroke="#D4AF37"
+      stroke-width="2.5"
+      stroke-linecap="round"
+    />
+
+    <!-- Technology circuit detail 1 -->
+    <path
+      class="circuit-1"
+      d="M49 31h5v-4"
+      fill="none"
+      stroke="#D4AF37"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <circle class="dot circuit-dot-1" cx="54" cy="25" r="2" fill="#D4AF37" />
+
+    <!-- Technology circuit detail 2 -->
+    <path
+      class="circuit-2"
+      d="M49 38h6"
+      fill="none"
+      stroke="#D4AF37"
+      stroke-width="2"
+      stroke-linecap="round"
+    />
+    <circle class="dot circuit-dot-2" cx="57" cy="38" r="2" fill="#D4AF37" />
+  </g>
+</svg>
