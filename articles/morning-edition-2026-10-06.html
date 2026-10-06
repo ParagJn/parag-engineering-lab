@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Privileged Machine — Tuesday, October 06, 2026</title>
+
+<!-- SEO Meta -->
+<meta name="description" content="AI agents get guardrails, budgets, audits: Nvidia&#39;s safety platform, Cloudflare&#39;s post-quantum CA, Unsloth RCE flaw, MCP token bloat and Dynatrace&#39;s $915M bet.">
+<meta name="keywords" content="AI agent security, Model Context Protocol, MCP token overhead, post-quantum cryptography, non-human identity, AI observability, Unsloth vulnerability, LLM watermarking, CI/CD bottleneck, data anonymization GDPR, agent spending controls, AI supply chain security">
+<meta name="author" content="Morning Edition — AI Curated">
+<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
+<meta name="generator" content="Morning Edition AI Magazine Generator">
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="article">
+<meta property="og:title" content="The Privileged Machine — Tuesday, October 06, 2026">
+<meta property="og:description" content="AI agents get guardrails, budgets, audits: Nvidia&#39;s safety platform, Cloudflare&#39;s post-quantum CA, Unsloth RCE flaw, MCP token bloat and Dynatrace&#39;s $915M bet.">
+<meta property="og:site_name" content="Morning Edition">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2026-10-06T11:36:40">
+<meta property="article:section" content="Technology">
+<meta property="article:tag" content="AI agent security, Model Context Protocol, MCP token overhead, post-quantum cryptography, non-human identity, AI observability, Unsloth vulnerability, LLM watermarking, CI/CD bottleneck, data anonymization GDPR, agent spending controls, AI supply chain security">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="The Privileged Machine — Tuesday, October 06, 2026">
+<meta name="twitter:description" content="AI agents get guardrails, budgets, audits: Nvidia&#39;s safety platform, Cloudflare&#39;s post-quantum CA, Unsloth RCE flaw, MCP token bloat and Dynatrace&#39;s $915M bet.">
+
+<!-- JSON-LD Structured Data -->
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "CollectionPage", "name": "The Privileged Machine", "description": "AI agents get guardrails, budgets, audits: Nvidia's safety platform, Cloudflare's post-quantum CA, Unsloth RCE flaw, MCP token bloat and Dynatrace's $915M bet.", "datePublished": "2026-10-06T11:36:40", "dateModified": "2026-10-06T11:36:40", "publisher": {"@type": "Organization", "name": "Morning Edition"}, "about": {"@type": "Thing", "name": "Technology News"}, "hasPart": [{"@type": "Article", "headline": "Open the Model, Lose the Machine", "description": "A patched Unsloth Studio flaw turned the most mundane ML task, inspecting a model, into arbitrary Python execution on your workstation.", "url": "https://www.darkreading.com/application-security/unsloth-studio-flaw-model-inspection-code-execution", "articleSection": "SECURITY ALERT", "position": 1}, {"@type": "Article", "headline": "Cloudflare Hands Out Quantum Armor for Free", "description": "A public certificate authority built on post-quantum signatures moves PQC out of the research lab and into your TLS handshake.", "url": "https://www.darkreading.com/cloud-security/cloudflare-announces-public-certificate-authority-post-quantum-web", "articleSection": "INFRASTRUCTURE", "position": 2}, {"@type": "Article", "headline": "Nvidia Builds a Padded Cell for Rogue Agents", "description": "The Open Agent Safety Platform pairs hardware and software to watch autonomous agents and quarantine the unruly ones before damage is done.", "url": "https://www.darkreading.com/cyber-risk/nvidia-launches-ai-agent-safety-platform-prevent-rogue-activities", "articleSection": "AI SECURITY", "position": 3}, {"@type": "Article", "headline": "The Insider Threat Has No Badge", "description": "Enterprises scrutinize every human login while AI agents roam with broad privileges, unrotated keys, and nobody checking their work.", "url": "https://www.darkreading.com/vulnerabilities-threats/ai-agents-are-privileged-users-who-is-auditing-their-access", "articleSection": "IDENTITY RISK", "position": 4}, {"@type": "Article", "headline": "Anonymous Until Proven Otherwise", "description": "Italy fines IQVIA €7 million over health data that regulators say could be traced back to roughly one million patients.", "url": "https://www.bleepingcomputer.com/news/security/iqvia-fined-78-million-for-failing-to-properly-anonymize-health-data/", "articleSection": "PRIVACY", "position": 5}, {"@type": "Article", "headline": "18,000 Tokens Before Hello", "description": "One MCP server burned a small novel's worth of context on tool schemas alone. The coding agent Pi found a smarter way around it.", "url": "https://thenewstack.io/pi-agent-mcp-codemode/", "articleSection": "AI ENGINEERING", "position": 6}, {"@type": "Article", "headline": "OpenAI's Invisible Ink Comes With an Off Switch", "description": "Text watermarking arrives in the OpenAI API as an opt-in feature, a sharp contrast with Anthropic's on-by-default posture.", "url": "https://thenewstack.io/openai-api-text-watermarking/", "articleSection": "AI POLICY", "position": 7}, {"@type": "Article", "headline": "$915 Million Says Agents Are Just Apps", "description": "Dynatrace closes its Arize acquisition, folding AI agent tracing and evaluation into mainstream application monitoring.", "url": "https://thenewstack.io/dynatrace-arize-ai-observability/", "articleSection": "AI OBSERVABILITY", "position": 8}, {"@type": "Article", "headline": "Your Agents Write Faster Than Your Pipeline Can Doubt", "description": "AI coding agents have made CI the new bottleneck, and throwing more runners at the problem misses the point entirely.", "url": "https://thenewstack.io/ci-bottleneck-agent-verification/", "articleSection": "DEV TOOLS", "position": 9}, {"@type": "Article", "headline": "The Agent Has a Wallet. Who Holds the Purse Strings?", "description": "Cloudflare's Monetization Gateway lets domain owners charge AI agents for MCP tool access, and exposes how few enterprises have set spending limits.", "url": "https://thenewstack.io/cloudflare-x402-agent-spending/", "articleSection": "AGENT ECONOMY", "position": 10}]}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; font-size: 18px; }
+body { font-family: 'Inter', sans-serif; overflow-x: hidden; }
+
+.cover {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: #0a0a0a;
+  color: #fff;
+  text-align: center;
+  padding: 4rem 2rem;
+  position: relative;
+  overflow: hidden;
+}
+.cover::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at 30% 40%, rgba(99,102,241,0.15), transparent 50%),
+              radial-gradient(circle at 70% 60%, rgba(244,63,94,0.1), transparent 50%);
+  animation: drift 20s ease-in-out infinite;
+}
+@keyframes drift {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(2%, -2%) rotate(1deg); }
+}
+.cover-content { position: relative; z-index: 1; max-width: 900px; }
+.cover h1 {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(3rem, 8vw, 7rem);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin-bottom: 1rem;
+}
+.cover .tagline {
+  font-size: clamp(1.2rem, 2.5vw, 1.8rem);
+  opacity: 0.7;
+  font-weight: 300;
+  margin-bottom: 2rem;
+}
+.cover .meta {
+  font-size: 1rem;
+  opacity: 0.5;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+.cover .source-badge {
+  display: inline-block;
+  margin-top: 1.5rem;
+  padding: 0.5rem 1.5rem;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 100px;
+  font-size: 0.9rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* === SPREAD BASE === */
+.spread {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 6rem 2rem;
+  position: relative;
+}
+.spread-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+.category-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  margin-bottom: 1.5rem;
+}
+.numeral {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(4rem, 10vw, 8rem);
+  font-weight: 900;
+  opacity: 0.12;
+  position: absolute;
+  top: 2rem;
+  right: 3rem;
+  line-height: 1;
+}
+.headline {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(2.2rem, 5vw, 4rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.8rem;
+}
+.deck {
+  font-size: clamp(1.1rem, 2vw, 1.4rem);
+  font-weight: 300;
+  opacity: 0.75;
+  margin-bottom: 2.5rem;
+  line-height: 1.4;
+}
+.body p {
+  font-size: clamp(1.05rem, 1.5vw, 1.2rem);
+  line-height: 1.8;
+  margin-bottom: 1.2rem;
+}
+.pull-quote {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  font-style: italic;
+  font-weight: 400;
+  line-height: 1.4;
+  padding: 2rem 0;
+  margin: 2rem 0;
+  border-top: 3px solid currentColor;
+  border-bottom: 1px solid currentColor;
+  opacity: 0.9;
+}
+.read-more {
+  display: inline-block;
+  margin-top: 1.5rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  padding: 0.7rem 1.5rem;
+  border: 2px solid currentColor;
+  transition: all 0.3s;
+}
+.read-more:hover { opacity: 0.7; }
+.flag-badge {
+  display: inline-block;
+  padding: 0.3rem 0.8rem;
+  background: #f43f5e;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  border-radius: 3px;
+  margin-bottom: 1rem;
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* === SPREAD STYLES === */
+.spread-hero {
+  background: #fafaf9;
+  color: #1a1a1a;
+}
+.spread-hero .category-label { color: #6366f1; }
+.spread-hero .read-more { color: #1a1a1a; }
+
+.spread-midnight {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+.spread-midnight .category-label { color: #818cf8; }
+.spread-midnight .numeral { color: #334155; opacity: 0.3; }
+.spread-midnight .read-more { color: #e2e8f0; }
+
+.spread-rose_alert {
+  background: #fff1f2;
+  color: #1a1a1a;
+  border-left: 8px solid #f43f5e;
+}
+.spread-rose_alert .category-label { color: #e11d48; }
+.spread-rose_alert .pull-quote { border-color: #f43f5e; }
+.spread-rose_alert .numeral { color: #f43f5e; opacity: 0.15; }
+.spread-rose_alert .read-more { color: #e11d48; }
+
+.spread-terminal {
+  background: #0a0a0a;
+  color: #4ade80;
+  font-family: 'JetBrains Mono', monospace;
+}
+.spread-terminal .headline {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+}
+.spread-terminal .headline::before { content: '> '; opacity: 0.5; }
+.spread-terminal .body p { font-family: 'JetBrains Mono', monospace; font-size: 1rem; }
+.spread-terminal .pull-quote { border-color: #4ade80; font-family: 'JetBrains Mono', monospace; }
+.spread-terminal .category-label { color: #22d3ee; }
+.spread-terminal .numeral { color: #4ade80; }
+.spread-terminal .read-more { color: #4ade80; }
+
+.spread-academic {
+  background: #fef9ef;
+  color: #292524;
+}
+.spread-academic .body p:first-child::first-letter {
+  font-family: 'Fraunces', serif;
+  font-size: 4.5rem;
+  font-weight: 900;
+  float: left;
+  line-height: 0.8;
+  margin-right: 0.5rem;
+  margin-top: 0.1rem;
+  color: #78716c;
+}
+.spread-academic .category-label { color: #a16207; }
+.spread-academic .pull-quote { border-color: #d6d3d1; font-style: italic; }
+.spread-academic .read-more { color: #292524; }
+
+.spread-big_stat {
+  background: #1e1b4b;
+  color: #e0e7ff;
+  text-align: center;
+}
+.spread-big_stat .spread-inner { text-align: center; }
+.spread-big_stat .headline { font-size: clamp(2.5rem, 6vw, 5rem); }
+.spread-big_stat .pull-quote {
+  font-size: clamp(3rem, 8vw, 6rem);
+  font-weight: 900;
+  font-style: normal;
+  border: none;
+  color: #a5b4fc;
+}
+.spread-big_stat .body p { text-align: left; max-width: 700px; margin-left: auto; margin-right: auto; }
+.spread-big_stat .category-label { color: #818cf8; }
+.spread-big_stat .numeral { color: #312e81; opacity: 0.4; }
+.spread-big_stat .read-more { color: #e0e7ff; }
+
+.spread-blueprint {
+  background: #eff6ff;
+  color: #1e3a5f;
+  border: 2px dashed #93c5fd;
+}
+.spread-blueprint .headline { color: #1e40af; }
+.spread-blueprint .category-label { color: #2563eb; }
+.spread-blueprint .pull-quote { border-color: #93c5fd; }
+.spread-blueprint .numeral { color: #3b82f6; opacity: 0.15; }
+.spread-blueprint .read-more { color: #1e40af; }
+
+.spread-neon {
+  background: #18181b;
+  color: #fafafa;
+}
+.spread-neon .headline { color: #f0abfc; text-shadow: 0 0 40px rgba(240,171,252,0.3); }
+.spread-neon .category-label { color: #22d3ee; text-shadow: 0 0 20px rgba(34,211,238,0.4); }
+.spread-neon .pull-quote { border-color: #a855f7; color: #e879f9; }
+.spread-neon .numeral { color: #a855f7; opacity: 0.25; }
+.spread-neon .read-more { color: #e879f9; }
+
+.spread-editorial {
+  background: #ffffff;
+  color: #171717;
+}
+.spread-editorial .pull-quote {
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  padding: 3rem 0;
+  text-align: center;
+}
+.spread-editorial .category-label { color: #dc2626; }
+.spread-editorial .read-more { color: #171717; }
+
+.spread-sunset {
+  background: linear-gradient(135deg, #fef3c7, #fde68a, #fbbf24, #f59e0b);
+  color: #451a03;
+}
+.spread-sunset .headline { color: #78350f; }
+.spread-sunset .category-label { color: #92400e; }
+.spread-sunset .pull-quote { border-color: #d97706; }
+.spread-sunset .numeral { color: #f59e0b; opacity: 0.2; }
+.spread-sunset .read-more { color: #78350f; }
+
+/* Footer */
+.footer {
+  background: #0a0a0a;
+  color: #737373;
+  text-align: center;
+  padding: 4rem 2rem;
+  font-size: 0.9rem;
+}
+.footer .logo { font-family: 'Fraunces', serif; font-size: 1.5rem; color: #fff; margin-bottom: 0.5rem; }
+
+/* === TABLE OF CONTENTS === */
+.toc {
+  background: #fafaf9;
+  padding: 5rem 2rem;
+  position: relative;
+}
+.toc-inner {
+  max-width: 800px;
+  margin: 0 auto;
+}
+.toc-heading {
+  font-family: 'Fraunces', serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  color: #a8a29e;
+  margin-bottom: 2.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e7e5e4;
+}
+.toc-item {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid #f5f5f4;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s;
+}
+.toc-item:hover {
+  padding-left: 0.5rem;
+  background: #f5f5f4;
+  border-radius: 0.5rem;
+}
+.toc-numeral {
+  font-family: 'Fraunces', serif;
+  font-size: 1.6rem;
+  font-weight: 900;
+  min-width: 3rem;
+  text-align: center;
+  opacity: 0.7;
+}
+.toc-text {
+  flex: 1;
+  min-width: 0;
+}
+.toc-cat {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: #a8a29e;
+  margin-bottom: 0.2rem;
+}
+.toc-headline {
+  display: block;
+  font-family: 'Fraunces', serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1c1917;
+  line-height: 1.3;
+}
+.toc-arrow {
+  font-size: 1.2rem;
+  color: #d6d3d1;
+  transition: transform 0.2s, color 0.2s;
+}
+.toc-item:hover .toc-arrow {
+  transform: translateX(4px);
+  color: #6366f1;
+}
+
+/* === BACK TO TOP === */
+.back-to-top {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #0a0a0a;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s;
+  z-index: 999;
+}
+.back-to-top.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.back-to-top:hover {
+  background: #6366f1;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(99,102,241,0.4);
+}
+</style>
+<link rel="canonical" href="https://paragjn.github.io/parag-engineering-lab/articles/morning-edition-2026-10-06.html">
+<meta property="og:url" content="https://paragjn.github.io/parag-engineering-lab/articles/morning-edition-2026-10-06.html">
+<meta property="og:image" content="https://paragjn.github.io/parag-engineering-lab/articles/morning-edition-2026-10-06.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="627">
+<meta property="og:image:alt" content="The Privileged Machine — Tuesday, October 06, 2026">
+<meta name="twitter:image" content="https://paragjn.github.io/parag-engineering-lab/articles/morning-edition-2026-10-06.png">
+</head>
+<body>
+
+<header>
+<section class="cover" role="banner">
+  <div class="cover-content">
+    <time class="meta" datetime="2026-10-06T11:36:40">Tuesday, October 06, 2026</time>
+    <h1>The Privileged Machine</h1>
+    <p class="tagline">Your agents have root access, a corporate card, and an 18,000-token appetite. Who's watching them?</p>
+    <div class="source-badge">Curated from Dark Reading + BleepingComputer + The New Stack</div>
+  </div>
+</section>
+</header>
+
+<nav class="toc" id="toc">
+  <div class="toc-inner">
+    <h2 class="toc-heading">In This Edition</h2>
+    
+      <a href="#story-0" class="toc-item">
+        <span class="toc-numeral" style="color:#4ade80">01</span>
+        <span class="toc-text">
+          <span class="toc-cat">SECURITY ALERT</span>
+          <span class="toc-headline">Open the Model, Lose the Machine</span>
+        </span>
+        <span class="toc-arrow">→</span>
+      </a>
+      <a href="#story-1" class="toc-item">
+        <span class="toc-numeral" style="color:#2563eb">II</span>
+        <span class="toc-text">
+          <span class="toc-cat">INFRASTRUCTURE</span>
+          <span class="toc-headline">Cloudflare Hands Out Quantum Armor for Free</span>
+        </span>
+        <span class="toc-arrow">→</span>
+      </a>
+      <a href="#story-2" class="toc-item">
+        <span class="toc-numeral" style="color:#818cf8">三</span>
+        <span class="toc-text">
+          <span class="toc-cat">AI SECURITY</span>
+          <span class="toc-headline">Nvidia Builds a Padded Cell for Rogue Agents</span>
+        </span>
+        <span class="toc-arrow">→</span>
+      </a>
+      <a href="#story-3" class="toc-item">
+        <span class="toc-numeral" style="color:#e11d48">No. 4</span>
+        <span class="toc-text">
+          <span class="toc-cat">IDENTITY RISK</span>
+          <span class="toc-headline">The Insider Threat Has No Badge</span>
+        </span>
+        <span class="toc-arrow">→</span>
+      </a>
+      <a href="#story-4" class="toc-item">
+        <span class="toc-numeral" style="color:#a16207">§5</span>
+        <span class="toc-text">
+          <span class="toc-cat">PRIVACY</span>
+          <span class="toc-headline">Anonymous Until Proven Otherwise</span>
+        </span>
+        <span class="toc-arrow">→</span>
+      </a>
+      <a href="#story-5" class="toc-item">
+        <span class="toc-numeral" style="color:#818cf8">VI</span>
+        <span class="toc-text">
+          <span class="toc-cat">AI ENGINEERING</span>
+          <span class="toc-headline">18,000 Tokens Before Hello</span>
+        </span>
+        <span class="toc-arrow">→</span>
+      </a>
+      <a href="#story-6" class="toc-item">
+        <span class="toc-numeral" style="color:#dc2626">007</span>
+        <span class="toc-text">
+          <span class="toc-cat">AI POLICY</span>
+          <span class="toc-headline">OpenAI's Invisible Ink Comes With an Off Switch</span>
+        </span>
+        <span class="toc-arrow">→</span>
+      </a>
+      <a href="#story-7" class="toc-item">
+        <span class="toc-numeral" style="color:#6366f1">∞</span>
+        <span class="toc-text">
+          <span class="toc-cat">AI OBSERVABILITY</span>
+          <span class="toc-headline">$915 Million Says Agents Are Just Apps</span>
+        </span>
+        <span class="toc-arrow">→</span>
+      </a>
+      <a href="#story-8" class="toc-item">
+        <span class="toc-numeral" style="color:#e879f9">IX</span>
+        <span class="toc-text">
+          <span class="toc-cat">DEV TOOLS</span>
+          <span class="toc-headline">Your Agents Write Faster Than Your Pipeline Can Doubt</span>
+        </span>
+        <span class="toc-arrow">→</span>
+      </a>
+      <a href="#story-9" class="toc-item">
+        <span class="toc-numeral" style="color:#92400e">X</span>
+        <span class="toc-text">
+          <span class="toc-cat">AGENT ECONOMY</span>
+          <span class="toc-headline">The Agent Has a Wallet. Who Holds the Purse Strings?</span>
+        </span>
+        <span class="toc-arrow">→</span>
+      </a>
+  </div>
+</nav>
+
+<main>
+
+<article class="spread spread-terminal" id="story-0" itemscope itemtype="https://schema.org/Article">
+  <div class="numeral" aria-hidden="true">01</div>
+  <div class="spread-inner">
+    <div class="flag-badge">⚡ Applies to You</div>
+    <div class="category-label" itemprop="articleSection">SECURITY ALERT</div>
+    <h2 class="headline" itemprop="headline">Open the Model, Lose the Machine</h2>
+    <p class="deck" itemprop="description">A patched Unsloth Studio flaw turned the most mundane ML task, inspecting a model, into arbitrary Python execution on your workstation.</p>
+    <div class="body" itemprop="articleBody">
+      <p>For years, security teams have drilled one lesson into engineers: don't run code you don't trust. The machine learning world has quietly built a workflow that treats model downloads as data rather than code. The Unsloth Studio vulnerability, now patched, shows why that assumption no longer holds. A maliciously crafted model could execute arbitrary Python during routine inspection, through the innocuous-sounding trust_remote_code setting.</p>
+      <p>The attack surface is uncomfortable because it is so ordinary. Nobody was compiling a sketchy binary or clicking a phishing link. An engineer was simply looking at a model before fine-tuning it, the AI equivalent of reading a file's metadata. Because model repositories can ship executable configuration and custom modeling code alongside the weights, anything that honors trust_remote_code gives the model's author a direct line to your shell, your SSH keys, and your cloud credentials.</p>
+      <p>This is the AI supply chain problem in its purest form. We have spent a decade hardening package registries with signatures, lockfiles, and SBOMs. Model hubs are now where npm was in 2015: enormous, convenient, and largely running on vibes. Fine-tuning workstations are especially juicy targets, since they often hold GPU-cluster credentials, proprietary datasets, and API tokens.</p>
+      <p>The practitioner checklist is short. Patch Unsloth Studio today. Audit every tool in your ML stack for trust_remote_code defaults, and treat that flag as you would curl-pipe-to-bash. Prefer safetensors and other formats that cannot carry executable payloads, and inspect untrusted models inside sandboxed, credential-free environments. Model artifacts are code. Govern them that way.</p>
+    </div>
+    <blockquote class="pull-quote">"Model weights are the new npm packages: enormous, convenient, and largely running on trust."</blockquote>
+    <a href="https://www.darkreading.com/application-security/unsloth-studio-flaw-model-inspection-code-execution" target="_blank" rel="noopener noreferrer" class="read-more" itemprop="url">Read Original →</a>
+  </div>
+</article>
+
+<article class="spread spread-blueprint" id="story-1" itemscope itemtype="https://schema.org/Article">
+  <div class="numeral" aria-hidden="true">II</div>
+  <div class="spread-inner">
+    <div class="flag-badge">⚡ Applies to You</div>
+    <div class="category-label" itemprop="articleSection">INFRASTRUCTURE</div>
+    <h2 class="headline" itemprop="headline">Cloudflare Hands Out Quantum Armor for Free</h2>
+    <p class="deck" itemprop="description">A public certificate authority built on post-quantum signatures moves PQC out of the research lab and into your TLS handshake.</p>
+    <div class="body" itemprop="articleBody">
+      <p>Post-quantum cryptography has long carried the faint odor of a conference keynote: important, inevitable, and comfortably someday. Cloudflare just collapsed that timeline. Its new public certificate authority issues automated certificates backed by post-quantum signature algorithms such as ML-DSA, so quantum-resilient HTTPS becomes something you can deploy rather than merely debate.</p>
+      <p>The urgency comes from a threat model that is already running. Adversaries engaged in 'harvest now, decrypt later' are capturing encrypted traffic today and betting that a sufficiently powerful quantum computer will unlock it tomorrow. Data with a long shelf life, including health records, financial contracts, state secrets, and source code, is already exposed in principle. Key exchange has been moving toward post-quantum hybrids for a while. Authentication, the signature side of the certificate chain, has been the harder and slower half.</p>
+      <p>A free, automated CA changes the economics of experimentation. Enterprise architects can now test what PQC certificates do to handshake sizes, latency, middleboxes, and legacy clients, which are the unglamorous breakages that tend to derail cryptographic migrations, long before compliance deadlines force their hand. Expect some ugly discoveries about load balancers and inspection appliances that choke on larger signatures.</p>
+      <p>The move is to start an inventory now. Map where your organization terminates TLS, which libraries you depend on, and which vendors have a credible PQC roadmap. Then stand up a test domain on post-quantum certificates and watch what breaks. Cryptographic agility is a muscle, and most enterprises have never exercised it.</p>
+    </div>
+    <blockquote class="pull-quote">"Harvest now, decrypt later is not a future threat. The harvesting is already underway."</blockquote>
+    <a href="https://www.darkreading.com/cloud-security/cloudflare-announces-public-certificate-authority-post-quantum-web" target="_blank" rel="noopener noreferrer" class="read-more" itemprop="url">Read Original →</a>
+  </div>
+</article>
+
+<article class="spread spread-midnight" id="story-2" itemscope itemtype="https://schema.org/Article">
+  <div class="numeral" aria-hidden="true">三</div>
+  <div class="spread-inner">
+    <div class="flag-badge">⚡ Applies to You</div>
+    <div class="category-label" itemprop="articleSection">AI SECURITY</div>
+    <h2 class="headline" itemprop="headline">Nvidia Builds a Padded Cell for Rogue Agents</h2>
+    <p class="deck" itemprop="description">The Open Agent Safety Platform pairs hardware and software to watch autonomous agents and quarantine the unruly ones before damage is done.</p>
+    <div class="body" itemprop="articleBody">
+      <p>Nvidia has spent the AI boom selling the engines. Now it wants to sell the brakes. The company's Open Agent Safety Platform combines hardware and software components to monitor what autonomous agents actually do at runtime, and to quarantine agents that drift out of bounds before they can cause harm.</p>
+      <p>The timing is no accident. Agents have graduated from chatbots that suggest things to software that does things: writing to databases, calling payment APIs, and modifying cloud infrastructure. Perimeter security was built to keep bad actors out, but an agent is already inside, carrying legitimate credentials. When it misbehaves, whether through prompt injection, a hallucinated plan, or plain misconfiguration, the firewall has nothing to say about it.</p>
+      <p>What stands out is the architectural bet. By anchoring safety partly in hardware, Nvidia is arguing that guardrails living entirely inside the model or the prompt are too soft to trust. That is the right instinct. A system that asks an agent to police itself is a system that fails exactly when the agent is compromised. Enforcement must sit outside the thing being enforced.</p>
+      <p>The skeptic's caveat is that a safety layer from your GPU vendor is also a deeper hook into your GPU vendor. Even so, the category is real and overdue. Teams deploying agents with write access should be asking every platform the same questions: where is enforcement happening, what triggers a quarantine, and can I prove after the fact what the agent tried to do?</p>
+    </div>
+    <blockquote class="pull-quote">"A guardrail that lives inside the agent fails exactly when the agent is compromised."</blockquote>
+    <a href="https://www.darkreading.com/cyber-risk/nvidia-launches-ai-agent-safety-platform-prevent-rogue-activities" target="_blank" rel="noopener noreferrer" class="read-more" itemprop="url">Read Original →</a>
+  </div>
+</article>
+
+<article class="spread spread-rose_alert" id="story-3" itemscope itemtype="https://schema.org/Article">
+  <div class="numeral" aria-hidden="true">No. 4</div>
+  <div class="spread-inner">
+    <div class="flag-badge">⚡ Applies to You</div>
+    <div class="category-label" itemprop="articleSection">IDENTITY RISK</div>
+    <h2 class="headline" itemprop="headline">The Insider Threat Has No Badge</h2>
+    <p class="deck" itemprop="description">Enterprises scrutinize every human login while AI agents roam with broad privileges, unrotated keys, and nobody checking their work.</p>
+    <div class="body" itemprop="articleBody">
+      <p>Consider the asymmetry. A new human hire gets background checks, MFA, role-based access, quarterly access reviews, and session monitoring. An AI agent spun up last Tuesday often gets a long-lived API key, a service account with sweeping permissions, and a cheerful Slack announcement. One of these is treated as a potential insider threat. The other actually behaves like one.</p>
+      <p>Agents are privileged users in every meaningful sense. They hold database credentials, cloud roles, and tokens to SaaS tenants, and they act on them at machine speed. Yet they sit outside the identity governance machinery enterprises built for people. MFA does not apply, session anomaly detection was trained on human rhythms, and least-privilege scoping is routinely skipped because broad permissions make the demo work.</p>
+      <p>The result is a growing population of high-privilege non-human identities with no owner, no expiry date, and no audit trail anyone reads. When one is hijacked through prompt injection, a leaked key, or a poisoned tool, the attacker inherits everything the agent could touch, which is usually far more than it ever needed.</p>
+      <p>The fix is not exotic. It is IAM discipline applied without exception. Give every agent its own identity, never a shared service account. Scope permissions to the task, issue short-lived credentials, and rotate them automatically. Assign a human owner who is accountable for each agent, and include agents in access reviews. If you cannot answer 'what can this agent touch right now?' in under a minute, you have found your next incident.</p>
+    </div>
+    <blockquote class="pull-quote">"If you can't say what an agent can touch right now, you've already found your next incident."</blockquote>
+    <a href="https://www.darkreading.com/vulnerabilities-threats/ai-agents-are-privileged-users-who-is-auditing-their-access" target="_blank" rel="noopener noreferrer" class="read-more" itemprop="url">Read Original →</a>
+  </div>
+</article>
+
+<article class="spread spread-academic" id="story-4" itemscope itemtype="https://schema.org/Article">
+  <div class="numeral" aria-hidden="true">§5</div>
+  <div class="spread-inner">
+    <div class="flag-badge">⚡ Applies to You</div>
+    <div class="category-label" itemprop="articleSection">PRIVACY</div>
+    <h2 class="headline" itemprop="headline">Anonymous Until Proven Otherwise</h2>
+    <p class="deck" itemprop="description">Italy fines IQVIA €7 million over health data that regulators say could be traced back to roughly one million patients.</p>
+    <div class="body" itemprop="articleBody">
+      <p>'Anonymized' may be the most abused word in data engineering. Italy's Data Protection Authority, the GPDP, has now attached a price to that abuse: a €7 million (about $7.8 million) fine against healthcare data giant IQVIA over data-processing practices the regulator says could have exposed roughly one million patients to de-anonymization.</p>
+      <p>The lesson is old, yet it is relearned at great expense every year. Stripping names and swapping IDs for hashes is pseudonymization, not anonymization. Combinations of quasi-identifiers such as birth dates, postal codes, diagnosis codes, and visit timestamps are often enough to single out individuals, especially in rich medical datasets. European regulators have made clear that if re-identification is reasonably possible, the data is still personal data, and every GDPR obligation still applies.</p>
+      <p>This matters far beyond healthcare analytics. Every organization assembling datasets for model training is making implicit claims about anonymity, and those claims rarely survive adversarial scrutiny. Large models add a fresh twist: they can memorize and regurgitate rare records, which turns a weak de-identification step into a leak that ships inside your model weights.</p>
+      <p>Practitioners should treat anonymization as a property to be proven rather than a box to tick. Run re-identification risk assessments, apply k-anonymity and suppression to quasi-identifiers, and for aggregate analytics and training, seriously evaluate differential privacy, which offers mathematical guarantees in place of hopeful assumptions. Then document everything, because the regulator will ask.</p>
+    </div>
+    <blockquote class="pull-quote">"€7 million: the going rate for calling pseudonymized data 'anonymous.'"</blockquote>
+    <a href="https://www.bleepingcomputer.com/news/security/iqvia-fined-78-million-for-failing-to-properly-anonymize-health-data/" target="_blank" rel="noopener noreferrer" class="read-more" itemprop="url">Read Original →</a>
+  </div>
+</article>
+
+<article class="spread spread-big_stat" id="story-5" itemscope itemtype="https://schema.org/Article">
+  <div class="numeral" aria-hidden="true">VI</div>
+  <div class="spread-inner">
+    <div class="flag-badge">⚡ Applies to You</div>
+    <div class="category-label" itemprop="articleSection">AI ENGINEERING</div>
+    <h2 class="headline" itemprop="headline">18,000 Tokens Before Hello</h2>
+    <p class="deck" itemprop="description">One MCP server burned a small novel's worth of context on tool schemas alone. The coding agent Pi found a smarter way around it.</p>
+    <div class="body" itemprop="articleBody">
+      <p>Here is a number to tape above every AI engineer's monitor: 18,000. That is how many tokens a single Model Context Protocol server consumed before the agent did anything at all, spent purely on tool definitions loaded into context at startup. No reasoning, no user prompt, no work. Just a schema dump.</p>
+      <p>It explains why the coding agent Pi spent much of the past year leaving MCP out, even as the protocol became an industry standard. The default pattern of eagerly loading every tool's verbose JSON schema into the context window scales terribly. Connect a handful of servers and you can torch a meaningful share of your context budget before the conversation starts, paying for those tokens on every turn and degrading model attention as the window fills with noise.</p>
+      <p>The workaround is a broader shift in how agents use tools, often described as a code-mode approach. Instead of stuffing every schema into the prompt, the agent discovers tools lazily, loads definitions on demand, or writes small programs that call tool APIs directly. The model pulls in only what the current task needs. It is the same move software engineering made decades ago with dynamic linking and lazy loading.</p>
+      <p>The takeaway for teams is to audit your agent's baseline context cost today. Measure tokens consumed before the first user message, prune tool sets aggressively, and favor dynamic tool injection over static registration. MCP is not the problem. Treating the context window as free real estate is.</p>
+    </div>
+    <blockquote class="pull-quote">"18,000 tokens consumed before the agent did a single thing."</blockquote>
+    <a href="https://thenewstack.io/pi-agent-mcp-codemode/" target="_blank" rel="noopener noreferrer" class="read-more" itemprop="url">Read Original →</a>
+  </div>
+</article>
+
+<article class="spread spread-editorial" id="story-6" itemscope itemtype="https://schema.org/Article">
+  <div class="numeral" aria-hidden="true">007</div>
+  <div class="spread-inner">
+    <div class="flag-badge">⚡ Applies to You</div>
+    <div class="category-label" itemprop="articleSection">AI POLICY</div>
+    <h2 class="headline" itemprop="headline">OpenAI's Invisible Ink Comes With an Off Switch</h2>
+    <p class="deck" itemprop="description">Text watermarking arrives in the OpenAI API as an opt-in feature, a sharp contrast with Anthropic's on-by-default posture.</p>
+    <div class="body" itemprop="articleBody">
+      <p>The provenance wars have reached the API layer. OpenAI now lets developers opt in to watermarking text generated through its API, embedding subtle statistical markers that can later help identify content as machine-written. The headline detail is the default. Unlike Anthropic, which watermarks by default, OpenAI leaves the feature off unless you ask for it.</p>
+      <p>That single design choice reveals two philosophies. On-by-default treats provenance as a public good: every generated sentence carries a fingerprint whether or not the developer cares. Opt-in treats it as a customer feature, available when you need it for compliance or trust signaling and invisible when you don't. Each stance has defenders, and each puts the burden of responsibility on a different party.</p>
+      <p>For enterprises, regulation is the real driver. Transparency obligations such as those in the EU AI Act are pushing organizations to label synthetic content, and watermarking at the generation layer is far more reliable than hoping detection classifiers catch it afterward. Those classifiers have a well-earned reputation for false positives. The caveat is that statistical text watermarks can degrade under paraphrasing, translation, or heavy editing, so they work as evidence, not proof.</p>
+      <p>The practical step is to decide deliberately. If you publish customer-facing generated content or operate in regulated markets, enable watermarking and document that you did. If you run multi-vendor pipelines, remember that defaults now differ across providers, which means your provenance posture depends on which model happened to answer.</p>
+    </div>
+    <blockquote class="pull-quote">"With watermarking defaults now split across providers, your compliance posture depends on which model answered."</blockquote>
+    <a href="https://thenewstack.io/openai-api-text-watermarking/" target="_blank" rel="noopener noreferrer" class="read-more" itemprop="url">Read Original →</a>
+  </div>
+</article>
+
+<article class="spread spread-hero" id="story-7" itemscope itemtype="https://schema.org/Article">
+  <div class="numeral" aria-hidden="true">∞</div>
+  <div class="spread-inner">
+    <div class="flag-badge">⚡ Applies to You</div>
+    <div class="category-label" itemprop="articleSection">AI OBSERVABILITY</div>
+    <h2 class="headline" itemprop="headline">$915 Million Says Agents Are Just Apps</h2>
+    <p class="deck" itemprop="description">Dynatrace closes its Arize acquisition, folding AI agent tracing and evaluation into mainstream application monitoring.</p>
+    <div class="body" itemprop="articleBody">
+      <p>The AI observability category just got its first truly enterprise-scale exit. Dynatrace closed its $915 million acquisition of Arize on October 1, combining its application and infrastructure monitoring with Arize's tracing and evaluation of AI agents. The thesis, as Dynatrace's Sean O'Dell framed it, is disarmingly simple: however complex AI applications become, they are still applications.</p>
+      <p>That framing is both a strategy and a provocation. For two years, LLM observability lived in its own world of prompt logs, eval dashboards, and token counters, sitting apart from the APM tools that SREs actually use at 3 a.m. Dynatrace is betting that this separation is temporary. When an agent fails in production, the cause might be a hallucination, a slow vector database, a throttled API, or a bad deploy, and you need all of those signals in one trace.</p>
+      <p>The deal also validates something practitioners already sensed. Evaluation is becoming a runtime concern rather than a pre-launch ritual. Knowing that your agent passed a benchmark last month says little about whether it is quietly degrading this week. Continuous evaluation tied to infrastructure telemetry is what production AI actually requires.</p>
+      <p>Expect consolidation to accelerate as other APM giants go shopping and standalone LLM observability vendors face a stark choice between going deep or getting bought. For buyers, the question to ask any vendor is whether it can follow a single user request from the prompt through the agent's tool calls down to the database query, without forcing you to switch tabs.</p>
+    </div>
+    <blockquote class="pull-quote">"However complex AI applications become, they are still applications, and $915 million says they'll be monitored like them."</blockquote>
+    <a href="https://thenewstack.io/dynatrace-arize-ai-observability/" target="_blank" rel="noopener noreferrer" class="read-more" itemprop="url">Read Original →</a>
+  </div>
+</article>
+
+<article class="spread spread-neon" id="story-8" itemscope itemtype="https://schema.org/Article">
+  <div class="numeral" aria-hidden="true">IX</div>
+  <div class="spread-inner">
+    <div class="flag-badge">⚡ Applies to You</div>
+    <div class="category-label" itemprop="articleSection">DEV TOOLS</div>
+    <h2 class="headline" itemprop="headline">Your Agents Write Faster Than Your Pipeline Can Doubt</h2>
+    <p class="deck" itemprop="description">AI coding agents have made CI the new bottleneck, and throwing more runners at the problem misses the point entirely.</p>
+    <div class="body" itemprop="articleBody">
+      <p>Three September posts, including one from Anthropic's engineering team about the strain on its continuous integration, point to the same uncomfortable truth. Code generation is no longer the constraint. Verification is. AI coding agents now open pull requests at a rate no human team ever did, and CI pipelines built for a few dozen PRs a day are buckling under the load.</p>
+      <p>The reflexive fix is to buy more compute, add runners, parallelize, and cache harder. That treats a structural problem as a capacity problem. If PR volume grows with the number of agents you deploy, linear infrastructure scaling becomes a treadmill you will never get off, and it does nothing about the second bottleneck: the humans who must review all that output.</p>
+      <p>The smarter response is to rethink what verification means when the author is a machine. That means filtering before merge so that low-confidence changes never reach the expensive pipeline. It means running tests selectively based on what a change actually touches, and evaluating changes speculatively and asynchronously instead of forcing every commit through the same serial gauntlet. Verification itself has to become agent-native, with agents expected to prove their work before asking for scarce CI cycles and human attention.</p>
+      <p>Engineering leaders should watch one metric closely: the ratio of agent-generated PRs to PRs that actually merge. If it is climbing, you are paying to verify work that was never going to ship. The winning teams will not have the fastest pipelines. They will have the most discerning ones.</p>
+    </div>
+    <blockquote class="pull-quote">"Code generation is no longer the constraint. Verification is."</blockquote>
+    <a href="https://thenewstack.io/ci-bottleneck-agent-verification/" target="_blank" rel="noopener noreferrer" class="read-more" itemprop="url">Read Original →</a>
+  </div>
+</article>
+
+<article class="spread spread-sunset" id="story-9" itemscope itemtype="https://schema.org/Article">
+  <div class="numeral" aria-hidden="true">X</div>
+  <div class="spread-inner">
+    <div class="flag-badge">⚡ Applies to You</div>
+    <div class="category-label" itemprop="articleSection">AGENT ECONOMY</div>
+    <h2 class="headline" itemprop="headline">The Agent Has a Wallet. Who Holds the Purse Strings?</h2>
+    <p class="deck" itemprop="description">Cloudflare's Monetization Gateway lets domain owners charge AI agents for MCP tool access, and exposes how few enterprises have set spending limits.</p>
+    <div class="body" itemprop="articleBody">
+      <p>The machine economy just got a cash register. Cloudflare opened a closed beta of its Monetization Gateway, which gives domain owners a way to charge AI agents for access, including paid access to MCP tools. The approach builds on x402, a payment flow that revives HTTP's long-dormant 402 'Payment Required' status code. For publishers and API providers tired of being scraped for free, it is an overdue answer.</p>
+      <p>For the enterprises deploying those agents, it opens a new and slightly alarming question. When your agent can pay for a tool call on its own, who approved the budget? Today's agentic loops are designed to retry, explore, and chain tools together until a task succeeds. Attach a price to every call and that persistence becomes a spending pattern. A confused agent caught in a retry loop stops being merely inefficient. It runs up an invoice.</p>
+      <p>This is a governance gap hiding in plain sight. Most organizations have mature controls over human procurement, including purchase orders, approval thresholds, and corporate card limits, but almost none for software that spends autonomously. Prompt injection also gains a financial dimension: an attacker who can steer an agent toward a malicious paid endpoint now has a way to drain real money.</p>
+      <p>Build the guardrails before the beta goes general. Set per-agent and per-task spending ceilings, require human approval above a threshold, allowlist which paid endpoints agents may use, and log every transaction alongside the reasoning that triggered it. Finance teams will soon ask why the AI spent money. Have the answer ready.</p>
+    </div>
+    <blockquote class="pull-quote">"A confused agent in a retry loop stops being merely inefficient. It runs up an invoice."</blockquote>
+    <a href="https://thenewstack.io/cloudflare-x402-agent-spending/" target="_blank" rel="noopener noreferrer" class="read-more" itemprop="url">Read Original →</a>
+  </div>
+</article>
+
+</main>
+
+<button class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Back to top">↑</button>
+
+<footer class="footer">
+  <div class="logo">Morning Edition</div>
+  <p>Generated with AI — Anthropic Claude &amp; Google Gemini</p>
+  <p style="margin-top:0.5rem;"><time datetime="2026-10-06T11:36:40">Tuesday, October 06, 2026</time></p>
+</footer>
+
+<script>
+(function() {
+  var btn = document.getElementById('backToTop');
+  window.addEventListener('scroll', function() {
+    if (window.scrollY > 600) {
+      btn.classList.add('visible');
+    } else {
+      btn.classList.remove('visible');
+    }
+  });
+})();
+</script>
+
+</body>
+</html>
