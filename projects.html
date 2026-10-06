@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Projects — Parag Engineering Lab</title>
+  <link rel="canonical" href="https://paragjn.github.io/parag-engineering-lab/projects.html" />
+  <meta name="description" content="A collection of AI-powered tools and utilities built for real-world engineering and productivity workflows by Parag Jain." />
+  <meta property="og:title" content="Parag Engineering Lab" />
+  <meta property="og:description" content="AI-powered tools for real-world engineering workflows." />
+  <meta property="og:type" content="website" />
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8fafc" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)"  content="#080c14" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ═══════════════════════════════════════════════════════════════
+       DESIGN TOKENS
+    ═══════════════════════════════════════════════════════════════ */
+    :root {
+      --bg:        #f8fafc;
+      --surface:   #ffffff;
+      --border:    rgba(15,23,42,.08);
+      --border-h:  rgba(15,23,42,.18);
+      --text:      #0f172a;
+      --text-2:    #475569;
+      --text-3:    #94a3b8;
+      --accent:    #2563eb;
+      --accent-d:  #1d4ed8;
+      --accent-2:  #7c3aed;
+      --wip-bg:    rgba(245,158,11,.10);
+      --wip-color: #92400e;
+      --wip-border:rgba(245,158,11,.28);
+
+      --t-2xs: clamp(.625rem,  .6rem  + .15vw, .725rem);
+      --t-xs:  clamp(.7rem,    .67rem + .18vw, .8125rem);
+      --t-sm:  clamp(.8125rem, .78rem + .2vw,  .9375rem);
+      --t-md:  clamp(.9375rem, .9rem  + .25vw, 1.0625rem);
+      --t-lg:  clamp(1.0625rem,1rem   + .5vw,  1.3125rem);
+      --t-xl:  clamp(1.375rem, 1.2rem + 1vw,   1.875rem);
+      --t-hero:clamp(2.25rem,  1.7rem + 4vw,   4.25rem);
+
+      --s-1:  clamp(.25rem,  .2rem  + .25vw, .375rem);
+      --s-2:  clamp(.5rem,   .45rem + .3vw,  .625rem);
+      --s-3:  clamp(.75rem,  .7rem  + .3vw,  .875rem);
+      --s-4:  clamp(1rem,    .9rem  + .5vw,  1.25rem);
+      --s-6:  clamp(1.25rem, 1.1rem + .75vw, 1.5rem);
+      --s-8:  clamp(1.75rem, 1.4rem + 1.5vw, 2.25rem);
+      --s-12: clamp(2.5rem,  2rem   + 2.5vw, 3.5rem);
+      --s-16: clamp(3.5rem,  2.5rem + 5vw,   6rem);
+
+      --r:       12px;
+      --shadow:  0 1px 3px rgba(15,23,42,.05), 0 4px 16px rgba(15,23,42,.05);
+      --shadow-h:0 6px 30px rgba(15,23,42,.10), 0 1px 4px rgba(15,23,42,.04);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:        #080c14;
+        --surface:   #111827;
+        --border:    rgba(255,255,255,.07);
+        --border-h:  rgba(255,255,255,.16);
+        --text:      #f1f5f9;
+        --text-2:    #94a3b8;
+        --text-3:    #475569;
+        --accent:    #60a5fa;
+        --accent-d:  #93c5fd;
+        --accent-2:  #a78bfa;
+        --wip-bg:    rgba(245,158,11,.14);
+        --wip-color: #fcd34d;
+        --wip-border:rgba(245,158,11,.28);
+        --shadow:    0 1px 4px rgba(0,0,0,.3),  0 4px 16px rgba(0,0,0,.2);
+        --shadow-h:  0 6px 30px rgba(0,0,0,.45), 0 1px 4px rgba(0,0,0,.25);
+      }
+    }
+
+    /* ── RESET ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    img, svg { display: block; }
+
+    /* ── BODY — full-bleed grid host ── */
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: var(--t-md);
+      line-height: 1.6;
+      min-height: 100svh;
+      overflow-x: hidden;
+      display: grid;
+      grid-template-columns:
+        [edge-l] var(--s-6)
+        [content-l] 1fr [content-r]
+        var(--s-6) [edge-r];
+      grid-template-rows: auto 1fr auto;
+    }
+
+    body > * { grid-column: content-l / content-r; }
+
+    /* ── HEADER ── */
+    header {
+      display: grid;
+      place-items: center;
+      text-align: center;
+      gap: var(--s-4);
+      padding-block: var(--s-16);
+      max-width: 820px;
+      width: 100%;
+      margin-inline: auto;
+    }
+
+    header > span {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 15px;
+      border-radius: 999px;
+      font-size: var(--t-2xs);
+      font-weight: 600;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: rgba(37,99,235,.07);
+      border: 1px solid rgba(37,99,235,.2);
+    }
+    @media (prefers-color-scheme: dark) {
+      header > span { background: rgba(96,165,250,.08); border-color: rgba(96,165,250,.2); }
+    }
+
+    header > span > b {
+      display: inline-block;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+      animation: blink 2.2s ease infinite;
+    }
+
+    @keyframes blink {
+      0%,100% { opacity:1; transform:scale(1); }
+      50%      { opacity:.3; transform:scale(.65); }
+    }
+
+    header > h1 {
+      font-size: var(--t-hero);
+      font-weight: 800;
+      letter-spacing: -.04em;
+      line-height: 1.06;
+      background: linear-gradient(140deg, var(--text) 20%, var(--accent) 60%, var(--accent-2) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    header > p {
+      font-size: var(--t-lg);
+      color: var(--text-2);
+      max-width: 52ch;
+      line-height: 1.72;
+    }
+
+    header > nav {
+      display: flex;
+      gap: var(--s-3);
+      justify-content: center;
+      flex-wrap: wrap;
+      padding-top: var(--s-2);
+    }
+
+    header > nav > a {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 22px;
+      border-radius: var(--r);
+      font-size: var(--t-sm);
+      font-weight: 500;
+      text-decoration: none;
+      transition: transform .18s ease, background .18s, box-shadow .18s, border-color .18s;
+    }
+
+    header > nav > a:first-child {
+      background: var(--accent);
+      color: #fff;
+    }
+    header > nav > a:first-child:hover {
+      background: var(--accent-d);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(37,99,235,.28);
+    }
+    @media (prefers-color-scheme: dark) {
+      header > nav > a:first-child:hover { box-shadow: 0 8px 24px rgba(96,165,250,.22); }
+    }
+
+    header > nav > a:not(:first-child) {
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    header > nav > a:not(:first-child):hover {
+      border-color: var(--border-h);
+      transform: translateY(-2px);
+    }
+
+    /* ── MAIN ── */
+    main {
+      max-width: 1200px;
+      width: 100%;
+      margin-inline: auto;
+    }
+
+    /* ── STATS — dl with div groups ── */
+    dl {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      margin-bottom: var(--s-16);
+    }
+
+    dl > div {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: var(--s-6) var(--s-8);
+      border-right: 1px solid var(--border);
+    }
+    dl > div:last-child { border-right: none; }
+
+    dl dd {
+      font-size: var(--t-xl);
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: -.03em;
+      line-height: 1;
+    }
+
+    dl dt {
+      font-size: var(--t-2xs);
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      font-weight: 500;
+    }
+
+    /* ── SECTION ── */
+    section { margin-bottom: var(--s-16); }
+
+    section > h2 {
+      font-size: var(--t-xs);
+      font-weight: 600;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      margin-bottom: var(--s-8);
+      display: flex;
+      align-items: center;
+      gap: var(--s-4);
+    }
+
+    section > h2::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── PROJECT GRID — ol as grid ── */
+    section > ol {
+      list-style: none;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+      gap: 16px;
+    }
+
+    /* ── ARTICLE (card) ── */
+    article {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: var(--s-6);
+      height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr auto auto;
+      gap: var(--s-3);
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      transition: transform .28s cubic-bezier(.4,0,.2,1), border-color .2s, box-shadow .28s;
+      animation: rise .5s ease both;
+    }
+
+    @keyframes rise {
+      from { opacity:0; transform:translateY(16px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+    section > ol > li:nth-child(1)  article { animation-delay: .04s; }
+    section > ol > li:nth-child(2)  article { animation-delay: .08s; }
+    section > ol > li:nth-child(3)  article { animation-delay: .12s; }
+    section > ol > li:nth-child(4)  article { animation-delay: .16s; }
+    section > ol > li:nth-child(5)  article { animation-delay: .20s; }
+    section > ol > li:nth-child(6)  article { animation-delay: .24s; }
+    section > ol > li:nth-child(7)  article { animation-delay: .28s; }
+    section > ol > li:nth-child(8)  article { animation-delay: .32s; }
+    section > ol > li:nth-child(9)  article { animation-delay: .36s; }
+    section > ol > li:nth-child(10) article { animation-delay: .40s; }
+    section > ol > li:nth-child(11) article { animation-delay: .44s; }
+    section > ol > li:nth-child(12) article { animation-delay: .48s; }
+    section > ol > li:nth-child(13) article { animation-delay: .52s; }
+    section > ol > li:nth-child(14) article { animation-delay: .56s; }
+    section > ol > li:nth-child(15) article { animation-delay: .60s; }
+
+    article:hover {
+      transform: translateY(-5px);
+      border-color: var(--border-h);
+      box-shadow: var(--shadow-h);
+    }
+
+    article::before {
+      content: '';
+      position: absolute;
+      inset-block: 0;
+      inset-inline-start: 0;
+      width: 3px;
+      background: var(--stripe, linear-gradient(180deg, var(--accent), var(--accent-2)));
+    }
+
+    article[data-wip]::after {
+      content: 'In Progress';
+      position: absolute;
+      top: 14px; right: 14px;
+      font-size: var(--t-2xs);
+      font-weight: 600;
+      letter-spacing: .04em;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: var(--wip-bg);
+      color: var(--wip-color);
+      border: 1px solid var(--wip-border);
+    }
+
+    article > header {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--s-4);
+    }
+
+    article > header > span {
+      width: 44px; height: 44px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      font-size: 22px;
+      flex-shrink: 0;
+      background: var(--chip-bg, rgba(37,99,235,.08));
+    }
+
+    article > header > hgroup > h3 {
+      font-size: var(--t-md);
+      font-weight: 700;
+      letter-spacing: -.015em;
+      line-height: 1.3;
+      color: var(--text);
+    }
+
+    article > header > hgroup > p {
+      font-size: var(--t-2xs);
+      font-weight: 600;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-top: 3px;
+    }
+
+    article > p {
+      font-size: var(--t-sm);
+      color: var(--text-2);
+      line-height: 1.78;
+    }
+
+    article > ul {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      list-style: none;
+      align-content: flex-start;
+    }
+
+    article > ul > li {
+      font-size: var(--t-2xs);
+      font-weight: 500;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+      letter-spacing: .025em;
+      background: var(--tb, #eff6ff);
+      color:      var(--tc, #1d4ed8);
+      border: 1px solid var(--tk, #bfdbfe);
+    }
+
+    article > a {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: var(--t-sm);
+      font-weight: 500;
+      color: var(--accent);
+      text-decoration: none;
+      transition: gap .2s ease;
+      margin-top: var(--s-1);
+      width: fit-content;
+    }
+    article > a:hover { gap: 11px; }
+    article > a > svg { flex-shrink: 0; transition: transform .2s; }
+    article > a:hover > svg { transform: translateX(2px); }
+
+    /* ── TAG COLOUR SYSTEM ── */
+    [data-tag="blue"]   { --tb:#eff6ff; --tc:#1d4ed8; --tk:#bfdbfe; }
+    [data-tag="purple"] { --tb:#f5f3ff; --tc:#6d28d9; --tk:#ddd6fe; }
+    [data-tag="green"]  { --tb:#f0fdf4; --tc:#065f46; --tk:#a7f3d0; }
+    [data-tag="orange"] { --tb:#fff7ed; --tc:#c2410c; --tk:#fed7aa; }
+    [data-tag="pink"]   { --tb:#fdf2f8; --tc:#be185d; --tk:#fbcfe8; }
+    [data-tag="teal"]   { --tb:#f0fdfa; --tc:#0f766e; --tk:#99f6e4; }
+    [data-tag="red"]    { --tb:#fef2f2; --tc:#b91c1c; --tk:#fecaca; }
+    [data-tag="yellow"] { --tb:#fefce8; --tc:#854d0e; --tk:#fef08a; }
+    [data-tag="indigo"] { --tb:#eef2ff; --tc:#3730a3; --tk:#c7d2fe; }
+    [data-tag="slate"]  { --tb:#f1f5f9; --tc:#334155; --tk:#cbd5e1; }
+
+    @media (prefers-color-scheme: dark) {
+      [data-tag="blue"]   { --tb:rgba(37,99,235,.14);  --tc:#93c5fd; --tk:rgba(96,165,250,.22); }
+      [data-tag="purple"] { --tb:rgba(124,58,237,.14); --tc:#c4b5fd; --tk:rgba(167,139,250,.22); }
+      [data-tag="green"]  { --tb:rgba(5,150,105,.14);  --tc:#6ee7b7; --tk:rgba(52,211,153,.22); }
+      [data-tag="orange"] { --tb:rgba(234,88,12,.14);  --tc:#fdba74; --tk:rgba(251,146,60,.22); }
+      [data-tag="pink"]   { --tb:rgba(219,39,119,.14); --tc:#f9a8d4; --tk:rgba(244,114,182,.22); }
+      [data-tag="teal"]   { --tb:rgba(13,148,136,.14); --tc:#5eead4; --tk:rgba(45,212,191,.22); }
+      [data-tag="red"]    { --tb:rgba(185,28,28,.14);  --tc:#fca5a5; --tk:rgba(248,113,113,.22); }
+      [data-tag="yellow"] { --tb:rgba(133,77,14,.20);  --tc:#fde047; --tk:rgba(250,204,21,.22); }
+      [data-tag="indigo"] { --tb:rgba(79,70,229,.14);  --tc:#a5b4fc; --tk:rgba(99,102,241,.22); }
+      [data-tag="slate"]  { --tb:rgba(51,65,85,.22);   --tc:#94a3b8; --tk:rgba(100,116,139,.3); }
+    }
+
+    /* ── CHIP BG SYSTEM ── */
+    [data-chip="blue"]   { --chip-bg:#eff6ff; }
+    [data-chip="pink"]   { --chip-bg:#fdf2f8; }
+    [data-chip="green"]  { --chip-bg:#f0fdf4; }
+    [data-chip="teal"]   { --chip-bg:#f0fdfa; }
+    [data-chip="orange"] { --chip-bg:#fff7ed; }
+    [data-chip="purple"] { --chip-bg:#f5f3ff; }
+    [data-chip="yellow"] { --chip-bg:#fefce8; }
+    [data-chip="red"]    { --chip-bg:#fef2f2; }
+    [data-chip="indigo"] { --chip-bg:#eef2ff; }
+
+    @media (prefers-color-scheme: dark) {
+      [data-chip="blue"]   { --chip-bg:rgba(37,99,235,.12); }
+      [data-chip="pink"]   { --chip-bg:rgba(219,39,119,.12); }
+      [data-chip="green"]  { --chip-bg:rgba(5,150,105,.12); }
+      [data-chip="teal"]   { --chip-bg:rgba(13,148,136,.12); }
+      [data-chip="orange"] { --chip-bg:rgba(234,88,12,.12); }
+      [data-chip="purple"] { --chip-bg:rgba(124,58,237,.12); }
+      [data-chip="yellow"] { --chip-bg:rgba(133,77,14,.18); }
+      [data-chip="red"]    { --chip-bg:rgba(185,28,28,.12); }
+      [data-chip="indigo"] { --chip-bg:rgba(79,70,229,.12); }
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: var(--s-4);
+      padding-block: var(--s-8);
+      margin-bottom: var(--s-8);
+      border-top: 1px solid var(--border);
+      font-size: var(--t-sm);
+      color: var(--text-3);
+      max-width: 1200px;
+      width: 100%;
+      margin-inline: auto;
+    }
+
+    footer a { color: var(--text-2); text-decoration: none; transition: color .15s; }
+    footer a:hover { color: var(--accent); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 600px) {
+      dl { grid-template-columns: repeat(2, 1fr); }
+      dl > div:nth-child(2) { border-right: none; }
+      footer { flex-direction: column; text-align: center; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <span><b></b>Actively Building</span>
+    <h1>Parag Engineering Lab</h1>
+    <p>A collection of AI-powered tools and utilities built for real-world engineering
+       and productivity workflows — spanning multi-agent pipelines, LLM orchestration, and full-stack products.</p>
+    <nav>
+      <a href="architecture.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        View Architecture
+      </a>
+      <a href="https://github.com/ParagJn/parag-engineering-lab" target="_blank" rel="noopener">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.014-1.703-2.782.604-3.369-1.342-3.369-1.342-.454-1.154-1.11-1.461-1.11-1.461-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836a9.59 9.59 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+        View on GitHub
+      </a>
+      <a href="https://www.linkedin.com/in/paragjn" target="_blank" rel="noopener">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+        LinkedIn
+      </a>
+      <a href="./">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Back to profile
+      </a>
+    </nav>
+  </header>
+
+  <main>
+    <dl>
+      <div><dd>16</dd><dt>Projects</dt></div>
+      <div><dd>6+</dd><dt>AI Models</dt></div>
+      <div><dd>5</dd><dt>LLM Providers</dt></div>
+      <div><dd>∞</dd><dt>Ideas</dt></div>
+    </dl>
+
+    <section>
+      <h2>Projects</h2>
+      <ol>
+
+        <li style="--stripe:linear-gradient(180deg,#f59e0b,#f97316)">
+          <article data-wip>
+            <header><span data-chip="orange">🤝</span><hgroup><h3>Agentic Procurement Simulator</h3><p>Enterprise Agentic AI</p></hgroup></header>
+            <p>Multi-agent procurement negotiation platform where Gemini (Buyer) and Claude (Supplier) autonomously negotiate contracts, check live inventory, propose volume discounts, and handle SKU-level counter-offers — with full Human-in-the-Loop governance and an AI Negotiation Auditor.</p>
+            <ul><li data-tag="green">Gemini</li><li data-tag="purple">Claude</li><li data-tag="teal">HITL</li><li data-tag="orange">React</li><li data-tag="blue">FastAPI</li></ul>
+            <a href="https://github.com/ParagJn/parag-engineering-lab/tree/Lineage/Agentic-Procurement" target="_blank" rel="noopener">View project <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+          </article>
+        </li>
+
+        <li style="--stripe:linear-gradient(180deg,#60a5fa,#2dd4bf)">
+          <article data-wip>
+            <header><span data-chip="teal">📅</span><hgroup><h3>Project Schedule Tool</h3><p>Productivity</p></hgroup></header>
+            <p>An AI-assisted project scheduling and timeline management tool. Define milestones, assign tasks, and get intelligent scheduling recommendations — with dependency tracking and progress visualisation.</p>
+            <ul><li data-tag="blue">AI / LLM</li><li data-tag="teal">Scheduling</li><li data-tag="orange">React</li><li data-tag="slate">In Development</li></ul>
+            <a href="https://github.com/ParagJn/parag-engineering-lab" target="_blank" rel="noopener">Follow progress <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+          </article>
+        </li>
+
+        <li style="--stripe:linear-gradient(180deg,#60a5fa,#818cf8)">
+          <article>
+            <header><span data-chip="blue">🎯</span><hgroup><h3>Interview Coach</h3><p>AI Career Tools</p></hgroup></header>
+            <p>Multi-agent interview preparation platform. Upload a job description, answer questions posed by three independent AI agents, and receive consolidated feedback with scores — company-aware and role-tailored.</p>
+            <ul><li data-tag="blue">GPT-4</li><li data-tag="purple">Claude</li><li data-tag="green">Gemini</li><li data-tag="orange">React</li><li data-tag="teal">FastAPI</li></ul>
+            <a href="https://github.com/ParagJn/parag-engineering-lab/tree/Lineage/Interview-Coach" target="_blank" rel="noopener">View project <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+          </article>
+        </li>
+
+        <li style="--stripe:linear-gradient(180deg,#f472b6,#a78bfa)">
+          <article>
+            <header><span data-chip="pink">📣</span><hgroup><h3>Agentic Post Strategist</h3><p>Content &amp; Social</p></hgroup></header>
+            <p>Social media strategy engine running Gemini and Claude in parallel. Generates 30-day content calendars, viral hook formulas, and engagement plans — synthesised into a single execution-ready output.</p>
+            <ul><li data-tag="green">Gemini</li><li data-tag="purple">Claude</li><li data-tag="orange">React</li><li data-tag="teal">FastAPI</li></ul>
+            <a href="https://github.com/ParagJn/parag-engineering-lab/tree/Lineage/Agentic-Post-Strategist" target="_blank" rel="noopener">View project <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+          </article>
+        </li>
+
+        <li style="--stripe:linear-gradient(180deg,#34d399,#2dd4bf)">
+          <article>
+            <header><span data-chip="green">✍️</span><hgroup><h3>Article Generator</h3><p>Content Pipeline</p></hgroup></header>
+            <p>Full-stack article pipeline from source URLs. Gemini drafts the article while Claude reviews and scores it. Below-threshold outputs auto-retry with feedback applied; a manual refinement option streams progress in real time.</p>
+            <ul><li data-tag="green">Gemini</li><li data-tag="purple">Claude</li><li data-tag="orange">React</li><li data-tag="teal">FastAPI</li></ul>
+            <a href="https://github.com/ParagJn/parag-engineering-lab/tree/Lineage/Article-Generator" target="_blank" rel="noopener">View project <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+          </article>
+        </li>
+
+        <li style="--stripe:linear-gradient(180deg,#2dd4bf,#60a5fa)">
+          <article>
+            <header><span data-chip="teal">🗄️</span><hgroup><h3>Chat With Database</h3><p>Data &amp; Analytics</p></hgroup></header>
+            <p>Converse with your relational database in plain English. A LangGraph ReAct agent backed by Claude introspects schemas, constructs queries, and returns human-readable answers — zero SQL required. Supports PostgreSQL and MySQL.</p>
+            <ul><li data-tag="purple">Claude</li><li data-tag="teal">LangGraph</li><li data-tag="blue">PostgreSQL</li><li data-tag="orange">React</li></ul>
+            <a href="https://github.com/ParagJn/parag-engineering-lab/tree/Lineage/Chat-With-Database" target="_blank" rel="noopener">View project <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+          </article>
+        </li>
+
+        <li style="--stripe:linear-gradient(180deg,#fb923c,#f472b6)">
+          <article>
+            <header><span data-chip="orange">📰</span><hgroup><h3>Daily Articles Pages</h3><p>AI Publishing</p></hgroup></header>
+            <p>AI-curated daily tech magazine generator. Blend up to 5 news sources for a beautifully rendered HTML magazine with editorial-grade content and 10 distinct visual spread styles. Includes PDF export, email newsletter, and a regenerate archive.</p>
+            <ul><li data-tag="green">Gemini 2.0</li><li data-tag="purple">Claude Sonnet</li><li data-tag="blue">Playwright</li><li data-tag="teal">RSS</li></ul>
+            <a href="https://github.com/ParagJn/parag-engineering-lab/tree/Lineage/Daily-Articles-Pages" target="_blank" rel="noopener">View project <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+          </article>
+        </li>
+
+        <li style="--stripe:linear-gradient(180deg,#a78bfa,#f472b6)">
+          <article>
+            <header><span data-chip="purple">🪪</span><hgroup><h3>Profile Generator</h3><p>Career Tools</p></hgroup></header>
+            <p>Turns resume documents and profile links into a polished animated HTML CV, a print-ready PDF, and a LinkedIn copy-paste helper — all in one click. Iterative "Request Changes" prompt preserves context across refinements.</p>
+            <ul><li data-tag="green">Gemini 2.5 Pro</li><li data-tag="purple">Claude Opus</li><li data-tag="blue">Playwright</li><li data-tag="orange">React</li></ul>
+            <a href="https://github.com/ParagJn/parag-engineering-lab/tree/Lineage/Profile-Generator" target="_blank" rel="noopener">View project <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+          </article>
+        </li>
+
+        <li style="--stripe:linear-gradient(180deg,#c084fc,#818cf8)">
+          <article>
+            <header><span data-chip="indigo">🪪</span><hgroup><h3>Profile Generator V2</h3><p>Career Tools</p></hgroup></header>
+            <p>Rebuilds CVs through a true two-stage LLM pipeline: Gemini for evidence-grounded research and extraction, Anthropic for professional CV generation. Outputs responsive HTML, Markdown, and structured JSON profile.</p>
+            <ul><li data-tag="green">Gemini</li><li data-tag="purple">Claude</li><li data-tag="orange">React</li><li data-tag="teal">FastAPI</li></ul>
+            <a href="https://github.com/ParagJn/parag-engineering-lab/tree/Lineage/Profile-Generator-V2" target="_blank" rel="noopener">View project <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+          </article>
+        </li>
+
+        <li style="--stripe:linear-gradient(180deg,#34d399,#60a5fa)">
+          <article>
+            <header><span data-chip="green">⚡</span><hgroup><h3>Skills Generator</h3><p>Developer Tools</p></hgroup></header>
+            <p>Converts ideas into production-ready SKILL.md files for Claude, Gemini, and Azure OpenAI. Auto-syncs to Claude Code CLI, includes one-click test case generation, versioning, and a persistent skill library.</p>
+            <ul><li data-tag="purple">Claude</li><li data-tag="green">Gemini</li><li data-tag="blue">Azure OpenAI</li><li data-tag="orange">React</li></ul>
+            <a href="https://github.com/ParagJn/parag-engineering-lab/tree/Lineage/Skills-Generator" target="_blank" rel="noopener">View project <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+          </article>
+        </li>
+
+        <li style="--stripe:linear-gradient(180deg,#fbbf24,#fb923c)">
+          <article>
+            <header><span data-chip="yellow">🔍</span><hgroup><h3>Strategy Analyzer</h3><p>Enterprise AI</p></hgroup></header>
+            <p>Multi-agent enterprise strategy document review platform. Upload a PDF, Word, or PowerPoint and receive structured analysis from four AI agents across two providers — with follow-up chat, Markdown export, and a visual action map.</p>
+            <ul><li data-tag="blue">GPT-4</li><li data-tag="purple">Claude</li><li data-tag="orange">React</li><li data-tag="teal">LangChain</li></ul>
+            <a href="https://github.com/ParagJn/parag-engineering-lab/tree/Lineage/Strategy-Analyzer" target="_blank" rel="noopener">View project <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+          </article>
+        </li>
+
+        <li style="--stripe:linear-gradient(180deg,#2dd4bf,#34d399)">
+          <article>
+            <header><span data-chip="teal">⚡</span><hgroup><h3>VoltStream Energy Dashboard</h3><p>Data Platform</p></hgroup></header>
+            <p>Enterprise-grade AI-powered data platform prototype for the energy and utilities sector. Demonstrates how organisations can modernise legacy data infrastructure to support AI at scale while delivering measurable business value.</p>
+            <ul><li data-tag="teal">AI / ML</li><li data-tag="blue">Data Platform</li><li data-tag="green">Python</li><li data-tag="orange">React</li></ul>
+            <a href="https://github.com/ParagJn/parag-engineering-lab/tree/Lineage/Energy-Dashboard-Monitor" target="_blank" rel="noopener">View project <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+          </article>
+        </li>
+
+        <li style="--stripe:linear-gradient(180deg,#818cf8,#60a5fa)">
+          <article>
+            <header><span data-chip="indigo">📄</span><hgroup><h3>Document Processor</h3><p>RAG &amp; Vectors</p></hgroup></header>
+            <p>Converts DOCX files into vector-ready chunks for RAG pipelines. Preserves document hierarchy (headings, tables, images) and uses Azure OpenAI Vision for OCR and image enrichment. Output formatted for direct Milvus ingestion.</p>
+            <ul><li data-tag="blue">Azure OpenAI</li><li data-tag="purple">RAG</li><li data-tag="teal">Milvus</li><li data-tag="green">Python</li></ul>
+            <a href="https://github.com/ParagJn/parag-engineering-lab/tree/Lineage/document_processor" target="_blank" rel="noopener">View project <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+          </article>
+        </li>
+
+        <li style="--stripe:linear-gradient(180deg,#f87171,#fb923c)">
+          <article>
+            <header><span data-chip="red">🔀</span><hgroup><h3>File Compare</h3><p>Document Tools</p></hgroup></header>
+            <p>Streamlit-based document comparison tool. Upload any two files (PDF, DOCX, or image) and get a detailed section-by-section AI diff report. Content segmented by page, heading, or converted markdown — downloadable as Markdown.</p>
+            <ul><li data-tag="blue">Azure OpenAI</li><li data-tag="red">Streamlit</li><li data-tag="green">Python</li><li data-tag="orange">PDF / DOCX</li></ul>
+            <a href="https://github.com/ParagJn/parag-engineering-lab/tree/Lineage/File-Compare" target="_blank" rel="noopener">View project <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+          </article>
+        </li>
+
+        <li style="--stripe:linear-gradient(180deg,#60a5fa,#818cf8)">
+          <article>
+            <header><span data-chip="blue">🔄</span><hgroup><h3>MD to DOCX Converter</h3><p>Document Tools</p></hgroup></header>
+            <p>Converts Markdown files to professionally formatted Word documents. Supports tables, code blocks, lists, blockquotes, embedded images, and renders Mermaid diagrams as PNG. Batch upload with bulk ZIP download included.</p>
+            <ul><li data-tag="red">Streamlit</li><li data-tag="green">Python</li><li data-tag="blue">Mermaid</li><li data-tag="orange">DOCX</li></ul>
+            <a href="https://github.com/ParagJn/parag-engineering-lab/tree/Lineage/md-to-docx" target="_blank" rel="noopener">View project <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+          </article>
+        </li>
+
+        <li style="--stripe:linear-gradient(180deg,#f472b6,#fb923c)">
+          <article>
+            <header><span data-chip="pink">👥</span><hgroup><h3>TalentFlow</h3><p>HR Intelligence</p></hgroup></header>
+            <p>Recruiting intelligence dashboard that streamlines talent acquisition workflows. Visualises pipeline stages, candidate analytics, and hiring metrics in a clean, interactive UI — built as a front-end prototype.</p>
+            <ul><li data-tag="blue">JavaScript</li><li data-tag="pink">Chart.js</li><li data-tag="orange">HTML / CSS</li></ul>
+            <a href="https://github.com/ParagJn/parag-engineering-lab/tree/Lineage/TalentFlow" target="_blank" rel="noopener">View project <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+          </article>
+        </li>
+
+
+      </ol>
+    </section>
+  </main>
+
+  <footer>
+    <p>Built by <a href="https://github.com/ParagJn" target="_blank" rel="noopener">Parag Jain</a> · Hosted on <a href="https://pages.github.com" target="_blank" rel="noopener">GitHub Pages</a></p>
+    <p><a href="https://github.com/ParagJn/parag-engineering-lab" target="_blank" rel="noopener">github.com/ParagJn/parag-engineering-lab</a></p>
+  </footer>
+
+</body>
+</html>

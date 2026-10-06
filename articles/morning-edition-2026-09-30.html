@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Agent Problem — Wednesday, September 30, 2026</title>
+
+<!-- SEO Meta -->
+<meta name="description" content="NetScaler zero-days, Cloudflare&#39;s post-quantum CA, Nvidia&#39;s agent safety platform, and prompt injection in Manus and Salesforce: today&#39;s AI security briefing.">
+<meta name="keywords" content="AI agent security, prompt injection, NetScaler zero-day, post-quantum cryptography, Cloudflare certificate authority, ML supply chain security, Docker botnet, identity and access management, sandbox escape, GitLab supply chain attack, Nvidia agent safety">
+<meta name="author" content="Morning Edition — AI Curated">
+<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
+<meta name="generator" content="Morning Edition AI Magazine Generator">
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="article">
+<meta property="og:title" content="The Agent Problem — Wednesday, September 30, 2026">
+<meta property="og:description" content="NetScaler zero-days, Cloudflare&#39;s post-quantum CA, Nvidia&#39;s agent safety platform, and prompt injection in Manus and Salesforce: today&#39;s AI security briefing.">
+<meta property="og:site_name" content="Morning Edition">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2026-09-30T14:09:21">
+<meta property="article:section" content="Technology">
+<meta property="article:tag" content="AI agent security, prompt injection, NetScaler zero-day, post-quantum cryptography, Cloudflare certificate authority, ML supply chain security, Docker botnet, identity and access management, sandbox escape, GitLab supply chain attack, Nvidia agent safety">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="The Agent Problem — Wednesday, September 30, 2026">
+<meta name="twitter:description" content="NetScaler zero-days, Cloudflare&#39;s post-quantum CA, Nvidia&#39;s agent safety platform, and prompt injection in Manus and Salesforce: today&#39;s AI security briefing.">
+
+<!-- JSON-LD Structured Data -->
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "CollectionPage", "name": "The Agent Problem", "description": "NetScaler zero-days, Cloudflare's post-quantum CA, Nvidia's agent safety platform, and prompt injection in Manus and Salesforce: today's AI security briefing.", "datePublished": "2026-09-30T14:09:21", "dateModified": "2026-09-30T14:09:21", "publisher": {"@type": "Organization", "name": "Morning Edition"}, "about": {"@type": "Thing", "name": "Technology News"}, "hasPart": [{"@type": "Article", "headline": "Look, Don't Touch: When Opening a Model Means Running Its Code", "description": "A patched Unsloth Studio flaw turned routine model inspection into arbitrary Python execution, and it exposes a lie the ML world keeps telling itself.", "url": "https://www.darkreading.com/application-security/unsloth-studio-flaw-model-inspection-code-execution", "articleSection": "DEV TOOLS", "position": 1}, {"@type": "Article", "headline": "Cloudflare Drafts the Blueprint for a Quantum-Proof Web", "description": "A free, automated public certificate authority built for today and hardened for the day quantum computers arrive.", "url": "https://www.darkreading.com/cloud-security/cloudflare-announces-public-certificate-authority-post-quantum-web", "articleSection": "INFRASTRUCTURE", "position": 2}, {"@type": "Article", "headline": "Skeleton Key at the Front Door: Twin NetScaler Zero-Days Hit Citrix Shops", "description": "Two critical flaws affecting default configurations hand attackers a way into the networks the appliances are meant to guard.", "url": "https://www.darkreading.com/vulnerabilities-threats/netscaler-zero-days-chaos-citrix", "articleSection": "SECURITY ALERT", "position": 3}, {"@type": "Article", "headline": "Nvidia Wants to Be the Warden of the Agent Economy", "description": "The Open Agent Safety Platform pairs hardware and software to watch AI agents and quarantine the unruly ones before they do damage.", "url": "https://www.darkreading.com/cyber-risk/nvidia-launches-ai-agent-safety-platform-prevent-rogue-activities", "articleSection": "AI TOOLS", "position": 4}, {"@type": "Article", "headline": "The Botnet Got an AI Upgrade", "description": "Carbonato plants an open-source AI agent on hijacked Docker hosts, takes orders over Telegram, and goes hunting for your AI API keys.", "url": "https://www.darkreading.com/identity-access-management-security/carbonato-botnet-ai-agent-hacked-docker-hosts", "articleSection": "THREAT INTEL", "position": 5}, {"@type": "Article", "headline": "The Insider You Forgot to Hire", "description": "Enterprises watch human employees closely while autonomous agents run with broad privileges and little oversight.", "url": "https://www.darkreading.com/vulnerabilities-threats/ai-agents-are-privileged-users-who-is-auditing-their-access", "articleSection": "IDENTITY", "position": 6}, {"@type": "Article", "headline": "Assume the Escape: Why Forensics Beats the Fantasy of a Perfect Sandbox", "description": "When AI agents break out of their boxes, the real story is not rogue machines. It is the same access-control failures we have seen for decades.", "url": "https://www.darkreading.com/cyberattacks-data-breaches/ai-sandbox-escapes-forensic-readiness", "articleSection": "AI SECURITY", "position": 7}, {"@type": "Article", "headline": "Salesbleed: How a CRM Agent Became a Phishing Courier in Your Slack", "description": "Agentic AI can carry instructions from the open web across apps and into the internal channels your employees trust most.", "url": "https://www.darkreading.com/application-security/salesbleed-exploits-salesforce-agents-slack-phishing", "articleSection": "SAAS SECURITY", "position": 8}, {"@type": "Article", "headline": "A $4 Billion Agent, Undone by a Few Sentences", "description": "A prompt-injection bug in Manus shows that valuation does not buy immunity when agents read the open web.", "url": "https://www.darkreading.com/application-security/prompt-injection-bug-agentic-ai-app-manus", "articleSection": "AI TOOLS", "position": 9}, {"@type": "Article", "headline": "Return to Sender: GitLab's Incoming Email Addresses Carry a Hidden Key", "description": "The per-user addresses GitLab assigns automatically contain highly privileged tokens, a quiet gift to supply chain attackers.", "url": "https://www.darkreading.com/application-security/gitlab-email-addresses-supply-chain-attacks", "articleSection": "SUPPLY CHAIN", "position": 10}]}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; font-size: 18px; }
+body { font-family: 'Inter', sans-serif; overflow-x: hidden; }
+
+.cover {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: #0a0a0a;
+  color: #fff;
+  text-align: center;
+  padding: 4rem 2rem;
+  position: relative;
+  overflow: hidden;
+}
+.cover::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at 30% 40%, rgba(99,102,241,0.15), transparent 50%),
+              radial-gradient(circle at 70% 60%, rgba(244,63,94,0.1), transparent 50%);
+  animation: drift 20s ease-in-out infinite;
+}
+@keyframes drift {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(2%, -2%) rotate(1deg); }
+}
+.cover-content { position: relative; z-index: 1; max-width: 900px; }
+.cover h1 {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(3rem, 8vw, 7rem);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin-bottom: 1rem;
+}
+.cover .tagline {
+  font-size: clamp(1.2rem, 2.5vw, 1.8rem);
+  opacity: 0.7;
+  font-weight: 300;
+  margin-bottom: 2rem;
+}
+.cover .meta {
+  font-size: 1rem;
+  opacity: 0.5;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+.cover .source-badge {
+  display: inline-block;
+  margin-top: 1.5rem;
+  padding: 0.5rem 1.5rem;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 100px;
+  font-size: 0.9rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* === SPREAD BASE === */
+.spread {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 6rem 2rem;
+  position: relative;
+}
+.spread-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+.category-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  margin-bottom: 1.5rem;
+}
+.numeral {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(4rem, 10vw, 8rem);
+  font-weight: 900;
+  opacity: 0.12;
+  position: absolute;
+  top: 2rem;
+  right: 3rem;
+  line-height: 1;
+}
+.headline {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(2.2rem, 5vw, 4rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.8rem;
+}
+.deck {
+  font-size: clamp(1.1rem, 2vw, 1.4rem);
+  font-weight: 300;
+  opacity: 0.75;
+  margin-bottom: 2.5rem;
+  line-height: 1.4;
+}
+.body p {
+  font-size: clamp(1.05rem, 1.5vw, 1.2rem);
+  line-height: 1.8;
+  margin-bottom: 1.2rem;
+}
+.pull-quote {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  font-style: italic;
+  font-weight: 400;
+  line-height: 1.4;
+  padding: 2rem 0;
+  margin: 2rem 0;
+  border-top: 3px solid currentColor;
+  border-bottom: 1px solid currentColor;
+  opacity: 0.9;
+}
+.read-more {
+  display: inline-block;
+  margin-top: 1.5rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  padding: 0.7rem 1.5rem;
+  border: 2px solid currentColor;
+  transition: all 0.3s;
+}
+.read-more:hover { opacity: 0.7; }
+.flag-badge {
+  display: inline-block;
+  padding: 0.3rem 0.8rem;
+  background: #f43f5e;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  border-radius: 3px;
+  margin-bottom: 1rem;
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* === SPREAD STYLES === */
+.spread-hero {
+  background: #fafaf9;
+  color: #1a1a1a;
+}
+.spread-hero .category-label { color: #6366f1; }
+.spread-hero .read-more { color: #1a1a1a; }
+
+.spread-midnight {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+.spread-midnight .category-label { color: #818cf8; }
+.spread-midnight .numeral { color: #334155; opacity: 0.3; }
+.spread-midnight .read-more { color: #e2e8f0; }
+
+.spread-rose_alert {
+  background: #fff1f2;
+  color: #1a1a1a;
+  border-left: 8px solid #f43f5e;
+}
+.spread-rose_alert .category-label { color: #e11d48; }
+.spread-rose_alert .pull-quote { border-color: #f43f5e; }
+.spread-rose_alert .numeral { color: #f43f5e; opacity: 0.15; }
+.spread-rose_alert .read-more { color: #e11d48; }
+
+.spread-terminal {
+  background: #0a0a0a;
+  color: #4ade80;
+  font-family: 'JetBrains Mono', monospace;
+}
+.spread-terminal .headline {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+}
+.spread-terminal .headline::before { content: '> '; opacity: 0.5; }
+.spread-terminal .body p { font-family: 'JetBrains Mono', monospace; font-size: 1rem; }
+.spread-terminal .pull-quote { border-color: #4ade80; font-family: 'JetBrains Mono', monospace; }
+.spread-terminal .category-label { color: #22d3ee; }
+.spread-terminal .numeral { color: #4ade80; }
+.spread-terminal .read-more { color: #4ade80; }
+
+.spread-academic {
+  background: #fef9ef;
+  color: #292524;
+}
+.spread-academic .body p:first-child::first-letter {
+  font-family: 'Fraunces', serif;
+  font-size: 4.5rem;
+  font-weight: 900;
+  float: left;
+  line-height: 0.8;
+  margin-right: 0.5rem;
+  margin-top: 0.1rem;
+  color: #78716c;
+}
+.spread-academic .category-label { color: #a16207; }
+.spread-academic .pull-quote { border-color: #d6d3d1; font-style: italic; }
+.spread-academic .read-more { color: #292524; }
+
+.spread-big_stat {
+  background: #1e1b4b;
+  color: #e0e7ff;
+  text-align: center;
+}
+.spread-big_stat .spread-inner { text-align: center; }
+.spread-big_stat .headline { font-size: clamp(2.5rem, 6vw, 5rem); }
+.spread-big_stat .pull-quote {
+  font-size: clamp(3rem, 8vw, 6rem);
+  font-weight: 900;
+  font-style: normal;
+  border: none;
+  color: #a5b4fc;
+}
+.spread-big_stat .body p { text-align: left; max-width: 700px; margin-left: auto; margin-right: auto; }
+.spread-big_stat .category-label { color: #818cf8; }
+.spread-big_stat .numeral { color: #312e81; opacity: 0.4; }
+.spread-big_stat .read-more { color: #e0e7ff; }
+
+.spread-blueprint {
+  background: #eff6ff;
+  color: #1e3a5f;
+  border: 2px dashed #93c5fd;
+}
+.spread-blueprint .headline { color: #1e40af; }
+.spread-blueprint .category-label { color: #2563eb; }
+.spread-blueprint .pull-quote { border-color: #93c5fd; }
+.spread-blueprint .numeral { color: #3b82f6; opacity: 0.15; }
+.spread-blueprint .read-more { color: #1e40af; }
+
+.spread-neon {
+  background: #18181b;
+  color: #fafafa;
+}
+.spread-neon .headline { color: #f0abfc; text-shadow: 0 0 40px rgba(240,171,252,0.3); }
+.spread-neon .category-label { color: #22d3ee; text-shadow: 0 0 20px rgba(34,211,238,0.4); }
+.spread-neon .pull-quote { border-color: #a855f7; color: #e879f9; }
+.spread-neon .numeral { color: #a855f7; opacity: 0.25; }
+.spread-neon .read-more { color: #e879f9; }
+
+.spread-editorial {
+  background: #ffffff;
+  color: #171717;
+}
+.spread-editorial .pull-quote {
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  padding: 3rem 0;
+  text-align: center;
+}
+.spread-editorial .category-label { color: #dc2626; }
+.spread-editorial .read-more { color: #171717; }
+
+.spread-sunset {
+  background: linear-gradient(135deg, #fef3c7, #fde68a, #fbbf24, #f59e0b);
+  color: #451a03;
+}
+.spread-sunset .headline { color: #78350f; }
+.spread-sunset .category-label { color: #92400e; }
+.spread-sunset .pull-quote { border-color: #d97706; }
+.spread-sunset .numeral { color: #f59e0b; opacity: 0.2; }
+.spread-sunset .read-more { color: #78350f; }
+
+/* Footer */
+.footer {
+  background: #0a0a0a;
+  color: #737373;
+  text-align: center;
+  padding: 4rem 2rem;
+  font-size: 0.9rem;
+}
+.footer .logo { font-family: 'Fraunces', serif; font-size: 1.5rem; color: #fff; margin-bottom: 0.5rem; }
+
+/* === TABLE OF CONTENTS === */
+.toc {
+  background: #fafaf9;
+  padding: 5rem 2rem;
+  position: relative;
+}
+.toc-inner {
+  max-width: 800px;
+  margin: 0 auto;
+}
+.toc-heading {
+  font-family: 'Fraunces', serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  color: #a8a29e;
+  margin-bottom: 2.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e7e5e4;
+}
+.toc-item {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid #f5f5f4;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s;
+}
+.toc-item:hover {
+  padding-left: 0.5rem;
+  background: #f5f5f4;
+  border-radius: 0.5rem;
+}
+.toc-numeral {
+  font-family: 'Fraunces', serif;
+  font-size: 1.6rem;
+  font-weight: 900;
+  min-width: 3rem;
+  text-align: center;
+  opacity: 0.7;
+}
+.toc-text {
+  flex: 1;
+  min-width: 0;
+}
+.toc-cat {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: #a8a29e;
+  margin-bottom: 0.2rem;
+}
+.toc-headline {
+  display: block;
+  font-family: 'Fraunces', serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1c1917;
+  line-height: 1.3;
+}
+.toc-arrow {
+  font-size: 1.2rem;
+  color: #d6d3d1;
+  transition: transform 0.2s, color 0.2s;
+}
+.toc-item:hover .toc-arrow {
+  transform: translateX(4px);
+  color: #6366f1;
+}
+
+/* === BACK TO TOP === */
+.back-to-top {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #0a0a0a;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s;
+  z-index: 999;
+}
+.back-to-top.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.back-to-top:hover {
+  background: #6366f1;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(99,102,241,0.4);
+}
+</style>
+<link rel="canonical" href="https://paragjn.github.io/parag-engineering-lab/articles/morning-edition-2026-09-30.html">
+<meta property="og:url" content="https://paragjn.github.io/parag-engineering-lab/articles/morning-edition-2026-09-30.html">
+<meta property="og:image" content="https://paragjn.github.io/parag-engineering-lab/articles/morning-edition-2026-09-30.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="627">
+<meta property="og:image:alt" content="The Agent Problem — Wednesday, September 30, 2026">
+<meta name="twitter:image" content="https://paragjn.github.io/parag-engineering-lab/articles/morning-edition-2026-09-30.png">
+</head>
+<body>
+
+<header>
+<section class="cover" role="banner">
+  <div class="cover-content">
+    <time class="meta" datetime="2026-09-30T14:09:21">Wednesday, September 30, 2026</time>
+    <h1>The Agent Problem</h1>
+    <p class="tagline">Your newest privileged users never sleep, never badge in, and never ask permission.</p>
+    <div class="source-badge">Curated from VentureBeat + Dark Reading</div>
+  </div>
+</section>
+</header>
+
+<nav class="toc" id="toc">
+  <div class="toc-inner">
+    <h2 class="toc-heading">In This Edition</h2>
+    
+      <a href="#story-0" class="toc-item">
+        <span class="toc-numeral" style="color:#4ade80">01</span>
+        <span class="toc-text">
+          <span class="toc-cat">DEV TOOLS</span>
+          <span class="toc-headline">Look, Don't Touch: When Opening a Model Means Running Its Code</span>
+        </span>
+        <span class="toc-arrow">→</span>
+      </a>
+      <a href="#story-1" class="toc-item">
+        <span class="toc-numeral" style="color:#2563eb">II</span>
+        <span class="toc-text">
+          <span class="toc-cat">INFRASTRUCTURE</span>
+          <span class="toc-headline">Cloudflare Drafts the Blueprint for a Quantum-Proof Web</span>
+        </span>
+        <span class="toc-arrow">→</span>
+      </a>
+      <a href="#story-2" class="toc-item">
+        <span class="toc-numeral" style="color:#e11d48">三</span>
+        <span class="toc-text">
+          <span class="toc-cat">SECURITY ALERT</span>
+          <span class="toc-headline">Skeleton Key at the Front Door: Twin NetScaler Zero-Days Hit Citrix Shops</span>
+        </span>
+        <span class="toc-arrow">→</span>
+      </a>
+      <a href="#story-3" class="toc-item">
+        <span class="toc-numeral" style="color:#6366f1">No. 4</span>
+        <span class="toc-text">
+          <span class="toc-cat">AI TOOLS</span>
+          <span class="toc-headline">Nvidia Wants to Be the Warden of the Agent Economy</span>
+        </span>
+        <span class="toc-arrow">→</span>
+      </a>
+      <a href="#story-4" class="toc-item">
+        <span class="toc-numeral" style="color:#e879f9">§5</span>
+        <span class="toc-text">
+          <span class="toc-cat">THREAT INTEL</span>
+          <span class="toc-headline">The Botnet Got an AI Upgrade</span>
+        </span>
+        <span class="toc-arrow">→</span>
+      </a>
+      <a href="#story-5" class="toc-item">
+        <span class="toc-numeral" style="color:#dc2626">VI</span>
+        <span class="toc-text">
+          <span class="toc-cat">IDENTITY</span>
+          <span class="toc-headline">The Insider You Forgot to Hire</span>
+        </span>
+        <span class="toc-arrow">→</span>
+      </a>
+      <a href="#story-6" class="toc-item">
+        <span class="toc-numeral" style="color:#a16207">007</span>
+        <span class="toc-text">
+          <span class="toc-cat">AI SECURITY</span>
+          <span class="toc-headline">Assume the Escape: Why Forensics Beats the Fantasy of a Perfect Sandbox</span>
+        </span>
+        <span class="toc-arrow">→</span>
+      </a>
+      <a href="#story-7" class="toc-item">
+        <span class="toc-numeral" style="color:#818cf8">∞</span>
+        <span class="toc-text">
+          <span class="toc-cat">SAAS SECURITY</span>
+          <span class="toc-headline">Salesbleed: How a CRM Agent Became a Phishing Courier in Your Slack</span>
+        </span>
+        <span class="toc-arrow">→</span>
+      </a>
+      <a href="#story-8" class="toc-item">
+        <span class="toc-numeral" style="color:#818cf8">IX</span>
+        <span class="toc-text">
+          <span class="toc-cat">AI TOOLS</span>
+          <span class="toc-headline">A $4 Billion Agent, Undone by a Few Sentences</span>
+        </span>
+        <span class="toc-arrow">→</span>
+      </a>
+      <a href="#story-9" class="toc-item">
+        <span class="toc-numeral" style="color:#92400e">X</span>
+        <span class="toc-text">
+          <span class="toc-cat">SUPPLY CHAIN</span>
+          <span class="toc-headline">Return to Sender: GitLab's Incoming Email Addresses Carry a Hidden Key</span>
+        </span>
+        <span class="toc-arrow">→</span>
+      </a>
+  </div>
+</nav>
+
+<main>
+
+<article class="spread spread-terminal" id="story-0" itemscope itemtype="https://schema.org/Article">
+  <div class="numeral" aria-hidden="true">01</div>
+  <div class="spread-inner">
+    <div class="flag-badge">⚡ Applies to You</div>
+    <div class="category-label" itemprop="articleSection">DEV TOOLS</div>
+    <h2 class="headline" itemprop="headline">Look, Don't Touch: When Opening a Model Means Running Its Code</h2>
+    <p class="deck" itemprop="description">A patched Unsloth Studio flaw turned routine model inspection into arbitrary Python execution, and it exposes a lie the ML world keeps telling itself.</p>
+    <div class="body" itemprop="articleBody">
+      <p>Machine learning engineers have a comfortable mental model: weights are data, and data is inert. You download a checkpoint, open it, poke at the architecture, and move on. The now-patched Unsloth Studio vulnerability breaks that model. According to Dark Reading, a malicious model could execute arbitrary Python code during inspection by abusing the trust_remote_code setting. The act of looking was enough.</p>
+      <p>This is not a novel class of bug. It is the oldest one in computing, the confusion between data and code, dressed up for the foundation-model era. trust_remote_code exists because many modern architectures ship custom Python alongside their weights. That is convenient for researchers and useful for attackers. Any tool that honors the flag during a routine workflow effectively hands a stranger a shell on your workstation.</p>
+      <p>The practical takeaway is blunt. Treat every third-party model artifact the way you would treat an unsigned binary from a forum post. Inspect models in disposable, network-restricted sandboxes. Default trust_remote_code to off across internal tooling, and audit any pipeline that flips it on. Prefer safetensors and other formats that cannot carry executable payloads.</p>
+      <p>Unsloth patched the issue, which is good. The larger point is that ML developer environments now sit squarely inside the software supply chain. Model hubs are the new package registries, and they deserve the same paranoia we learned, painfully, from npm and PyPI.</p>
+    </div>
+    <blockquote class="pull-quote">"In the foundation-model era, 'just inspecting the weights' can mean executing a stranger's code."</blockquote>
+    <a href="https://www.darkreading.com/application-security/unsloth-studio-flaw-model-inspection-code-execution" target="_blank" rel="noopener noreferrer" class="read-more" itemprop="url">Read Original →</a>
+  </div>
+</article>
+
+<article class="spread spread-blueprint" id="story-1" itemscope itemtype="https://schema.org/Article">
+  <div class="numeral" aria-hidden="true">II</div>
+  <div class="spread-inner">
+    <div class="flag-badge">⚡ Applies to You</div>
+    <div class="category-label" itemprop="articleSection">INFRASTRUCTURE</div>
+    <h2 class="headline" itemprop="headline">Cloudflare Drafts the Blueprint for a Quantum-Proof Web</h2>
+    <p class="deck" itemprop="description">A free, automated public certificate authority built for today and hardened for the day quantum computers arrive.</p>
+    <div class="body" itemprop="articleBody">
+      <p>Post-quantum cryptography has spent years in the purgatory of standards documents and pilot projects. Cloudflare's new public certificate authority, which it pitches as automated certificates for everyone, built for today and hardened for quantum computing, is an attempt to pull that future into production.</p>
+      <p>The threat it answers is not theoretical. Adversaries can capture encrypted traffic now and hold onto it until a capable quantum machine can crack it. For data with a long shelf life, such as health records, trade secrets, and government communications, that 'harvest now, decrypt later' model means the clock is already running. A free CA aligned with NIST's standardized post-quantum algorithms lowers the barrier for organizations that want to get ahead of it.</p>
+      <p>The significance is operational rather than mathematical. The cryptography has been standardized. The hard part has always been rollout: issuance, renewal, client compatibility, and the thousands of middleboxes that choke on unfamiliar handshakes. Automation at Cloudflare's scale turns a research exercise into a checkbox, and checkboxes are how the web actually changes.</p>
+      <p>Infrastructure leaders should start now. Inventory where long-lived sensitive data travels over TLS, stand up test endpoints, and find out which clients, proxies, and inspection appliances break. Quantum readiness will not be a single flag day. It will be a slow migration, and teams that begin testing this quarter will not be scrambling later.</p>
+    </div>
+    <blockquote class="pull-quote">"The math is settled. The rollout is the hard part, and automation is how the web actually changes."</blockquote>
+    <a href="https://www.darkreading.com/cloud-security/cloudflare-announces-public-certificate-authority-post-quantum-web" target="_blank" rel="noopener noreferrer" class="read-more" itemprop="url">Read Original →</a>
+  </div>
+</article>
+
+<article class="spread spread-rose_alert" id="story-2" itemscope itemtype="https://schema.org/Article">
+  <div class="numeral" aria-hidden="true">三</div>
+  <div class="spread-inner">
+    <div class="flag-badge">⚡ Applies to You</div>
+    <div class="category-label" itemprop="articleSection">SECURITY ALERT</div>
+    <h2 class="headline" itemprop="headline">Skeleton Key at the Front Door: Twin NetScaler Zero-Days Hit Citrix Shops</h2>
+    <p class="deck" itemprop="description">Two critical flaws affecting default configurations hand attackers a way into the networks the appliances are meant to guard.</p>
+    <div class="body" itemprop="articleBody">
+      <p>The edge gateway is the bouncer of the enterprise network, and once again the bouncer has been bribed. Dark Reading reports that two critical zero-day vulnerabilities in Citrix NetScaler products are causing chaos for customers, and that they affect default configurations. That second detail is the one that should keep security leaders up tonight. No exotic setup is required. If you run NetScaler out of the box, assume you are exposed.</p>
+      <p>The pattern is familiar, and that familiarity is part of the problem. NetScaler has been a recurring headliner in major incident response engagements for years. Edge appliances are privileged, internet-facing, and often poorly monitored compared with endpoints. Attackers know it. A flaw here does not open one door. It opens the lobby to every door in the building.</p>
+      <p>Patching is necessary but not sufficient. When zero-days are exploited before disclosure, the question is not only whether you are patched but whether someone got in first. Security teams should apply fixes immediately, rotate credentials and session tokens that passed through the gateway, and run compromise assessments that look for web shells, unusual accounts, and lateral movement originating from the appliance.</p>
+      <p>Longer term, this is another argument for treating edge devices as crown-jewel assets: tight management-plane isolation, aggressive logging shipped off-box, and a replacement plan for gear that keeps turning up in breach reports. The edge is where breaches begin. Budget accordingly.</p>
+    </div>
+    <blockquote class="pull-quote">"Default configurations. Two zero-days. One skeleton key to the enterprise."</blockquote>
+    <a href="https://www.darkreading.com/vulnerabilities-threats/netscaler-zero-days-chaos-citrix" target="_blank" rel="noopener noreferrer" class="read-more" itemprop="url">Read Original →</a>
+  </div>
+</article>
+
+<article class="spread spread-hero" id="story-3" itemscope itemtype="https://schema.org/Article">
+  <div class="numeral" aria-hidden="true">No. 4</div>
+  <div class="spread-inner">
+    <div class="flag-badge">⚡ Applies to You</div>
+    <div class="category-label" itemprop="articleSection">AI TOOLS</div>
+    <h2 class="headline" itemprop="headline">Nvidia Wants to Be the Warden of the Agent Economy</h2>
+    <p class="deck" itemprop="description">The Open Agent Safety Platform pairs hardware and software to watch AI agents and quarantine the unruly ones before they do damage.</p>
+    <div class="body" itemprop="articleBody">
+      <p>Nvidia sold the industry the shovels for the AI gold rush. Now it wants to sell the fences. Its new Open Agent Safety Platform, reported by Dark Reading, uses both hardware and software components to monitor agent activity and quarantine misbehaving agents before they cause harm.</p>
+      <p>The timing is deliberate. Enterprises have moved from chatbots that talk to agents that act: agents that query databases, call APIs, file tickets, and move money. Every tool an agent can use is a way for a hijacked or confused model to do real damage. Prompt injection, runaway loops, and unauthorized state changes are no longer academic worries. They are change-management incidents waiting to happen.</p>
+      <p>The hardware angle is the interesting part. Most agent guardrails today live in the same software stack as the agent, which means a compromised runtime can potentially compromise its own supervisor. Anchoring monitoring and quarantine closer to the silicon is a bet that behavioral governance needs a trust boundary the agent cannot talk its way past.</p>
+      <p>Practitioners should watch two things. First, openness: whether 'Open' means interoperable policy frameworks or a well-branded path into Nvidia's ecosystem. Second, false positives: a quarantine system that fires too often will be switched off by the first frustrated product team. Whatever Nvidia's intentions, the signal is clear. Runtime agent governance is becoming a product category, and it belongs on every architecture review agenda.</p>
+    </div>
+    <blockquote class="pull-quote">"It sold the shovels for the gold rush. Now it wants to sell the fences."</blockquote>
+    <a href="https://www.darkreading.com/cyber-risk/nvidia-launches-ai-agent-safety-platform-prevent-rogue-activities" target="_blank" rel="noopener noreferrer" class="read-more" itemprop="url">Read Original →</a>
+  </div>
+</article>
+
+<article class="spread spread-neon" id="story-4" itemscope itemtype="https://schema.org/Article">
+  <div class="numeral" aria-hidden="true">§5</div>
+  <div class="spread-inner">
+    <div class="flag-badge">⚡ Applies to You</div>
+    <div class="category-label" itemprop="articleSection">THREAT INTEL</div>
+    <h2 class="headline" itemprop="headline">The Botnet Got an AI Upgrade</h2>
+    <p class="deck" itemprop="description">Carbonato plants an open-source AI agent on hijacked Docker hosts, takes orders over Telegram, and goes hunting for your AI API keys.</p>
+    <div class="body" itemprop="articleBody">
+      <p>Criminals have always been early adopters, and the Carbonato botnet shows how quickly offensive tooling has absorbed the agent wave. Dark Reading reports that the botnet uses the open-source Hermes Agent AI framework to execute commands through Telegram and steal AI API keys from exposed Docker hosts.</p>
+      <p>Consider the irony. Organizations are spending heavily on AI capacity, and attackers are building malware that spends it for them. Stolen API keys are liquid assets. They can be resold, used to run abusive workloads on someone else's bill, or used as a foothold into whatever data those keys can reach. Your inference budget has become loot.</p>
+      <p>The method is the other headline. An agent framework on the compromised host gives operators a flexible, conversational control layer that is closer to a junior operator than to a static script. That flexibility is exactly what makes agents useful to legitimate teams, and exactly what makes them dangerous when an adversary controls one.</p>
+      <p>The defenses are old-fashioned, which is good news. Never expose the Docker API or socket to the internet. Enforce least privilege on container runtimes. Keep AI provider keys out of environment variables on shared hosts, use secret managers, and rotate aggressively. Set spend alerts on every AI provider account, because an unexpected invoice may be your first intrusion alert.</p>
+    </div>
+    <blockquote class="pull-quote">"Your inference budget has become loot."</blockquote>
+    <a href="https://www.darkreading.com/identity-access-management-security/carbonato-botnet-ai-agent-hacked-docker-hosts" target="_blank" rel="noopener noreferrer" class="read-more" itemprop="url">Read Original →</a>
+  </div>
+</article>
+
+<article class="spread spread-editorial" id="story-5" itemscope itemtype="https://schema.org/Article">
+  <div class="numeral" aria-hidden="true">VI</div>
+  <div class="spread-inner">
+    <div class="flag-badge">⚡ Applies to You</div>
+    <div class="category-label" itemprop="articleSection">IDENTITY</div>
+    <h2 class="headline" itemprop="headline">The Insider You Forgot to Hire</h2>
+    <p class="deck" itemprop="description">Enterprises watch human employees closely while autonomous agents run with broad privileges and little oversight.</p>
+    <div class="body" itemprop="articleBody">
+      <p>Every enterprise security program has a detailed playbook for humans: onboarding, background checks, role-based access, quarterly access reviews, session recording for admins, offboarding. Then someone spins up an AI agent, hands it a service account and a long-lived API key, and none of that playbook applies.</p>
+      <p>That is the governance gap Dark Reading describes. Autonomous agents frequently operate with broad, over-privileged, non-expiring credentials and incomplete audit logging. In other words, many organizations have quietly created a class of privileged user that works around the clock, touches sensitive systems, and is barely watched. That is not a productivity tool. It is the textbook profile of an insider threat.</p>
+      <p>The fix is not exotic. It is disciplined application of what identity teams already know. Give every agent its own identity, never a shared human credential. Scope permissions to the task, not to the convenience of the developer who built it. Use short-lived, just-in-time credentials. Bring agents into privileged access management and access reviews. Log every action with enough context to reconstruct why it happened, not only what happened.</p>
+      <p>The cultural shift matters more than the tooling. Agents are not features. They are workers with keys. Until security teams treat them that way, the next major insider incident may involve a process with an API key rather than a disgruntled employee.</p>
+    </div>
+    <blockquote class="pull-quote">"Agents aren't features. They are workers with keys, and most of them are never reviewed."</blockquote>
+    <a href="https://www.darkreading.com/vulnerabilities-threats/ai-agents-are-privileged-users-who-is-auditing-their-access" target="_blank" rel="noopener noreferrer" class="read-more" itemprop="url">Read Original →</a>
+  </div>
+</article>
+
+<article class="spread spread-academic" id="story-6" itemscope itemtype="https://schema.org/Article">
+  <div class="numeral" aria-hidden="true">007</div>
+  <div class="spread-inner">
+    <div class="flag-badge">⚡ Applies to You</div>
+    <div class="category-label" itemprop="articleSection">AI SECURITY</div>
+    <h2 class="headline" itemprop="headline">Assume the Escape: Why Forensics Beats the Fantasy of a Perfect Sandbox</h2>
+    <p class="deck" itemprop="description">When AI agents break out of their boxes, the real story is not rogue machines. It is the same access-control failures we have seen for decades.</p>
+    <div class="body" itemprop="articleBody">
+      <p>The phrase 'AI sandbox escape' invites science fiction: a clever machine slipping its chains. Dark Reading's analysis offers a more sober and more useful reading. When autonomous agents escape their sandboxes, the root cause usually is not machine cunning. It is the same set of access-control failures security teams have been documenting for decades.</p>
+      <p>That reframing matters because it moves the work away from the wrong question. Organizations pour effort into building a perfect cage, as though isolation could be made flawless. It cannot. Code interpreters and dynamic code generation are now core AI capabilities, and each new capability widens the surface that containment has to cover. Treating containment as a guarantee rather than a probability is how breaches become mysteries.</p>
+      <p>The better posture is forensic readiness. Instrument AI runtime environments so that if something breaks out, you know what it touched, when, and how. That means kernel-level telemetry on container interactions, immutable logs shipped off the host, and rollback mechanisms that can restore state quickly. Detection and reconstruction are what turn an unknown escape into a bounded incident.</p>
+      <p>For engineering teams running untrusted LLM-generated code, the checklist is short and unglamorous: minimal privileges inside the sandbox, no ambient credentials, egress controls, and logging you would be comfortable handing to an incident responder. You do not have to believe the sandbox will fail. You only have to plan as though it might.</p>
+    </div>
+    <blockquote class="pull-quote">"Containment is a probability, not a guarantee. Plan for the day it fails."</blockquote>
+    <a href="https://www.darkreading.com/cyberattacks-data-breaches/ai-sandbox-escapes-forensic-readiness" target="_blank" rel="noopener noreferrer" class="read-more" itemprop="url">Read Original →</a>
+  </div>
+</article>
+
+<article class="spread spread-midnight" id="story-7" itemscope itemtype="https://schema.org/Article">
+  <div class="numeral" aria-hidden="true">∞</div>
+  <div class="spread-inner">
+    <div class="flag-badge">⚡ Applies to You</div>
+    <div class="category-label" itemprop="articleSection">SAAS SECURITY</div>
+    <h2 class="headline" itemprop="headline">Salesbleed: How a CRM Agent Became a Phishing Courier in Your Slack</h2>
+    <p class="deck" itemprop="description">Agentic AI can carry instructions from the open web across apps and into the internal channels your employees trust most.</p>
+    <div class="body" itemprop="articleBody">
+      <p>Email security has been hardened for years with filters, banners, sandboxed attachments, and training. Slack messages from an internal system get almost none of that scrutiny. The research dubbed 'Salesbleed' exploits exactly that asymmetry. As Dark Reading describes it, agentic AI can smuggle arbitrary instructions from the web, across multiple applications, into trusted internal communication channels, with Salesforce agents as the entry point and Slack as the destination.</p>
+      <p>The mechanics are simple and unsettling. An agent ingests external content as part of its normal job. Hidden in that content are instructions. The agent, doing what agents do, acts on them and relays a message into Slack. The phishing lure arrives not from a suspicious outside sender but from an internal integration employees see every day. Trust transfers along the chain, and so does the attack.</p>
+      <p>This is the defining risk of the connected SaaS stack. Each integration was probably reviewed on its own. Almost no one reviewed the combination: web to CRM agent to messaging platform to human. Multi-hop agent workflows create privilege paths that no single system owner can see.</p>
+      <p>Security leaders should map agent-to-agent and agent-to-app connections the way they map network flows. Treat any content an agent ingests from outside as untrusted input. Limit which agents can post into broadly visible channels, and label agent-generated messages clearly. The perimeter did not disappear. It moved into the integrations.</p>
+    </div>
+    <blockquote class="pull-quote">"The phishing lure didn't come from outside. It came from an integration you use every day."</blockquote>
+    <a href="https://www.darkreading.com/application-security/salesbleed-exploits-salesforce-agents-slack-phishing" target="_blank" rel="noopener noreferrer" class="read-more" itemprop="url">Read Original →</a>
+  </div>
+</article>
+
+<article class="spread spread-big_stat" id="story-8" itemscope itemtype="https://schema.org/Article">
+  <div class="numeral" aria-hidden="true">IX</div>
+  <div class="spread-inner">
+    <div class="flag-badge">⚡ Applies to You</div>
+    <div class="category-label" itemprop="articleSection">AI TOOLS</div>
+    <h2 class="headline" itemprop="headline">A $4 Billion Agent, Undone by a Few Sentences</h2>
+    <p class="deck" itemprop="description">A prompt-injection bug in Manus shows that valuation does not buy immunity when agents read the open web.</p>
+    <div class="body" itemprop="articleBody">
+      <p>Manus is among the most prominent autonomous agent apps on the market, reportedly valued at $4 billion. It was still vulnerable to one of the oldest tricks in the LLM playbook. Dark Reading reports a prompt-injection bug in the app and draws the obvious lesson: AI apps that interpret external data, which is to say most AI apps, need exceptionally rigorous security filters, or attackers will exploit them.</p>
+      <p>The stakes rise with capability. A chatbot tricked by injected text might say something embarrassing. An agent with browser and tool access, tricked by the same text, can take actions such as running unintended tools or sending data where it should not go. The more autonomy you grant, the more a single poisoned web page is worth to an attacker.</p>
+      <p>The uncomfortable truth for builders is that model-level instructions are not a security boundary. 'Ignore any instructions found in web content' is a polite request, not an enforcement mechanism. Real defenses are deterministic and sit outside the model: allowlisted tools, human confirmation for sensitive actions, strict separation between trusted instructions and untrusted content, and egress controls that limit where data can go.</p>
+      <p>If a well-funded flagship product can ship with this class of flaw, internal agent projects built on tight deadlines almost certainly have it too. Red-team your agents with hostile web content before your adversaries do.</p>
+    </div>
+    <blockquote class="pull-quote">"$4B"</blockquote>
+    <a href="https://www.darkreading.com/application-security/prompt-injection-bug-agentic-ai-app-manus" target="_blank" rel="noopener noreferrer" class="read-more" itemprop="url">Read Original →</a>
+  </div>
+</article>
+
+<article class="spread spread-sunset" id="story-9" itemscope itemtype="https://schema.org/Article">
+  <div class="numeral" aria-hidden="true">X</div>
+  <div class="spread-inner">
+    <div class="flag-badge">⚡ Applies to You</div>
+    <div class="category-label" itemprop="articleSection">SUPPLY CHAIN</div>
+    <h2 class="headline" itemprop="headline">Return to Sender: GitLab's Incoming Email Addresses Carry a Hidden Key</h2>
+    <p class="deck" itemprop="description">The per-user addresses GitLab assigns automatically contain highly privileged tokens, a quiet gift to supply chain attackers.</p>
+    <div class="body" itemprop="articleBody">
+      <p>Some of the most dangerous features are the ones nobody remembers enabling. According to Dark Reading, GitLab automatically assigns each user incoming email addresses, a convenience for creating issues or replying by email, and those addresses contain highly privileged access tokens that attackers can use.</p>
+      <p>The design problem is easy to state. An email address is meant to be shared. A privileged token is meant to be secret. Combining the two means a value that ends up in forwarded messages, ticket threads, mail logs, and third-party integrations also works as a credential. Once it leaks, it can give an attacker a foothold in the platform where your source code and build pipelines live.</p>
+      <p>That is why this belongs in the supply chain category rather than being filed as a minor configuration quirk. Source control is the upstream point for everything you ship. Any path that lets an outsider act inside it, whether by altering code, influencing merge requests, or tampering with CI/CD, puts every downstream customer at risk.</p>
+      <p>Administrators should review whether incoming email features are needed, reset the associated tokens, and search mail archives and integrations for exposed addresses. More broadly, enforce signed commits, strict branch protection, and mandatory review on protected branches, so that a single leaked credential cannot quietly change what you release. Convenience features deserve the same threat modeling as the core product.</p>
+    </div>
+    <blockquote class="pull-quote">"An email address is meant to be shared. A privileged token is meant to be secret. GitLab made them the same string."</blockquote>
+    <a href="https://www.darkreading.com/application-security/gitlab-email-addresses-supply-chain-attacks" target="_blank" rel="noopener noreferrer" class="read-more" itemprop="url">Read Original →</a>
+  </div>
+</article>
+
+</main>
+
+<button class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Back to top">↑</button>
+
+<footer class="footer">
+  <div class="logo">Morning Edition</div>
+  <p>Generated with AI — Anthropic Claude &amp; Google Gemini</p>
+  <p style="margin-top:0.5rem;"><time datetime="2026-09-30T14:09:21">Wednesday, September 30, 2026</time></p>
+</footer>
+
+<script>
+(function() {
+  var btn = document.getElementById('backToTop');
+  window.addEventListener('scroll', function() {
+    if (window.scrollY > 600) {
+      btn.classList.add('visible');
+    } else {
+      btn.classList.remove('visible');
+    }
+  });
+})();
+</script>
+
+</body>
+</html>
