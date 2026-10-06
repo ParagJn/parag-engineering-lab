@@ -1085,7 +1085,8 @@
       { id: "md_docx", label: "md-to-docx", type: "utility", color: "#10b981", desc: "Markdown compilation dashboard rendering token trees to docx files and loading Mermaid codes to inline PNG shapes.", tech: "Streamlit · python-docx · Pillow", dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/md-to-docx", x: 242, y: 550 },
       { id: "skills_gen", label: "Skills Generator", type: "utility", color: "#10b981", desc: "Builds versioned SKILL.md prompt files for AI engines, automatically syncing with Claude Code CLI config folders.", tech: "FastAPI · Vanilla JS · Anthropic SDK", dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/Skills-Generator", x: 434, y: 550 },
       { id: "doc_processor", label: "Document Processor", type: "utility", color: "#10b981", desc: "Extracts paragraph hierarchy and captions images via Azure Vision, outputting records structured for Milvus vectors databases.", tech: "FastAPI · React 18 · Azure OpenAI", dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/document_processor", x: 626, y: 550 },
-      { id: "myownai", label: "My Own AI Assistant", type: "project", color: "#3b82f6", desc: "Personal ChatGPT-like interface powered by IBM ICA. Supports session management, document uploads, and conversation renaming. Internal use only.", tech: "FastAPI · React 18 · IBM ICA · PyPDF2", dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/My-Own-AI-Assistant", x: 818, y: 550 }
+      { id: "myownai", label: "My Own AI Assistant", type: "project", color: "#3b82f6", desc: "Personal ChatGPT-like interface powered by IBM ICA. Supports session management, document uploads, and conversation renaming. Internal use only.", tech: "FastAPI · React 18 · IBM ICA · PyPDF2", dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/My-Own-AI-Assistant", x: 818, y: 550 },
+      { id: "hero_motion", label: "Hero Motion Studio", type: "project", color: "#3b82f6", desc: "Animated presentation hero generator. One accent dot drives a looping canvas film; exports PNG, MP4 (WebCodecs), GIF and PPTX. Claude via IBM ICA writes the copy.", tech: "FastAPI · React 19 · Canvas · WebCodecs", dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/hero-motion-studio", x: 1010, y: 550 }
     ];
 
     const EDGES = [
@@ -1118,7 +1119,8 @@
       { source: "skills_gen", target: "claude", color: "#10b981" },
       { source: "skills_gen", target: "azure_openai", color: "#10b981" },
       { source: "doc_processor", target: "azure_openai", color: "#10b981" },
-      { source: "myownai", target: "ibm_ica", color: "#3b82f6" }
+      { source: "myownai", target: "ibm_ica", color: "#3b82f6" },
+      { source: "hero_motion", target: "ibm_ica", color: "#3b82f6" }
     ];
 
     const FLOWS = [
@@ -1425,6 +1427,23 @@
           { node: "myownai", text: "User starts or resumes a chat session; sessions are organized and renamed in a sidebar, persisted as local JSON." },
           { node: "myownai", text: "User optionally uploads a text/Markdown/PDF/Word document for the assistant to reference." },
           { node: "ibm_ica", text: "IBM ICA (Claude Sonnet 5 on watsonx) streams a markdown-formatted, syntax-highlighted response back to the chat." }
+        ]
+      },
+      {
+        id: "f18",
+        name: "Slide Hero Rendering",
+        project: "Hero Motion Studio",
+        color: "#f97316",
+        desc: "Brief-to-motion pipeline: Claude (via IBM ICA) writes the copy, then a deterministic canvas engine renders and encodes the looping hero in the browser.",
+        nodes: ["hero_motion", "ibm_ica"],
+        edges: [
+          { source: "hero_motion", target: "ibm_ica" }
+        ],
+        steps: [
+          { node: "hero_motion", text: "User describes the slide and picks stat, shape and word styles, theme, size and loop duration." },
+          { node: "ibm_ica", text: "Claude on IBM ICA returns strict JSON copy: intro, hero word, stat, orbit words and end-card lines, validated by FastAPI." },
+          { node: "hero_motion", text: "The film engine renders every frame as a pure function of time; a timing map paces scenes and bridges any switched off." },
+          { node: "hero_motion", text: "Exports render frame by frame offscreen: PNG stills, H.264 MP4 via WebCodecs, GIF, or a PPTX slide with video and poster." }
         ]
       }
     ];

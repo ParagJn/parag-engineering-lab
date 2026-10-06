@@ -56,6 +56,7 @@ graph TD
         converter[md-to-docx Converter]
         skills[Skills Generator]
         doc_proc[Document Processor]
+        hero[Hero Motion Studio]
     end
 
     %% Connections
@@ -81,6 +82,7 @@ graph TD
     doc_proc --> azure
     strat_analyzer --> azure
     skills --> azure
+    hero --> claude
     
     azure --> gpt
 ```
@@ -224,6 +226,12 @@ Below is a detailed breakdown of each project directory, detailing its business 
 * **Tech Stack**: FastAPI, React 18, python-docx, Pillow, Azure OpenAI embeddings.
 * **AI Orchestration Pattern**: **Hierarchical Document Chunking**. Traces heading trails (h1-h6) to maintain context for text paragraphs. Optionally enriches images in the document using Azure OpenAI Vision OCR.
 
+#### 🟠 Hero Motion Studio
+* **Directory**: [hero-motion-studio](file:///Users/paragjain/dev-works/parag-engineering-lab/hero-motion-studio)
+* **Business Value**: Produces animated, on-brand hero visuals for presentation slides from a short brief, exported as PNG, MP4, GIF or a ready-made PPTX slide.
+* **Tech Stack**: FastAPI, Vite, React 19, TypeScript, Canvas 2D, WebCodecs + mp4-muxer, gifenc, pptxgenjs, IBM ICA (Claude).
+* **AI Orchestration Pattern**: **LLM Copywriter + Deterministic Renderer**. Claude (via IBM ICA) writes validated JSON copy; a pure function-of-time canvas engine with closed-form springs renders the loop, and exports encode it frame by frame.
+
 ---
 
 ## 3. Multi-Agent Orchestration & Workflow Sequences
@@ -309,7 +317,7 @@ Used in `Strategy-Analyzer`, `File-Compare`, and `Document-Processor` for highly
 
 ## 5. Cross-Cutting Architectural Patterns
 
-Across the 16 projects, several repeating structural design decisions are evident:
+Across the 17 projects, several repeating structural design decisions are evident:
 
 1. **Clean Architecture (Separation of Concerns)**:
    Backend folders consistently separate route definitions (`routes/`), request/response data shapes (`models/` using Pydantic), and database and LLM interaction layers (`services/` and `repositories/`).

@@ -42,6 +42,7 @@ To use a project:
 | [Strategy Analyzer](Strategy-Analyzer) | Enterprise Strategy | Four-agent review of strategy documents with follow-up chat and an action map | Multi-provider LLMs, React, FastAPI |
 | [Project Schedule Tool](Project-Schedule-Tool) | Productivity | Gantt scheduling, critical-path engine, and AI-generated Statements of Work | React, TypeScript, AG Grid, SAP AI Core / IBM ICA |
 | [My Own AI Assistant](My-Own-AI-Assistant) | Productivity | Personal chat assistant with document upload and session management | IBM ICA, React, FastAPI |
+| [Hero Motion Studio](hero-motion-studio) | Presentation Design | Turns a short brief into an animated slide hero, exported as PNG, MP4, GIF or PPTX | Claude via IBM ICA, React, Canvas, FastAPI |
 | [TalentFlow](TalentFlow) | HR Intelligence | Recruiting pipeline and hiring-metrics dashboard (front-end prototype) | JavaScript, Chart.js |
 | [Architect Solutions Demo](Architect-Solutions-Demo) | Showcase | Short product videos of professional tools built while leading asset engineering services | Video |
 
@@ -96,6 +97,9 @@ An AI-assisted project scheduling tool. It calculates the critical path, handles
 
 ### 💬 My Own AI Assistant
 A clean chat assistant, similar to ChatGPT, built on IBM ICA model infrastructure. Features include managing multiple conversations, uploading documents (TXT, MD, PDF, DOCX), streaming Markdown responses with syntax-highlighted code, web search, and local JSON storage.
+
+### 🟠 Hero Motion Studio
+Turns a few lines of text into an **animated hero for a presentation slide**. One accent dot drives a looping motion film: a UI toggle, the hero word, a stat (spring graph, bars, counter or progress ring), a shape morph, kinetic words, a halftone reveal and an end card. Scenes can be switched off and paced, sizes cover full, half, square and banner slides, and exports are rendered frame by frame to **PNG, MP4, GIF or a ready-made PPTX**. Claude (via IBM ICA) can write all the copy from a short brief.
 
 ### 👥 TalentFlow
 A recruiting dashboard that makes talent acquisition workflows easier. It shows pipeline stages, candidate analytics, and hiring metrics in a clean, interactive UI. Built as a front-end prototype.
