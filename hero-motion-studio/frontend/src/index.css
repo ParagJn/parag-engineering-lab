@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+  --accent: #ff5a1f;
+}
+
+body {
+  margin: 0;
+  background: #0b0b0b;
+  color: #efe9df;
+  font-family: "Inter Tight", system-ui, sans-serif;
+}
+
+@layer components {
+  .input {
+    @apply w-full rounded-md border border-neutral-800 bg-neutral-900 px-2.5 py-1.5 text-sm text-neutral-100 outline-none focus:border-[var(--accent)];
+  }
+  .btn {
+    @apply rounded-md border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm font-semibold text-neutral-100 hover:border-neutral-500 disabled:cursor-not-allowed disabled:opacity-40;
+  }
+  .btn-primary {
+    @apply border-[var(--accent)] bg-[var(--accent)] text-neutral-950 hover:brightness-110;
+  }
+  .chip {
+    @apply rounded-full border border-neutral-800 px-3 py-1 text-xs text-neutral-300 hover:border-neutral-600;
+  }
+  .chip-on {
+    @apply border-[var(--accent)] text-[var(--accent)];
+  }
+}
+
+/* Transparent-style backdrop so non-16:9 outputs read as their true shape. */
+.checker {
+  background-color: #111;
+  background-image: linear-gradient(45deg, #161616 25%, transparent 25%), linear-gradient(-45deg, #161616 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #161616 75%), linear-gradient(-45deg, transparent 75%, #161616 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+}

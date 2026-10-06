@@ -1,0 +1,697 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orange Dot Motion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;800&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#0b0b0b; --panel:#161616; --line:#2a2a2a; --text:#efe9df; --dim:#8a857c; --accent:#ff5a1f; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.4 "Inter Tight", system-ui, sans-serif; }
+  .wrap { max-width:1280px; margin:0 auto; padding:20px 16px 48px; }
+  canvas#stage { width:100%; aspect-ratio:16/9; display:block; background:#000; border-radius:6px; }
+  .bar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:12px; }
+  button { background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:7px 12px; font:inherit; cursor:pointer; }
+  button:hover { border-color:#444; }
+  button.on { border-color:var(--accent); color:var(--accent); }
+  .time { font-variant-numeric:tabular-nums; color:var(--dim); min-width:150px; }
+  .scrub { position:relative; flex:1 1 300px; height:28px; }
+  .scrub input { width:100%; margin:0; position:absolute; top:6px; accent-color:var(--accent); }
+  .ticks { position:absolute; left:0; right:0; top:22px; height:6px; pointer-events:none; }
+  .ticks i { position:absolute; width:1px; height:6px; background:#555; }
+  .ticks i.ev { background:var(--accent); height:6px; width:2px; }
+  #stills { display:none; margin-top:24px; }
+  #stills.show { display:block; }
+  h3 { font-weight:800; margin:24px 0 10px; font-size:15px; letter-spacing:.02em; }
+  .key { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px; }
+  .key figure, .sheet figure { margin:0; }
+  .key canvas, .sheet canvas { width:100%; aspect-ratio:16/9; display:block; border-radius:4px; cursor:pointer; }
+  figcaption { color:var(--dim); font-size:12px; margin-top:4px; }
+  .sheet { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:8px; }
+  table { border-collapse:collapse; width:100%; font-size:13px; }
+  td { border-top:1px solid var(--line); padding:6px 8px; vertical-align:top; }
+  td:first-child { color:var(--accent); font-variant-numeric:tabular-nums; width:80px; }
+  td:nth-child(2) { color:var(--dim); width:70px; font-variant-numeric:tabular-nums; }
+  .hint { color:var(--dim); font-size:12px; margin-top:8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <canvas id="stage" width="1920" height="1080"></canvas>
+  <div class="bar">
+    <button id="play">▶ Play</button>
+    <button id="sound" class="on">Sound on</button>
+    <div class="scrub"><input id="scrub" type="range" min="0" max="15" step="0.0166667" value="0"><div class="ticks" id="ticks"></div></div>
+    <span class="time" id="time">0.00s · beat 1</span>
+    <button id="stillsBtn">Beat map &amp; stills</button>
+    <button id="rec">● Record 15s</button>
+  </div>
+  <div class="hint">Space play/pause · ←/→ one frame · ,/. one beat · URL params: ?label=&amp;hero=&amp;pct=&amp;card1=&amp;card2=&amp;card3=&amp;accent=ff5a1f</div>
+
+  <section id="stills">
+    <h3>Beat map (120 BPM, 0.5s per beat, 30 beats)</h3>
+    <table id="beatTable"></table>
+    <h3>Key stills</h3>
+    <div class="key" id="keyStills"></div>
+    <h3>One frame per beat</h3>
+    <div class="sheet" id="sheet"></div>
+  </section>
+</div>
+
+<script>
+// ---------------------------------------------------------------- config
+const Q = new URLSearchParams(location.search);
+const CONFIG = {
+  hero:    Q.get('hero')  || 'Parag Jain',
+  label:   Q.get('label') || null,               // defaults to "Meet <hero>"
+  percent: +(Q.get('pct') || 22),
+  card: [Q.get('card1') || 'Parag Jain', Q.get('card2') || 'Built by Opus 5.5.', Q.get('card3') || '0 keyframes'],
+  accent:  '#' + (Q.get('accent') || 'ff5a1f').replace('#', ''),
+  words:   ['SPRINGS', 'EASING', 'KINETIC TYPE', '3D', 'SOUND'],
+};
+if (!CONFIG.label || CONFIG.label.indexOf(CONFIG.hero) < 0) CONFIG.label = 'Meet ' + CONFIG.hero;
+
+const W = 1920, H = 1080, DUR = 15, BEAT = 0.5, FPS = 60;
+const PAPER = '#F3EEE4', INK = '#0E0E0E', MUTE = '#DCD4C6', ORANGE = CONFIG.accent;
+const FONT = '"Inter Tight", "Helvetica Neue", Arial, sans-serif';
+const f = (w, s) => `${w} ${s}px ${FONT}`;
+const DOTLESS = { i: 'ı', j: 'ȷ' };
+
+// ---------------------------------------------------------------- math
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const eio = p => p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const ein = p => p * p * p;
+const eout = p => 1 - Math.pow(1 - p, 3);
+const einBack = p => { const c = 1.70158; return (c + 1) * p * p * p - c * p * p; };
+const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+const expLerp = (a, b, p) => a * Math.pow(b / a, p);
+
+// Closed-form underdamped spring step response.
+function springStep(x, z, wn) {
+  const wd = wn * Math.sqrt(1 - z * z);
+  return 1 - Math.exp(-z * wn * x) * (Math.cos(wd * x) + (z * wn / wd) * Math.sin(wd * x));
+}
+// Normalised spring on p in [0,1]; residual at p=1 is sub-pixel, so we snap.
+const sp = (p, z = .6, wn = 14) => p <= 0 ? 0 : p >= 1 ? 1 : springStep(p, z, wn);
+
+// Graph spring: damping solved so the overshoot equals the callout percentage,
+// peak lands exactly at x = 0.25 of the graph (one beat after landing).
+const OS = clamp(CONFIG.percent / 100, .02, .8);
+const GZ = -Math.log(OS) / Math.sqrt(Math.PI ** 2 + Math.log(OS) ** 2);
+const GWN = 4 * Math.PI / Math.sqrt(1 - GZ * GZ);
+const gy = x => springStep(x, GZ, GWN);
+
+// One dot pulse after a landing: positive = squash.
+function squash(t, t0, dur = .3, amt = .32) {
+  const l = prog(t, t0, t0 + dur);
+  return l <= 0 || l >= 1 ? 0 : Math.sin(l * Math.PI * 2) * Math.exp(-l * 3) * amt;
+}
+function mix(a, b, t) {
+  const pa = [1, 3, 5].map(i => parseInt(a.slice(i, i + 2), 16)), pb = [1, 3, 5].map(i => parseInt(b.slice(i, i + 2), 16));
+  return `rgb(${pa.map((v, i) => Math.round(lerp(v, pb[i], t))).join(',')})`;
+}
+
+// ---------------------------------------------------------------- layout
+const canvas = document.getElementById('stage');
+const ctx = canvas.getContext('2d');
+const L = {};
+const TT = {};
+
+// Find the tittle of i / j by rasterising the glyph: top blob above the first empty row.
+function measureTittle(ch) {
+  const c = document.createElement('canvas'); c.width = c.height = 400;
+  const g = c.getContext('2d', { willReadFrequently: true });
+  g.font = f(800, 200); g.fillStyle = '#000'; g.fillText(ch, 100, 300);
+  const d = g.getImageData(0, 0, 400, 400).data;
+  let top = -1, bot = -1, minx = 1e9, maxx = -1;
+  for (let y = 0; y < 400; y++) {
+    let any = false;
+    for (let x = 0; x < 400; x++) if (d[(y * 400 + x) * 4 + 3] > 128) { any = true; if (top >= 0 || true) { minx = Math.min(minx, x); maxx = Math.max(maxx, x); } }
+    if (any && top < 0) top = y;
+    if (!any && top >= 0) { bot = y - 1; break; }
+  }
+  if (top < 0 || bot < 0 || bot > 270) return { x: .3, y: .72, r: .075 };
+  return { x: ((minx + maxx) / 2 - 100) / 200, y: (300 - (top + bot) / 2) / 200, r: Math.max(maxx - minx, bot - top) / 400 };
+}
+
+function lineLayout(str, size, weight, x0, base) {
+  const out = [];
+  for (let i = 0; i < str.length; i++) {
+    ctx.font = f(weight, size);
+    const x = x0 + ctx.measureText(str.slice(0, i)).width;
+    ctx.font = f(weight, 100);
+    out.push({ ch: str[i], dl: DOTLESS[str[i]] || str[i], x, y: base, u: ctx.measureText(str[i]).width / 100 });
+  }
+  return out;
+}
+const textW = (s, size, weight) => { ctx.font = f(weight, size); return ctx.measureText(s).width; };
+const dotIndex = s => { let k = s.lastIndexOf('i'); if (k < 0) k = s.lastIndexOf('j'); return k; };
+// Tittle spec for a line: the real i/j tittle, or a period-like spot after the last letter.
+function dotSpec(letters, k) {
+  if (k >= 0) return { k, spec: TT[letters[k].ch], real: true };
+  const last = letters.length - 1;
+  return { k: last, spec: { x: letters[last].u + .1, y: .09, r: .085 }, real: false };
+}
+
+function layout() {
+  TT.i = measureTittle('i'); TT.j = measureTittle('j');
+  L.C = { x: W / 2, y: H / 2 };
+
+  // Toggle + label row
+  const TW = 150, TH = 80, GAP = 44, LS = 64;
+  const x0 = (W - (TW + GAP + textW(CONFIG.label, LS, 800))) / 2;
+  L.track = { cx: x0 + TW / 2, cy: H / 2, w: TW, h: TH };
+  L.knobOff = { x: x0 + 40, y: H / 2 }; L.knobOn = { x: x0 + TW - 40, y: H / 2 };
+  L.KR = 30; L.LS = LS;
+  L.label = lineLayout(CONFIG.label, LS, 800, x0 + TW + GAP, H / 2 + .36 * LS);
+  L.h0 = CONFIG.label.lastIndexOf(CONFIG.hero);
+  let j = 0; L.exitOrder = L.label.map((_, i) => (i < L.h0 || i >= L.h0 + CONFIG.hero.length) ? j++ : -1);
+
+  // Hero word, big and centred
+  L.HS = Math.min(220, 220 * 1500 / textW(CONFIG.hero, 220, 800));
+  L.hero = lineLayout(CONFIG.hero, L.HS, 800, (W - textW(CONFIG.hero, L.HS, 800)) / 2, H / 2 + .36 * L.HS);
+  L.heroDot = dotSpec(L.hero, dotIndex(CONFIG.hero));
+  L.labelDot = L.h0 + L.heroDot.k;
+  L.DR = L.heroDot.spec.r * L.HS * 1.15;
+
+  // Graph
+  L.G0 = { x: 400, y: 800 }; L.GW = 980; L.GH = 400;
+  L.E = { x: L.G0.x + L.GW, y: L.G0.y - L.GH * gy(1) };
+  L.P1 = { x: 520, y: 800 }; L.P2 = { x: L.P1.x + 640, y: L.P1.y - 220 * gy(1) };
+  L.BIG = 1250;   // > half-diagonal (1101) so the circle clears all four corners
+
+  // Cursor
+  L.cRest = { x: L.knobOn.x + 230, y: H / 2 + 190 };
+  L.cClick = { x: L.track.cx, y: L.track.cy };
+  L.cOff = { x: L.cRest.x + 620, y: L.cRest.y + 520 };
+
+  // Kinetic ring
+  L.RR = 330;
+  const ringText = CONFIG.words.join(' · ') + ' · ';
+  L.FS = Math.min(80, 100 * 2 * Math.PI * L.RR * .97 / textW(ringText, 100, 800));
+  const total = textW(ringText, L.FS, 800), k = 2 * Math.PI / total;
+  L.ring = []; let cum = 0, gi = 0;
+  CONFIG.words.forEach((w, wi) => {
+    const seg = w + ' · ';
+    [...seg].forEach((ch, ci) => {
+      const cw = textW(ch, L.FS, 800);
+      L.ring.push({ ch, w: wi, c: ci, i: gi++, a: -Math.PI / 2 + (cum + cw / 2) * k, sep: ci >= w.length });
+      cum += cw;
+    });
+  });
+
+  // End card
+  const c1 = Math.min(170, 170 * 1500 / textW(CONFIG.card[0], 170, 800));
+  const spec = [[CONFIG.card[0], c1, 800, 470], [CONFIG.card[1], 60, 500, 590], [CONFIG.card[2], 38, 500, 676]];
+  L.card = spec.map(([s, size, weight, base]) => ({ size, weight, letters: lineLayout(s, size, weight, (W - textW(s, size, weight)) / 2, base) }));
+  L.cardDot = dotSpec(L.card[0].letters, dotIndex(CONFIG.card[0]));
+  L.DR2 = L.cardDot.spec.r * c1 * 1.15;
+  let n = 0; L.card.forEach(line => line.letters.forEach(l => l.gi = n++));
+}
+
+// ---------------------------------------------------------------- glyph helpers
+function glyphPivot(xf, u) { const w = u * xf.size; return { cx: xf.x + w / 2, cy: xf.y - .36 * xf.size, w }; }
+function drawGlyph(g, ch, xf, u, weight, color) {
+  if (xf.a <= .003 || ch === ' ') return;
+  const P = glyphPivot(xf, u);
+  g.save(); g.globalAlpha *= clamp(xf.a); g.translate(P.cx, P.cy); g.rotate(xf.rot);
+  g.font = f(weight, xf.size); g.fillStyle = color; g.fillText(ch, -P.w / 2, .36 * xf.size);
+  g.restore();
+}
+function tittleAt(xf, u, spec) {
+  const P = glyphPivot(xf, u);
+  const lx = spec.x * xf.size - P.w / 2, ly = -spec.y * xf.size + .36 * xf.size;
+  const c = Math.cos(xf.rot), s = Math.sin(xf.rot);
+  return { x: P.cx + lx * c - ly * s, y: P.cy + lx * s + ly * c, r: spec.r * xf.size };
+}
+function circle(g, x, y, r, color, a = 1) {
+  if (r <= 0 || a <= 0) return;
+  g.save(); g.globalAlpha *= clamp(a); g.fillStyle = color; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); g.restore();
+}
+// The single shape primitive: dot, frame-filling circle, rounded square and pill are all states of this.
+function shapeState(g, s, color) {
+  const w = Math.max(0, s.w), h = Math.max(0, s.h);
+  if (w < .1 || h < .1) return;
+  const r = Math.min(s.rad, w / 2, h / 2);
+  g.save(); g.translate(s.x, s.y); g.rotate(s.rot || 0); g.fillStyle = color;
+  g.beginPath();
+  g.moveTo(-w / 2 + r, -h / 2);
+  g.arcTo(w / 2, -h / 2, w / 2, h / 2, r); g.arcTo(w / 2, h / 2, -w / 2, h / 2, r);
+  g.arcTo(-w / 2, h / 2, -w / 2, -h / 2, r); g.arcTo(-w / 2, -h / 2, w / 2, -h / 2, r);
+  g.closePath(); g.fill(); g.restore();
+}
+function line(g, x1, y1, x2, y2) { g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); }
+
+// ---------------------------------------------------------------- element timelines
+function labelXf(i, t) {
+  const c = L.label[i], k = i - L.h0, isHero = k >= 0 && k < CONFIG.hero.length, LS = L.LS;
+  let x = c.x, y = c.y, size = LS, rot = 0, a = 1;
+  if (t >= 14.4) {                                  // return: letters rise back in
+    const r = sp(prog(t, 14.45 + i * .017, 14.7 + i * .017), .6, 15);
+    return { x, y: y + (1 - r) * 56, size, rot, a: clamp(r * 1.6) };
+  }
+  if (!isHero) {                                    // "Meet " bends away
+    const j = L.exitOrder[i], q = ein(prog(t, 1.45 + j * .05, 1.85 + j * .05));
+    return { x: x - 40 * q, y: y + 100 * q, size, rot: -.9 * q, a: 1 - q };
+  }
+  const B = L.hero[k], p = sp(prog(t, 1.7 + k * .03, 2.35 + k * .03), .6, 14);
+  x = lerp(c.x, B.x, p); y = lerp(c.y, B.y, p); size = lerp(LS, L.HS, p);
+  rot = Math.sin(Math.PI * clamp(p)) * .14 * (k % 2 ? 1 : -1);
+  const q = ein(prog(t, 3.0 + k * .025, 3.4 + k * .025));   // exit after the dot jumps
+  return { x, y: y + 180 * q, size, rot: rot + .4 * q * (k % 2 ? 1 : -1), a: 1 - q };
+}
+const heroTittle = t => tittleAt(labelXf(L.labelDot, t), L.label[L.labelDot].u, L.heroDot.spec);
+
+const CARD_START = [12.35, 12.5, 12.62], CARD_STAG = [.02, .01, .012];
+function cardXf(li, k, t) {
+  const l = L.card[li].letters[k];
+  const a = sp(prog(t, CARD_START[li] + k * CARD_STAG[li], CARD_START[li] + k * CARD_STAG[li] + .4), .6, 14);
+  const q = ein(prog(t, 13.5 + l.gi * .008, 13.85 + l.gi * .008));
+  return { x: l.x, y: l.y + (1 - a) * 50 + 120 * q, size: L.card[li].size, rot: .3 * q * (l.gi % 2 ? 1 : -1), a: clamp(a * 1.6) * (1 - q) };
+}
+const cardTittle = t => tittleAt(cardXf(0, L.cardDot.k, t), L.card[0].letters[L.cardDot.k].u, L.cardDot.spec);
+
+// The orange dot: one continuous path through every scene.
+function dotAt(t) {
+  const KR = L.KR, C = L.C, on = L.knobOn, off = L.knobOff;
+  let x, y, r, sx = 1, sy = 1;
+  if (t < 1.0) { x = off.x; y = off.y; r = KR; }
+  else if (t < 1.6) {
+    const p = sp(prog(t, 1.0, 1.6), .55, 15), v = Math.sin(Math.PI * prog(t, 1.0, 1.35));
+    x = lerp(off.x, on.x, p); y = on.y; r = KR; sx = 1 + .28 * v; sy = 1 - .18 * v;
+  } else if (t < 2.3) {
+    const T = heroTittle(t), e = eio(prog(t, 1.6, 2.3));
+    x = lerp(on.x, T.x, e); y = lerp(on.y, T.y, e) - Math.sin(Math.PI * e) * 220; r = lerp(KR, L.DR, e);
+  } else if (t < 3.0) {
+    const T = heroTittle(t), s = squash(t, 2.3), a = eio(prog(t, 2.78, 3.0));
+    r = L.DR; x = T.x; y = T.y + r * .3 * a; sx = (1 + s) * (1 + .2 * a); sy = (1 - s) * (1 - .3 * a);
+  } else if (t < 3.5) {
+    const S = heroTittle(3.0), e = prog(t, 3.0, 3.5), v = Math.sin(Math.PI * e);
+    x = lerp(S.x, L.G0.x, e); y = lerp(S.y, L.G0.y, e) - 4 * 260 * e * (1 - e); r = L.DR; sy = 1 + .25 * v; sx = 1 - .15 * v;
+  } else if (t < 5.5) {
+    const tau = prog(t, 3.5, 5.5), s = squash(t, 3.5);
+    x = L.G0.x + tau * L.GW; y = L.G0.y - gy(tau) * L.GH; r = L.DR; sx = 1 + s; sy = 1 - s;
+  } else if (t < 6.0) {
+    const a = eio(prog(t, 5.8, 6.0));
+    x = L.E.x; y = L.E.y; r = L.DR; sx = 1 - .25 * a; sy = 1 + .15 * a;
+  } else if (t < 6.45) {
+    const e = eio(prog(t, 6.0, 6.45)), v = Math.sin(Math.PI * e);
+    x = lerp(L.E.x, C.x, e); y = lerp(L.E.y, C.y, e); r = L.DR; sx = 1 + .8 * v; sy = 1 - .3 * v;
+  } else if (t < 9.0) {
+    x = C.x; y = C.y;
+    r = t < 6.5 ? L.DR : t < 7.0 ? expLerp(L.DR, L.BIG, eio(prog(t, 6.5, 7.0))) : t < 8.5 ? L.BIG : expLerp(L.BIG, L.DR, eio(prog(t, 8.5, 9.0)));
+  } else if (t < 12.25) {
+    let pulse = 0;
+    for (let j = 0; j < CONFIG.words.length; j++) pulse += Math.sin(Math.PI * prog(t, 9 + j * .25, 9.2 + j * .25)) * .18;
+    const s = squash(t, 9.0);
+    x = C.x; y = C.y; r = L.DR * (1 + pulse); sx = 1 + s; sy = 1 - s;
+  } else if (t < 12.75) {
+    const T = cardTittle(t), e = eio(prog(t, 12.25, 12.75));
+    x = lerp(C.x, T.x, e); y = lerp(C.y, T.y, e) - Math.sin(Math.PI * e) * 170; r = lerp(L.DR, L.DR2, e);
+  } else if (t < 13.55) {
+    const T = cardTittle(t), s = squash(t, 12.75), a = eio(prog(t, 13.35, 13.55));
+    r = L.DR2; x = T.x; y = T.y + r * .3 * a; sx = (1 + s) * (1 + .2 * a); sy = (1 - s) * (1 - .3 * a);
+  } else if (t < 13.95) {
+    const S = cardTittle(13.55), e = prog(t, 13.55, 13.95);
+    x = lerp(S.x, L.P1.x, e); y = lerp(S.y, L.P1.y, e) - 4 * 200 * e * (1 - e); r = lerp(L.DR2, L.DR, e);
+  } else if (t < 14.35) {
+    const tau = prog(t, 13.95, 14.35), s = squash(t, 13.95);
+    x = L.P1.x + tau * 640; y = L.P1.y - gy(tau) * 220; r = L.DR; sx = 1 + s; sy = 1 - s;
+  } else if (t < 14.92) {
+    const p = sp(prog(t, 14.35, 14.92), .6, 15);
+    x = lerp(L.P2.x, off.x, p); y = lerp(L.P2.y, off.y, p) - Math.sin(Math.PI * clamp(p)) * 180; r = lerp(L.DR, KR, clamp(p));
+  } else { x = off.x; y = off.y; r = KR; }
+  return { x, y, r, sx, sy };
+}
+
+function cursorAt(t) {
+  const R = L.cRest, K = L.cClick, O = L.cOff;
+  if (t < .2) return { ...R, s: 1 };
+  if (t < .85) {
+    const e = eio(prog(t, .2, .85)), bow = Math.sin(Math.PI * e) * 40;
+    return { x: lerp(R.x, K.x, e) - bow * .4, y: lerp(R.y, K.y, e) + bow, s: 1 };
+  }
+  if (t < 1.0) return { ...K, s: 1 - .12 * eout(prog(t, .85, 1.0)) };
+  if (t < 1.3) return { ...K, s: lerp(.88, 1, eout(prog(t, 1.0, 1.15))) };
+  if (t < 1.9) { const e = ein(prog(t, 1.3, 1.9)); return { x: lerp(K.x, O.x, e), y: lerp(K.y, O.y, e), s: 1 }; }
+  if (t < 14.35) return null;
+  const e = eout(prog(t, 14.35, 14.95));
+  return { x: lerp(O.x, R.x, e), y: lerp(O.y, R.y, e), s: 1 };
+}
+
+// ---------------------------------------------------------------- scene drawing
+function drawTrack(g, t) {
+  let s, col = MUTE;
+  if (t < 2.0) { col = mix(MUTE, INK, prog(t, 1.0, 1.18)); s = 1 - einBack(prog(t, 1.55, 1.95)); }
+  else if (t >= 14.5) s = sp(prog(t, 14.5, 14.9), .6, 15);
+  else return;
+  const T = L.track;
+  shapeState(g, { x: T.cx, y: T.cy, w: T.w * s, h: T.h * s, rad: Infinity }, col);
+}
+
+function drawLabel(g, t) {
+  L.label.forEach((c, i) => {
+    const xf = labelXf(i, t), isDot = i === L.labelDot && L.heroDot.real;
+    drawGlyph(g, isDot ? c.dl : c.ch, xf, c.u, 800, INK);
+    if (isDot) {
+      const s = t < 3.7 ? 1 - prog(t, 2.22, 2.32) : 1;   // ink tittle hands over to the orange dot
+      if (s > 0) { const T = tittleAt(xf, c.u, L.heroDot.spec); circle(g, T.x, T.y, T.r * s, INK, xf.a); }
+    }
+  });
+}
+
+function drawGraph(g, t) {
+  const { G0, GW, GH, E, C } = L;
+  const a = eout(prog(t, 3.0, 3.45)), er = eio(prog(t, 6.0, 6.4));
+  g.save();
+  if (er > 0) { g.beginPath(); g.rect(G0.x - 60 + er * (GW + 200), 0, W, H); g.clip(); }
+  g.lineCap = 'round'; g.strokeStyle = INK; g.lineWidth = 5;
+  line(g, G0.x, G0.y, G0.x, G0.y - GH * 1.5 * a);
+  line(g, G0.x, G0.y, G0.x + (GW + 40) * a, G0.y);
+  const tp = eio(prog(t, 3.25, 3.7));
+  if (tp > 0) { g.save(); g.setLineDash([14, 14]); g.globalAlpha = .4; g.lineWidth = 3; line(g, G0.x, G0.y - GH, G0.x + (GW + 40) * tp, G0.y - GH); g.restore(); }
+  g.save(); g.globalAlpha = a; g.font = f(500, 26); g.fillStyle = INK; g.textAlign = 'right';
+  g.fillText('1.0', G0.x - 22, G0.y - GH + 9); g.fillText('0', G0.x - 22, G0.y + 9); g.restore();
+
+  // Curve: drawn from the exact function that moves the dot.
+  const tau = prog(t, 3.5, 5.5);
+  if (tau > 0) {
+    g.lineWidth = 6; g.lineJoin = 'round'; g.beginPath();
+    const N = Math.ceil(260 * tau) + 1;
+    for (let n = 0; n <= N; n++) { const x = tau * n / N; const px = G0.x + x * GW, py = G0.y - gy(x) * GH; n ? g.lineTo(px, py) : g.moveTo(px, py); }
+    g.stroke();
+  }
+  if (t >= 4.0) {
+    const pk = { x: G0.x + .25 * GW, y: G0.y - (1 + OS) * GH }, p = prog(t, 4.0, 4.4);
+    g.save(); g.setLineDash([6, 10]); g.globalAlpha = .3; g.lineWidth = 3;
+    line(g, pk.x, pk.y, lerp(pk.x, G0.x, eout(prog(t, 4.0, 4.3))), pk.y); g.restore();
+    if (p < 1) { g.save(); g.globalAlpha = 1 - p; g.lineWidth = 3; g.beginPath(); g.arc(pk.x, pk.y, 20 + 60 * eout(p), 0, Math.PI * 2); g.stroke(); g.restore(); }
+  }
+  g.restore();
+
+  const c = sp(prog(t, 5.0, 5.45), .5, 15) * (1 - einBack(prog(t, 6.0, 6.3)));
+  if (c > .001) {
+    const size = 130;
+    g.save(); g.translate(E.x + 70, E.y); g.scale(c, c);
+    g.font = f(800, size); g.fillStyle = INK; g.fillText(`+${CONFIG.percent}%`, 0, .36 * size); g.restore();
+  }
+  // The line the dot shoots across.
+  const lp = eio(prog(t, 5.8, 6.05)), tail = eio(prog(t, 6.0, 6.45));
+  if (lp > tail) { g.save(); g.strokeStyle = INK; g.lineWidth = 3; g.lineCap = 'round'; line(g, lerp(E.x, C.x, tail), lerp(E.y, C.y, tail), lerp(E.x, C.x, lp), lerp(E.y, C.y, lp)); g.restore(); }
+}
+
+function drawInner(g, t) {
+  if (t < 7.0 || t >= 9.0) return;
+  const s1 = sp(prog(t, 7.0, 7.45), .55, 14);
+  const cf = lerp(.5, .2, eio(prog(t, 7.05, 7.5)));        // circle -> rounded square
+  const st = sp(prog(t, 7.75, 8.25), .55, 14);              // square -> pill
+  const rot = Math.PI * sp(prog(t, 7.0, 8.1), .5, 14);
+  let k = 1;
+  if (t >= 8.5) k = (dotAt(t).r - L.DR) / (L.BIG - L.DR);   // contracts with the orange field
+  const w = lerp(280, 700, st) * s1 * k, h = lerp(280, 220, st) * s1 * k;
+  shapeState(g, { x: L.C.x, y: L.C.y, w, h, rad: Math.min(w, h) * lerp(cf, .5, clamp(st)), rot }, INK);
+}
+
+function drawRing(g, t) {
+  if (t < 9.0 || t > 11.7) return;
+  const rotA = -.32 * (t - 9) - 1.4 * ein(prog(t, 10.75, 11.5));
+  g.save(); g.textAlign = 'center';
+  for (const ch of L.ring) {
+    const t0 = 9.0 + ch.w * .25 + ch.c * .012;
+    const e = sp(prog(t, t0, t0 + .45), .6, 14);
+    const o = ein(prog(t, 10.75 + ch.i * .004, 11.35 + ch.i * .004));
+    const rad = L.RR * e + 760 * o, ang = ch.a + rotA;
+    const px = L.C.x + rad * Math.cos(ang), py = L.C.y + rad * Math.sin(ang);
+    if (o > 0 && o < 1) circle(g, px, py, 4.5, PAPER, Math.sin(Math.PI * o));
+    const a = clamp(e * 2) * (1 - o) * (ch.sep ? .45 : 1);
+    if (ch.ch === ' ' || a <= .003 || e <= 0) continue;
+    const size = L.FS * lerp(.5, 1, clamp(e)) * (1 - o * .85);
+    g.save(); g.globalAlpha = a; g.translate(px, py); g.rotate(ang + Math.PI / 2);
+    g.font = f(800, size); g.fillStyle = PAPER; g.fillText(ch.ch, 0, .36 * size); g.restore();
+  }
+  g.restore();
+}
+
+function drawHalftone(g, t) {
+  const step = 30, cx = L.C.x, cy = L.C.y;
+  if (t >= 10.85 && t < 12.0) {
+    const Rw = lerp(140, 1500, eio(prog(t, 10.85, 12.0)));
+    const mr = lerp(3.5, step * .76, ein(prog(t, 11.3, 12.0)));
+    const rip = .15 * (1 - prog(t, 11.4, 11.9)), hole = 1 - prog(t, 11.6, 12.0);
+    const D = dotAt(t);
+    g.fillStyle = PAPER; g.beginPath();
+    for (let x = 0; x <= W; x += step) for (let y = 0; y <= H; y += step) {
+      const d = Math.hypot(x - cx, y - cy);
+      let r = mr * clamp((Rw - d) / 420) * smooth(D.r + 8 * hole, D.r + 110 * hole + 1, Math.hypot(x - D.x, y - D.y));
+      r *= 1 - rip + rip * Math.cos(d / 38 - t * 14);
+      if (r > .3) { g.moveTo(x + r, y); g.arc(x, y, r, 0, Math.PI * 2); }
+    }
+    g.fill();
+  } else if (t >= 12.0 && t < 12.6) {                   // flip to black from the centre
+    g.fillStyle = PAPER; g.fillRect(0, 0, W, H);
+    const Rw = lerp(0, 1500, eio(prog(t, 12.0, 12.55)));
+    g.fillStyle = INK; g.beginPath();
+    for (let x = 0; x <= W; x += step) for (let y = 0; y <= H; y += step) {
+      const r = step * .76 * clamp((Rw - Math.hypot(x - cx, y - cy)) / 300);
+      if (r > .3) { g.moveTo(x + r, y); g.arc(x, y, r, 0, Math.PI * 2); }
+    }
+    g.fill();
+  }
+}
+
+function drawCard(g, t) {
+  if (t < 12.3 || t > 14.3) return;
+  L.card.forEach((line, li) => {
+    const color = li === 0 ? PAPER : PAPER, alpha = [1, .9, .55][li];
+    line.letters.forEach((l, k) => {
+      const xf = cardXf(li, k, t); xf.a *= alpha;
+      const isDot = li === 0 && k === L.cardDot.k && L.cardDot.real;
+      drawGlyph(g, isDot ? l.dl : l.ch, xf, l.u, line.weight, color);
+      if (isDot) { const s = 1 - prog(t, 12.66, 12.76); if (s > 0) { const T = tittleAt(xf, l.u, L.cardDot.spec); circle(g, T.x, T.y, T.r * s, PAPER, xf.a); } }
+    });
+  });
+}
+
+function drawEcho(g, t) {
+  if (t >= 13.55 && t < 13.95) {                        // halftone echo around the moving dot
+    const env = Math.sin(Math.PI * prog(t, 13.55, 13.95)), D = dotAt(t), step = 30;
+    g.fillStyle = PAPER; g.beginPath();
+    for (let x = 0; x <= W; x += step) for (let y = 0; y <= H; y += step) {
+      const r = 8 * env * clamp(1 - Math.hypot(x - D.x, y - D.y) / 320);
+      if (r > .3) { g.moveTo(x + r, y); g.arc(x, y, r, 0, Math.PI * 2); }
+    }
+    g.fill();
+  }
+  if (t >= 13.95 && t < 14.45) {                        // graph echo, same spring
+    const tau = prog(t, 13.95, 14.35), fade = 1 - prog(t, 14.3, 14.45), t0 = Math.max(0, tau - .45);
+    if (tau <= t0) return;
+    g.save(); g.globalAlpha = fade; g.strokeStyle = PAPER; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath();
+    for (let n = 0; n <= 80; n++) { const x = lerp(t0, tau, n / 80); const px = L.P1.x + x * 640, py = L.P1.y - gy(x) * 220; n ? g.lineTo(px, py) : g.moveTo(px, py); }
+    g.stroke(); g.restore();
+  }
+}
+
+function drawWipe(g, t) {
+  if (t < 14.3 || t >= 14.65) return;
+  const D = dotAt(t);
+  circle(g, D.x, D.y, 2400 * ein(prog(t, 14.3, 14.65)), PAPER);
+}
+
+function drawCursor(g, t) {
+  const p = prog(t, 1.0, 1.4);
+  if (p > 0 && p < 1) { g.save(); g.globalAlpha = .45 * (1 - p); g.strokeStyle = INK; g.lineWidth = 3; g.beginPath(); g.arc(L.cClick.x, L.cClick.y, 50 + 50 * eout(p), 0, Math.PI * 2); g.stroke(); g.restore(); }
+  const c = cursorAt(t); if (!c) return;
+  g.save(); g.translate(c.x, c.y); g.scale(1.7 * c.s, 1.7 * c.s);
+  g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 34); g.lineTo(8, 26); g.lineTo(13.5, 38); g.lineTo(19, 35.5); g.lineTo(13.5, 24); g.lineTo(24, 24); g.closePath();
+  g.lineJoin = 'round'; g.lineWidth = 2.5; g.strokeStyle = PAPER; g.stroke(); g.fillStyle = INK; g.fill();
+  g.restore();
+}
+
+// Pure function of t: no state carried between frames.
+function seek(g, t) {
+  t = ((t % DUR) + DUR) % DUR;
+  g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+  g.fillStyle = (t >= 7.0 && t < 14.65) ? INK : PAPER; g.fillRect(0, 0, W, H);
+  drawHalftone(g, t);
+  drawEcho(g, t);
+  drawWipe(g, t);
+  drawTrack(g, t);
+  if (t < 3.7 || t >= 14.4) drawLabel(g, t);
+  if (t >= 3.0 && t < 6.5) drawGraph(g, t);
+  drawRing(g, t);
+  drawCard(g, t);
+  const D = dotAt(t);
+  shapeState(g, { x: D.x, y: D.y, w: 2 * D.r * D.sx, h: 2 * D.r * D.sy, rad: Infinity }, ORANGE);
+  drawInner(g, t);
+  drawCursor(g, t);
+}
+
+// ---------------------------------------------------------------- beat map
+const BEATS = [
+  [0.0, 'Loop frame: toggle off, cursor at rest'],
+  [1.0, 'Click: toggle springs on'],
+  [1.5, '"Meet" bends away, hero letters grow'],
+  [2.3, `Dot lands on the i of "${CONFIG.hero}"`],
+  [3.0, 'Dot jumps, word drops out'],
+  [3.5, 'Dot lands on graph origin'],
+  [4.0, `Spring peak (+${CONFIG.percent}% overshoot)`],
+  [5.0, `+${CONFIG.percent}% callout`],
+  [6.0, 'Dot shoots across the line'],
+  [7.0, 'Circle fills frame, black square appears and rotates'],
+  [7.75, 'Square stretches into a pill'],
+  [8.5, 'Scene contracts to an orange dot on black'],
+  [9.0, 'Kinetic ring: SPRINGS'],
+  [10.0, 'SOUND: ring complete'],
+  [10.75, 'Letters open out into dots'],
+  [12.0, 'Halftone covers frame, flips to black'],
+  [12.5, 'End card title'],
+  [13.55, 'Return: halftone, then graph, then toggle'],
+  [14.92, 'Dot back in toggle, matches frame 0'],
+];
+
+// ---------------------------------------------------------------- audio (synth track, 120 BPM)
+let actx = null, master = null, noiseBuf = null, recDest = null;
+let playing = false, startAt = 0, pausedT = 0, nextLoop = 0, soundOn = true;
+const SONG = (() => {
+  const ev = [], roots = [55, 55, 65.41, 49, 55, 73.42, 65.41, 55];
+  for (let b = 0; b < 30; b++) {
+    const T = b * BEAT;
+    if (b >= 2) { ev.push([T, 'kick']); ev.push([T + BEAT / 2, 'bass', roots[Math.floor(b / 4)]]); }
+    ev.push([T + BEAT / 2, 'hat']);
+    if (b % 2 === 1 && b >= 3) ev.push([T, 'clap']);
+  }
+  ev.push([1.0, 'tick'], [2.3, 'tone', 1318.5], [3.5, 'tone', 659.25], [4.0, 'tone', 987.77], [5.0, 'stab', [659.25, 830.6, 987.77]],
+    [5.95, 'sweep', .5], [7.0, 'tone', 110, .6, 'sawtooth', .25], [7.75, 'tone', 880], [8.5, 'sweep', .5], [10.75, 'sweep', .7],
+    [12.0, 'tone', 110, .5, 'sawtooth', .22], [12.5, 'stab', [440, 554.37, 659.25, 880]], [13.55, 'tone', 1318.5], [13.95, 'tone', 987.77], [14.9, 'tick']);
+  [440, 554.37, 659.25, 880, 1108.7].forEach((fq, j) => ev.push([9 + j * .25, 'tone', fq, .2]));
+  return ev;
+})();
+
+function ensureAudio() {
+  if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+  if (actx.state === 'suspended') actx.resume();
+}
+function noiseSrc() {
+  if (!noiseBuf) { noiseBuf = actx.createBuffer(1, actx.sampleRate, actx.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+  const s = actx.createBufferSource(); s.buffer = noiseBuf; return s;
+}
+function env(gn, T, peak, dec) { gn.gain.setValueAtTime(.0001, T); gn.gain.exponentialRampToValueAtTime(peak, T + .004); gn.gain.exponentialRampToValueAtTime(.0001, T + dec); }
+const SFX = {
+  kick(T) { const o = actx.createOscillator(), gn = actx.createGain(); o.frequency.setValueAtTime(150, T); o.frequency.exponentialRampToValueAtTime(42, T + .12); env(gn, T, .9, .38); o.connect(gn).connect(master); o.start(T); o.stop(T + .4); },
+  hat(T) { const s = noiseSrc(), hp = actx.createBiquadFilter(), gn = actx.createGain(); hp.type = 'highpass'; hp.frequency.value = 7500; env(gn, T, .12, .05); s.connect(hp).connect(gn).connect(master); s.start(T, Math.random() * .5); s.stop(T + .06); },
+  clap(T) { const s = noiseSrc(), bp = actx.createBiquadFilter(), gn = actx.createGain(); bp.type = 'bandpass'; bp.frequency.value = 1600; bp.Q.value = .8; env(gn, T, .35, .16); s.connect(bp).connect(gn).connect(master); s.start(T, Math.random() * .5); s.stop(T + .2); },
+  tick(T) { const o = actx.createOscillator(), gn = actx.createGain(); o.type = 'square'; o.frequency.value = 2400; env(gn, T, .18, .03); o.connect(gn).connect(master); o.start(T); o.stop(T + .05); },
+  tone(T, fq, dur = .25, type = 'triangle', v = .2) { const o = actx.createOscillator(), gn = actx.createGain(); o.type = type; o.frequency.value = fq; env(gn, T, v, dur); o.connect(gn).connect(master); o.start(T); o.stop(T + dur + .05); },
+  stab(T, fqs) { fqs.forEach(fq => SFX.tone(T, fq, .45, 'triangle', .1)); },
+  bass(T, fq) { const o = actx.createOscillator(), lp = actx.createBiquadFilter(), gn = actx.createGain(); o.type = 'sawtooth'; o.frequency.value = fq; lp.type = 'lowpass'; lp.frequency.value = 500; env(gn, T, .25, .22); o.connect(lp).connect(gn).connect(master); o.start(T); o.stop(T + .25); },
+  sweep(T, dur) { const s = noiseSrc(), bp = actx.createBiquadFilter(), gn = actx.createGain(); bp.type = 'bandpass'; bp.Q.value = 2; bp.frequency.setValueAtTime(400, T); bp.frequency.exponentialRampToValueAtTime(6000, T + dur); gn.gain.setValueAtTime(.0001, T); gn.gain.exponentialRampToValueAtTime(.25, T + dur * .9); gn.gain.exponentialRampToValueAtTime(.0001, T + dur); s.connect(bp).connect(gn).connect(master); s.start(T); s.stop(T + dur + .02); },
+};
+function scheduleLoop(n) {
+  const base = startAt + n * DUR, now = actx.currentTime;
+  for (const [et, kind, ...args] of SONG) { const T = base + et; if (T >= now - .005) SFX[kind](Math.max(T, now), ...args); }
+}
+const currentT = () => playing ? (((actx.currentTime - startAt) % DUR) + DUR) % DUR : pausedT;
+
+function play() {
+  ensureAudio();
+  master = actx.createGain(); master.gain.value = soundOn ? .8 : 0; master.connect(actx.destination);
+  if (recDest) master.connect(recDest);
+  startAt = actx.currentTime + .05 - pausedT;
+  nextLoop = Math.floor((actx.currentTime + .05 - startAt) / DUR);
+  playing = true; playBtn.textContent = '❚❚ Pause';
+}
+function pause() {
+  if (!playing) return;
+  pausedT = currentT(); playing = false;
+  master.disconnect(); master = null; playBtn.textContent = '▶ Play';
+}
+function setT(t) { if (playing) pause(); pausedT = ((t % DUR) + DUR) % DUR; }
+
+// ---------------------------------------------------------------- recording
+let rec = null, recStart = 0;
+function record() {
+  if (rec) return;
+  ensureAudio();
+  recDest = actx.createMediaStreamDestination();
+  const stream = new MediaStream([...canvas.captureStream(FPS).getVideoTracks(), ...recDest.stream.getAudioTracks()]);
+  const mime = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'].find(m => MediaRecorder.isTypeSupported(m));
+  const chunks = [];
+  rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 16e6 });
+  rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+  rec.onstop = () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(chunks, { type: mime }));
+    a.download = 'orange-dot-motion.' + (mime.includes('mp4') ? 'mp4' : 'webm'); a.click();
+    rec = null; recDest = null; recBtn.classList.remove('on'); recBtn.textContent = '● Record 15s';
+  };
+  setT(0); play(); recStart = startAt; rec.start();
+  recBtn.classList.add('on'); recBtn.textContent = 'Recording…';
+}
+
+// ---------------------------------------------------------------- UI
+const playBtn = document.getElementById('play'), soundBtn = document.getElementById('sound'), scrub = document.getElementById('scrub');
+const timeEl = document.getElementById('time'), recBtn = document.getElementById('rec'), stillsBtn = document.getElementById('stillsBtn');
+
+playBtn.onclick = () => playing ? pause() : play();
+soundBtn.onclick = () => { soundOn = !soundOn; soundBtn.classList.toggle('on', soundOn); soundBtn.textContent = soundOn ? 'Sound on' : 'Sound off'; if (master) master.gain.value = soundOn ? .8 : 0; };
+scrub.oninput = () => setT(+scrub.value);
+recBtn.onclick = record;
+stillsBtn.onclick = () => { const s = document.getElementById('stills'); s.classList.toggle('show'); stillsBtn.classList.toggle('on'); if (s.classList.contains('show')) buildStills(); };
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' && e.code !== 'Space') return;
+  if (e.code === 'Space') { e.preventDefault(); playing ? pause() : play(); }
+  else if (e.key === 'ArrowRight') setT(currentT() + 1 / FPS);
+  else if (e.key === 'ArrowLeft') setT(currentT() - 1 / FPS);
+  else if (e.key === '.') setT(Math.floor(currentT() / BEAT + 1e-6) * BEAT + BEAT);
+  else if (e.key === ',') setT(Math.ceil(currentT() / BEAT - 1e-6) * BEAT - BEAT);
+});
+
+function buildTicks() {
+  const el = document.getElementById('ticks');
+  for (let b = 0; b <= 30; b++) { const i = document.createElement('i'); i.style.left = (b * BEAT / DUR * 100) + '%'; el.appendChild(i); }
+  BEATS.forEach(([t]) => { const i = document.createElement('i'); i.className = 'ev'; i.style.left = (t / DUR * 100) + '%'; el.appendChild(i); });
+  document.getElementById('beatTable').innerHTML = BEATS.map(([t, d]) => `<tr><td>${t.toFixed(2)}s</td><td>beat ${Math.floor(t / BEAT) + 1}</td><td>${d}</td></tr>`).join('');
+}
+
+let stillsBuilt = false;
+function buildStills() {
+  if (stillsBuilt) return; stillsBuilt = true;
+  const off = document.createElement('canvas'); off.width = W; off.height = H; const og = off.getContext('2d');
+  const thumb = (host, t, cap, w) => {
+    const fig = document.createElement('figure'), c = document.createElement('canvas');
+    c.width = w; c.height = w * 9 / 16; seek(og, t); c.getContext('2d').drawImage(off, 0, 0, c.width, c.height);
+    c.onclick = () => { setT(t); scrollTo({ top: 0, behavior: 'smooth' }); };
+    const fc = document.createElement('figcaption'); fc.textContent = cap;
+    fig.append(c, fc); host.appendChild(fig);
+  };
+  const key = document.getElementById('keyStills');
+  [[.95, 'Toggle: cursor clicks'], [4.0, 'Spring graph: peak'], [10.5, 'Kinetic type: ring'], [13.2, 'End card']].forEach(([t, n]) => thumb(key, t, `${n} · ${t.toFixed(2)}s`, 640));
+  const sheet = document.getElementById('sheet');
+  for (let b = 0; b < 30; b++) thumb(sheet, b * BEAT, `beat ${b + 1} · ${(b * BEAT).toFixed(1)}s`, 320);
+}
+
+function loop() {
+  if (playing) {
+    while (startAt + nextLoop * DUR < actx.currentTime + 2) scheduleLoop(nextLoop++);
+    if (rec && actx.currentTime - recStart >= DUR + .05) { rec.stop(); pause(); setT(0); }
+  }
+  const t = currentT();
+  seek(ctx, t);
+  if (document.activeElement !== scrub) scrub.value = t;
+  timeEl.textContent = `${t.toFixed(2)}s · beat ${Math.floor(t / BEAT) + 1}`;
+  requestAnimationFrame(loop);
+}
+
+Promise.all([document.fonts.load(f(800, 100)), document.fonts.load(f(500, 100))]).catch(() => {}).then(() => {
+  layout(); buildTicks();
+  const m = location.hash.match(/t=([\d.]+)/); if (m) pausedT = +m[1];
+  loop();
+});
+</script>
+</body>
+</html>
