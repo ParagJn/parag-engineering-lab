@@ -13,6 +13,7 @@ from ..services import (
     get_attachment_service,
     get_message_service,
     get_model_service,
+    get_project_service,
     get_session_service,
 )
 
@@ -41,11 +42,30 @@ class ChatResponse(BaseModel):
     message: MessageResponse
 
 
-def _build_attachments_context(attachment_ids: list[str]) -> tuple[str | None, list[dict]]:
-    """Build attachments context (extracted text) and gather embedded images for vision analysis."""
+def _build_project_context(project_id: str | None) -> tuple[dict | None, set[str]]:
+    """Project instructions and pinned documents for the prompt, plus the pinned file IDs."""
+    context = get_project_service().build_context(project_id)
+    if not context:
+        return None, set()
+    pinned_ids = {a.attachment_id for a in get_project_service().repository.list_documents(project_id)}
+    return {
+        "name": context.project.name,
+        "instructions": context.instructions,
+        "documents_context": context.documents_context,
+    }, pinned_ids
+
+
+def _build_attachments_context(
+    attachment_ids: list[str], skip_ids: set[str] | None = None
+) -> tuple[str | None, list[dict]]:
+    """Build attachments context (extracted text) and gather embedded images for vision analysis.
+
+    Files in skip_ids (already pinned to the chat's project) aren't added twice.
+    """
     attachment_service = get_attachment_service()
     attachments_context = None
     attachment_images: list[dict] = []
+    attachment_ids = [a for a in attachment_ids if a not in (skip_ids or set())]
 
     if attachment_ids:
         context_parts = []
@@ -88,7 +108,8 @@ async def send_message(session_id: str, request: MessageRequest):
     if len(session.messages) == 1:
         session_service.update_session_title(session, request.content)
 
-    attachments_context, attachment_images = _build_attachments_context(request.attachment_ids)
+    project_context, pinned_ids = _build_project_context(session.project_id)
+    attachments_context, attachment_images = _build_attachments_context(request.attachment_ids, pinned_ids)
 
     try:
         # Generate response
@@ -98,6 +119,7 @@ async def send_message(session_id: str, request: MessageRequest):
             model=session.model,
             images=attachment_images,
             web_search_enabled=session.web_search_enabled,
+            project_context=project_context,
         )
         
         # Add assistant message
@@ -157,7 +179,8 @@ async def send_message_stream(session_id: str, request: MessageRequest):
     if len(session.messages) == 1:
         session_service.update_session_title(session, request.content)
 
-    attachments_context, attachment_images = _build_attachments_context(request.attachment_ids)
+    project_context, pinned_ids = _build_project_context(session.project_id)
+    attachments_context, attachment_images = _build_attachments_context(request.attachment_ids, pinned_ids)
 
     stream_iter = model_service.generate_stream(
         messages=session.messages,
@@ -165,6 +188,7 @@ async def send_message_stream(session_id: str, request: MessageRequest):
         model=session.model,
         images=attachment_images,
         web_search_enabled=session.web_search_enabled,
+        project_context=project_context,
     ).__aiter__()
 
     # Pull the first chunk now (before returning a streaming response) so that a

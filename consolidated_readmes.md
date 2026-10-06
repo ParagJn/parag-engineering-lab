@@ -1,6 +1,6 @@
 # Consolidated Project Documentation — Parag Engineering Lab
 
-This document aggregates the specifications, features, technology stacks, and orchestration frameworks for all 15 AI-powered applications and utility tools in this repository.
+This document aggregates the specifications, features, technology stacks, and orchestration frameworks for all 16 AI-powered applications and utility tools in this repository.
 
 ---
 
@@ -20,6 +20,7 @@ This document aggregates the specifications, features, technology stacks, and or
 13. [md-to-docx Converter](#13-md-to-docx-converter)
 14. [Skills Generator](#14-skills-generator)
 15. [Document Processor for Vector Databases](#15-document-processor-for-vector-databases)
+16. [Hero Motion Studio](#16-hero-motion-studio)
 
 ---
 
@@ -187,3 +188,14 @@ This document aggregates the specifications, features, technology stacks, and or
   - **Backend**: FastAPI, python-docx, Pillow, Azure OpenAI (Embeddings + Vision).
 * **Orchestration Pattern**: **Hierarchical Chunking Pipeline**. Preserves document heading hierarchy as prefix contexts for nested text paragraphs. Vision models caption embedded diagrams.
 * **Business Benefit**: High-quality vector store inputs, contextual chunks for RAG searches, and image OCR inclusion.
+
+---
+
+## 16. Hero Motion Studio
+* **Directory**: [hero-motion-studio](file:///Users/paragjain/dev-works/parag-engineering-lab/hero-motion-studio)
+* **Overview & Value**: Generates animated hero visuals for presentation slides from a few lines of text. One accent dot carries a seamless looping film through toggle, hero word, stat, shape, kinetic words, halftone and end card.
+* **Tech Stack**:
+  - **Frontend**: Vite, React 19, TypeScript, Tailwind CSS v4, Canvas 2D, WebCodecs + mp4-muxer, gifenc, pptxgenjs.
+  - **Backend**: FastAPI, pydantic-settings, IBM ICA client (Claude).
+* **Orchestration Pattern**: **LLM Copywriter + Deterministic Renderer**. Claude returns strict JSON copy that the backend validates; the browser engine renders every frame as a pure function of time, so previews and frame-by-frame exports match exactly.
+* **Business Benefit**: Slide-ready motion heroes in minutes, in any slide size, exported as native PowerPoint/Keynote video or stills.

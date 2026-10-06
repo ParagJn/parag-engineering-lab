@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from ..config import config
 from ..models import Session
 from ..repositories import SessionRepository
-from ..services import get_session_service
+from ..services import get_project_service, get_session_service
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -19,6 +19,7 @@ class SessionResponse(BaseModel):
     title: str
     model: str
     web_search_enabled: bool
+    project_id: str | None = None
 
 
 class SessionListItem(BaseModel):
@@ -29,20 +30,35 @@ class SessionListItem(BaseModel):
     updated_at: str
     model: str
     web_search_enabled: bool
+    project_id: str | None = None
+
+
+class CreateSessionRequest(BaseModel):
+    """Create session request."""
+    project_id: str | None = None
 
 
 class UpdateSessionRequest(BaseModel):
-    """Update session request."""
+    """Update session request. Send project_id: null to take a chat out of its project."""
     title: str | None = None
     model: str | None = None
     web_search_enabled: bool | None = None
+    project_id: str | None = None
+
+
+def _check_project(project_id: str | None):
+    if project_id is not None and not get_project_service().get_project(project_id):
+        raise HTTPException(status_code=404, detail="Project not found")
 
 
 @router.post("", response_model=SessionResponse)
-async def create_session():
-    """Create a new session."""
+async def create_session(request: CreateSessionRequest | None = None):
+    """Create a new session, optionally inside a project."""
+    project_id = request.project_id if request else None
+    _check_project(project_id)
+
     session_service = get_session_service()
-    session = session_service.create_session()
+    session = session_service.create_session(project_id=project_id)
 
     return SessionResponse(
         session_id=session.session_id,
@@ -51,6 +67,7 @@ async def create_session():
         title=session.title,
         model=session.model,
         web_search_enabled=session.web_search_enabled,
+        project_id=session.project_id,
     )
 
 
@@ -68,6 +85,7 @@ async def list_sessions():
             updated_at=s.updated_at.isoformat(),
             model=s.model,
             web_search_enabled=s.web_search_enabled,
+            project_id=s.project_id,
         )
         for s in sessions
     ]
@@ -100,7 +118,7 @@ async def delete_session(session_id: str):
 
 @router.patch("/{session_id}")
 async def update_session(session_id: str, request: UpdateSessionRequest):
-    """Update a session (rename, change model, and/or toggle web search)."""
+    """Update a session (rename, change model, toggle web search, and/or move to a project)."""
     session_service = get_session_service()
     repository = SessionRepository()
 
@@ -121,6 +139,11 @@ async def update_session(session_id: str, request: UpdateSessionRequest):
 
     if request.web_search_enabled is not None:
         session.web_search_enabled = request.web_search_enabled
+
+    # project_id: null is meaningful (leave the project), so check whether it was sent at all
+    if "project_id" in request.model_fields_set:
+        _check_project(request.project_id)
+        session.project_id = request.project_id
 
     repository.update(session)
 

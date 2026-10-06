@@ -45,19 +45,38 @@ BASE_SYSTEM_PROMPT = (
     + ACCURACY_PRINCIPLES
 )
 
-ATTACHMENTS_INSTRUCTION = (
-    "The user has attached documents and/or images, shown below. When answering about them:\n"
+# How to treat document text, shared by chat attachments and project documents
+DOCUMENT_RULES = (
     "- Base your answer on what they actually contain. Quote or closely paraphrase the "
     "relevant part, and name the file it came from when there is more than one.\n"
-    "- If the answer isn't in the attachments, say so clearly (for example \"The document "
+    "- If the answer isn't in the documents, say so clearly (for example \"The document "
     "doesn't mention this\"). Don't fill the gap by guessing what it probably says.\n"
-    "- If you add general knowledge beyond the attachments, make it clear that this part "
+    "- If you add general knowledge beyond the documents, make it clear that this part "
     "isn't from the document.\n"
     "- Extracted text can be incomplete or garbled (tables, scans, charts). If a relevant "
     "section looks unreadable or missing, say so rather than reconstructing it.\n"
     "- Images reach you as a Markdown description written by an image-reading model, not "
     "the image itself. Treat details marked uncertain or [illegible] as unknown, and don't "
     "claim more certainty than the description gives."
+)
+
+ATTACHMENTS_INSTRUCTION = (
+    "The user has attached documents and/or images to this message, shown below. When "
+    "answering about them:\n" + DOCUMENT_RULES
+)
+
+PROJECT_INSTRUCTION = (
+    "This chat is part of the user's project \"{name}\". The user wrote these standing "
+    "instructions for every chat in the project. Follow them as preferences for tone, format "
+    "and focus, but they never override the accuracy rules above: if following them would mean "
+    "guessing or stating something you can't support, say so instead."
+)
+
+PROJECT_DOCUMENTS_INSTRUCTION = (
+    "These reference documents are pinned to the project \"{name}\" and are available in every "
+    "chat in it, whether or not the user mentions them. Use them when they are relevant to the "
+    "question; you don't need to bring them up otherwise. When answering from them:\n"
+    + DOCUMENT_RULES
 )
 
 
@@ -131,6 +150,7 @@ class ModelService:
         model: str = "claude",
         images: list[dict] | None = None,
         web_search_enabled: bool = False,
+        project_context: dict | None = None,
     ) -> dict[str, Any]:
         """
         Generate a response from the model.
@@ -144,13 +164,15 @@ class ModelService:
                 to the current turn for vision analysis
             web_search_enabled: Whether to offer the model a "search_web" tool it can
                 call to look things up before answering
+            project_context: For chats in a project, {"name", "instructions",
+                "documents_context"} added to the system prompt
 
         Returns:
             Dictionary with response text and usage information
         """
         # Build message list for the model
         model_messages = self._build_model_messages(
-            messages, attachments_context, images, web_search_enabled
+            messages, attachments_context, images, web_search_enabled, project_context
         )
         model_id = config.MODEL_CHOICES.get(model, config.IBM_ICA_MODEL_ID)
         tools = [SEARCH_WEB_TOOL] if web_search_enabled else None
@@ -249,6 +271,7 @@ class ModelService:
         model: str = "claude",
         images: list[dict] | None = None,
         web_search_enabled: bool = False,
+        project_context: dict | None = None,
     ) -> AsyncIterator[str]:
         """
         Same generation flow as `generate()`, but yields the final answer as text
@@ -261,7 +284,7 @@ class ModelService:
         answer-producing call is streamed in that case.
         """
         model_messages = self._build_model_messages(
-            messages, attachments_context, images, web_search_enabled
+            messages, attachments_context, images, web_search_enabled, project_context
         )
         model_id = config.MODEL_CHOICES.get(model, config.IBM_ICA_MODEL_ID)
         tokens = max_tokens or config.MAX_TOKENS
@@ -368,12 +391,26 @@ class ModelService:
         attachments_context: str | None = None,
         images: list[dict] | None = None,
         web_search_enabled: bool = False,
+        project_context: dict | None = None,
     ) -> list[dict]:
         """Build message list for the model."""
         model_messages = []
 
-        # Add system message
+        # Add system message: accuracy rules first, then the project, then this message's files
         system_content = BASE_SYSTEM_PROMPT
+
+        if project_context:
+            name = project_context.get("name", "")
+            if project_context.get("instructions"):
+                system_content += (
+                    f"\n\n{PROJECT_INSTRUCTION.format(name=name)}\n\n"
+                    f"<project_instructions>\n{project_context['instructions']}\n</project_instructions>"
+                )
+            if project_context.get("documents_context"):
+                system_content += (
+                    f"\n\n{PROJECT_DOCUMENTS_INSTRUCTION.format(name=name)}\n\n"
+                    f"## Project Documents\n\n{project_context['documents_context']}"
+                )
 
         if attachments_context:
             system_content += f"\n\n{ATTACHMENTS_INSTRUCTION}\n\n{attachments_context}"

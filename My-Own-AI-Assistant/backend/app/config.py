@@ -20,6 +20,7 @@ class Config:
     SESSIONS_DIR = DATA_DIR / "sessions"
     DOCUMENTS_DIR = DATA_DIR / "documents"
     SVG_IMAGES_DIR = DATA_DIR / "svg_images"
+    DB_PATH = DATA_DIR / "assistant.db"
     
     # IBM ICA Model Configuration
     IBM_ICA_API_KEY = os.getenv("IBM_ICA_API_KEY", "")
@@ -38,6 +39,8 @@ class Config:
     
     # Model settings
     MODEL_TIMEOUT = int(os.getenv("MODEL_TIMEOUT", "180"))
+    # SVG replies are long single responses (up to 16k tokens), so allow more time
+    SVG_TIMEOUT = int(os.getenv("SVG_TIMEOUT", "600"))
     MAX_TOKENS = int(os.getenv("MAX_TOKENS", "100000"))
     
     # API settings
@@ -49,6 +52,10 @@ class Config:
     
     # File upload settings
     MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+
+    # Project documents are sent with every message in the project, so their
+    # combined size is capped (estimated tokens, ~4 characters each)
+    PROJECT_CONTEXT_MAX_TOKENS = int(os.getenv("PROJECT_CONTEXT_MAX_TOKENS", "100000"))
     # Images are read by the Claude model and converted to Markdown
     IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
     ALLOWED_EXTENSIONS = {

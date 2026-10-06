@@ -270,7 +270,9 @@ class ExtractionService:
         filename = file_path.name
         for extractor in self.extractors:
             if extractor.supports(mime_type, filename):
-                return extractor.extract_images(file_path)
+                # Plain-text extractors have no images to extract
+                extract_images = getattr(extractor, "extract_images", None)
+                return extract_images(file_path) if extract_images else []
         return []
 
 

@@ -58,6 +58,12 @@ An AI-powered skill definition generator that converts your ideas into fully str
 
 ---
 
+## Hero Motion Studio
+
+Turns a short text brief into an animated hero for a presentation slide. A single accent dot drives a looping motion film (toggle, hero word, stat, shape morph, kinetic words, halftone reveal and end card), with selectable stat, shape and word styles, scene switches, slide-ready sizes from full slide to banner, and frame-by-frame export to PNG, MP4, GIF or PPTX. Claude via IBM ICA writes the copy.
+
+---
+
 ## Architect Solutions Demo
 
 This repository will contain short product videos of some of the professional tools that I have built leading the asset engineering services at IBM. These videos will showcase the capabilities of the tool/asset and how it can be used in real-world scenarios.

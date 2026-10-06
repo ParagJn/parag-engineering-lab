@@ -57,7 +57,7 @@
       "id": "ibm",
       "label": "IBM ICA",
       "type": "ai",
-      "description": "IBM watsonx Code Assistant — Claude Sonnet 5 hosted on IBM infrastructure for internal AI chat.",
+      "description": "IBM watsonx Code Assistant \u2014 Claude Sonnet 5 hosted on IBM infrastructure for internal AI chat.",
       "tech": [
         "Claude Sonnet 5",
         "watsonx Code Assistant"
@@ -273,6 +273,21 @@
         "IBM ICA Client",
         "PyPDF2"
       ]
+    },
+    {
+      "id": "heromotion",
+      "label": "Hero Motion Studio",
+      "type": "project",
+      "description": "Animated presentation hero generator. One accent dot drives a looping canvas motion film with selectable stat, shape and word styles; exports PNG, MP4, GIF and PPTX in slide-ready sizes. Claude via IBM ICA writes the copy.",
+      "tech": [
+        "FastAPI",
+        "React 19",
+        "TypeScript",
+        "Canvas 2D",
+        "WebCodecs",
+        "pptxgenjs",
+        "IBM ICA Client"
+      ]
     }
   ],
   "edges": [
@@ -410,6 +425,11 @@
       "from": "myownai",
       "to": "ibm",
       "label": "chat model"
+    },
+    {
+      "from": "heromotion",
+      "to": "ibm",
+      "label": "copywriter"
     }
   ],
   "flows": [
@@ -710,6 +730,30 @@
         {
           "node": "docproc",
           "action": "ProcessResponse: paragraphs + tables + images + chunks + Milvus-ready vector_records"
+        }
+      ]
+    },
+    {
+      "id": "f12",
+      "name": "Slide Hero Rendering",
+      "project": "Hero Motion Studio",
+      "description": "Brief \u2192 Claude copy (IBM ICA) \u2192 deterministic canvas film \u2192 frame-by-frame export",
+      "steps": [
+        {
+          "node": "heromotion",
+          "action": "User writes a brief and picks scene styles, theme, size and loop duration"
+        },
+        {
+          "node": "ibm",
+          "action": "Claude returns JSON copy (hero, stat, words, end card); FastAPI validates and clamps it"
+        },
+        {
+          "node": "heromotion",
+          "action": "Film engine draws each frame as a pure function of time; springs drive dot, graph and counters"
+        },
+        {
+          "node": "heromotion",
+          "action": "PNG / MP4 (WebCodecs + mp4-muxer) / GIF (gifenc) / PPTX (pptxgenjs) rendered frame by frame"
         }
       ]
     }

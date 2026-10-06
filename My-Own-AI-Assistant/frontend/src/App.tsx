@@ -1,10 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ChatWindow } from './components/ChatWindow';
+import { ProjectSettings } from './components/ProjectSettings';
 import type { ComposerHandle } from './components/Composer';
 import type { RateLimitInfo } from './components/RateLimitTimer';
 import { apiService } from './services/api';
-import type { ModelProvider, Session, SessionListItem, SvgEditTarget } from './types';
+import type {
+  ModelProvider,
+  ProjectDetail,
+  ProjectSummary,
+  Session,
+  SessionListItem,
+  SvgEditTarget,
+} from './types';
 
 const RATE_LIMIT_WAIT_SECONDS = 90;
 
@@ -17,6 +25,11 @@ function App() {
   const [streamingText, setStreamingText] = useState<string | null>(null);
   const [svgMode, setSvgMode] = useState(false);
   const [svgEditTarget, setSvgEditTarget] = useState<SvgEditTarget | null>(null);
+  const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  const [currentProject, setCurrentProject] = useState<ProjectDetail | null>(null);
+  // undefined = closed, null = creating a new project, string = editing that project
+  const [settingsProjectId, setSettingsProjectId] = useState<string | null | undefined>(undefined);
+  const [focusMessageId, setFocusMessageId] = useState<string | null>(null);
 
   const composerRef = useRef<ComposerHandle>(null);
   const countdownIntervalRef = useRef<number | null>(null);
@@ -25,7 +38,30 @@ function App() {
   // Load sessions on mount
   useEffect(() => {
     loadSessions();
+    loadProjects();
   }, []);
+
+  // Load the open chat's project (instructions, documents) for the header and pinning
+  const currentProjectId = currentSession?.project_id ?? null;
+  useEffect(() => {
+    if (!currentProjectId) {
+      setCurrentProject(null);
+      return;
+    }
+    let cancelled = false;
+    apiService
+      .getProject(currentProjectId)
+      .then((detail) => {
+        if (!cancelled) setCurrentProject(detail);
+      })
+      .catch((err) => {
+        console.error('Failed to load project:', err);
+        if (!cancelled) setCurrentProject(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentProjectId]);
 
   // Make sure a running countdown doesn't keep firing after unmount
   useEffect(() => {
@@ -46,10 +82,20 @@ function App() {
     }
   };
 
-  const handleNewSession = async () => {
+  const loadProjects = async () => {
     try {
-      const newSession = await apiService.createSession();
+      setProjects(await apiService.listProjects());
+    } catch (err) {
+      console.error('Failed to load projects:', err);
+      setError('Failed to load projects');
+    }
+  };
+
+  const handleNewSession = async (projectId?: string | null) => {
+    try {
+      const newSession = await apiService.createSession(projectId);
       await loadSessions();
+      if (projectId) await loadProjects();
 
       // Load the new session
       const fullSession = await apiService.getSession(newSession.session_id);
@@ -61,9 +107,10 @@ function App() {
     }
   };
 
-  const handleSelectSession = async (sessionId: string) => {
+  const handleSelectSession = async (sessionId: string, messageId?: string) => {
     try {
       const session = await apiService.getSession(sessionId);
+      setFocusMessageId(messageId ?? null);
       setCurrentSession(session);
       setError(null);
     } catch (err) {
@@ -83,6 +130,7 @@ function App() {
 
       // Refresh session list
       await loadSessions();
+      await loadProjects();
       setError(null);
     } catch (err) {
       console.error('Failed to delete session:', err);
@@ -108,6 +156,50 @@ function App() {
       console.error('Failed to rename session:', err);
       setError('Failed to rename session');
     }
+  };
+
+  const handleMoveSession = async (sessionId: string, projectId: string | null) => {
+    try {
+      await apiService.moveSessionToProject(sessionId, projectId);
+      if (currentSession?.session_id === sessionId) {
+        setCurrentSession({ ...currentSession, project_id: projectId });
+      }
+      await Promise.all([loadSessions(), loadProjects()]);
+      setError(null);
+    } catch (err) {
+      console.error('Failed to move chat:', err);
+      const detail = (err as any)?.response?.data?.detail;
+      setError(detail ? `Failed to move chat: ${detail}` : 'Failed to move chat');
+    }
+  };
+
+  const handlePinAttachment = async (attachmentId: string) => {
+    if (!currentProject) return;
+    try {
+      await apiService.pinDocumentToProject(currentProject.project_id, attachmentId);
+      setCurrentProject(await apiService.getProject(currentProject.project_id));
+      await loadProjects();
+      setError(null);
+    } catch (err) {
+      console.error('Failed to pin file:', err);
+      const detail = (err as any)?.response?.data?.detail;
+      setError(detail ? `Couldn't add the file to the project: ${detail}` : "Couldn't add the file to the project");
+    }
+  };
+
+  const handleProjectChanged = async (detail: ProjectDetail) => {
+    // A new project stays open in the modal so documents can be added straight away
+    if (settingsProjectId === null) setSettingsProjectId(detail.project_id);
+    if (detail.project_id === currentProjectId) setCurrentProject(detail);
+    await loadProjects();
+  };
+
+  const handleProjectDeleted = async (projectId: string, deletedChats: boolean) => {
+    setSettingsProjectId(undefined);
+    if (currentSession?.project_id === projectId) {
+      setCurrentSession(deletedChats ? null : { ...currentSession, project_id: null });
+    }
+    await Promise.all([loadSessions(), loadProjects()]);
   };
 
   const handleModelChange = async (model: ModelProvider) => {
@@ -325,11 +417,16 @@ function App() {
     <div className="flex h-screen bg-white">
       <Sidebar
         sessions={sessions}
+        projects={projects}
         currentSessionId={currentSession?.session_id || null}
         onSelectSession={handleSelectSession}
         onNewSession={handleNewSession}
         onDeleteSession={handleDeleteSession}
         onRenameSession={handleRenameSession}
+        onNewProject={() => setSettingsProjectId(null)}
+        onOpenProjectSettings={(projectId) => setSettingsProjectId(projectId)}
+        onMoveSession={handleMoveSession}
+        onOpenSearchResult={handleSelectSession}
       />
 
       <div className="flex-1 flex flex-col">
@@ -357,13 +454,18 @@ function App() {
             svgEditTarget={svgMode ? svgEditTarget : null}
             onEditSvg={handleEditSvg}
             onClearSvgEdit={() => setSvgEditTarget(null)}
+            project={currentProject}
+            onOpenProject={() => currentProject && setSettingsProjectId(currentProject.project_id)}
+            onPinAttachment={handlePinAttachment}
+            focusMessageId={focusMessageId}
+            onFocusHandled={() => setFocusMessageId(null)}
           />
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center bg-white px-6">
             <h1 className="text-3xl font-normal text-gray-900 mb-3">AI Assistant</h1>
             <p className="text-gray-500 mb-8">Your personal assistant for technical work and document analysis</p>
             <button
-              onClick={handleNewSession}
+              onClick={() => handleNewSession()}
               className="px-5 py-2.5 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-700 transition-colors"
             >
               Start a conversation
@@ -371,6 +473,16 @@ function App() {
           </div>
         )}
       </div>
+
+      {settingsProjectId !== undefined && (
+        <ProjectSettings
+          key={settingsProjectId ?? 'new'}
+          projectId={settingsProjectId}
+          onClose={() => setSettingsProjectId(undefined)}
+          onChanged={handleProjectChanged}
+          onDeleted={handleProjectDeleted}
+        />
+      )}
     </div>
   );
 }

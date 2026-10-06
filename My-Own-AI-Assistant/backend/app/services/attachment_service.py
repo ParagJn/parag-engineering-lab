@@ -37,6 +37,7 @@ class AttachmentService:
         file: BinaryIO,
         filename: str,
         size_bytes: int,
+        session_id: Optional[str] = None,
     ) -> Attachment:
         """
         Create a new attachment from uploaded file.
@@ -45,6 +46,7 @@ class AttachmentService:
             file: File object
             filename: Original filename
             size_bytes: File size in bytes
+            session_id: Chat the file is uploaded in
             
         Returns:
             Created attachment
@@ -76,6 +78,7 @@ class AttachmentService:
         # Create attachment record
         attachment = Attachment(
             attachment_id=attachment_id,
+            session_id=session_id,
             filename=filename,
             mime_type=mime_type,
             size_bytes=size_bytes,

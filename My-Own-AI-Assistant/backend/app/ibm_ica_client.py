@@ -35,6 +35,11 @@ class IBMICAConnectionError(IBMICAError):
     pass
 
 
+class IBMICATimeoutError(IBMICAConnectionError):
+    """The endpoint was reached but didn't answer in time."""
+    pass
+
+
 class IBMICAResponseError(IBMICAError):
     """HTTP response error."""
     def __init__(self, message: str, http_code: int | None = None):
@@ -136,7 +141,7 @@ class IBMICAClient:
                 deduped.append(url)
         return deduped
 
-    def _call(self, url: str, payload: dict) -> tuple[int, str]:
+    def _call(self, url: str, payload: dict, timeout: int | None = None) -> tuple[int, str]:
         """Make HTTP POST request to the API."""
         body = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(
@@ -157,7 +162,7 @@ class IBMICAClient:
 
         try:
             with urllib.request.urlopen(
-                req, timeout=self.timeout, context=self.ssl_context
+                req, timeout=timeout or self.timeout, context=self.ssl_context
             ) as resp:
                 return resp.status, resp.read().decode("utf-8", "replace")
         except urllib.error.HTTPError as err:
@@ -173,6 +178,10 @@ class IBMICAClient:
             raise IBMICAResponseError(message, err.code) from err
         except urllib.error.URLError as err:
             reason = getattr(err, "reason", err)
+            if isinstance(reason, (TimeoutError, socket.timeout)):
+                raise IBMICATimeoutError(
+                    "Request timed out while connecting to IBM ICA."
+                ) from err
             if isinstance(reason, ssl.SSLCertVerificationError):
                 raise IBMICAConnectionError(
                     "SSL certificate verification failed. "
@@ -181,8 +190,8 @@ class IBMICAClient:
                 ) from err
             raise IBMICAConnectionError(f"Network error: {reason}") from err
         except (TimeoutError, socket.timeout) as err:
-            raise IBMICAConnectionError(
-                "Request timed out while connecting to IBM ICA."
+            raise IBMICATimeoutError(
+                f"The model didn't respond within {timeout or self.timeout} seconds."
             ) from err
 
     def _stream_call(self, url: str, payload: dict):
@@ -219,6 +228,10 @@ class IBMICAClient:
             raise IBMICAResponseError(message, err.code) from err
         except urllib.error.URLError as err:
             reason = getattr(err, "reason", err)
+            if isinstance(reason, (TimeoutError, socket.timeout)):
+                raise IBMICATimeoutError(
+                    "Request timed out while connecting to IBM ICA."
+                ) from err
             if isinstance(reason, ssl.SSLCertVerificationError):
                 raise IBMICAConnectionError(
                     "SSL certificate verification failed. "
@@ -227,8 +240,8 @@ class IBMICAClient:
                 ) from err
             raise IBMICAConnectionError(f"Network error: {reason}") from err
         except (TimeoutError, socket.timeout) as err:
-            raise IBMICAConnectionError(
-                "Request timed out while connecting to IBM ICA."
+            raise IBMICATimeoutError(
+                f"The model didn't respond within {self.timeout} seconds."
             ) from err
 
     def chat_stream(
@@ -270,14 +283,15 @@ class IBMICAClient:
                 resp = self._stream_call(url, payload)
                 used_url = url
                 break
-            except IBMICAAuthError:
+            except (IBMICAAuthError, IBMICATimeoutError):
                 raise
             except IBMICAResponseError as err:
-                last_err = str(err)
                 if err.http_code in (404, 405):
+                    last_err = last_err or str(err)
                     continue
                 raise
             except IBMICAConnectionError as err:
+                # Keep the connection error: it says more than a later 404 from a wrong path
                 last_err = str(err)
                 continue
 
@@ -322,7 +336,7 @@ class IBMICAClient:
                         chunk_count += 1
                         yield delta
         except (TimeoutError, socket.timeout) as err:
-            raise IBMICAConnectionError(
+            raise IBMICATimeoutError(
                 "Request timed out while streaming from IBM ICA."
             ) from err
 
@@ -487,7 +501,7 @@ class IBMICAClient:
         return prompt_tokens_est, completion_tokens_est, total_tokens_est, True
 
     def _send_chat(
-        self, payload: dict, preferred_url: str | None = None
+        self, payload: dict, preferred_url: str | None = None, timeout: int | None = None
     ) -> tuple[str, str]:
         """
         Send chat request, trying multiple endpoints if needed.
@@ -501,18 +515,21 @@ class IBMICAClient:
         last_err: str | None = None
         for url in ordered_urls:
             try:
-                _, raw = self._call(url, payload)
+                _, raw = self._call(url, payload, timeout)
                 self.last_url = url
                 return raw, url
-            except IBMICAAuthError:
+            except (IBMICAAuthError, IBMICATimeoutError):
+                # A timeout means the server was reached: re-sending the request to
+                # other paths only wastes time and hides the real error behind 404s
                 raise
             except IBMICAResponseError as err:
-                last_err = str(err)
-                # Only continue for 404/405, otherwise re-raise
+                # Only continue for 404/405 (wrong path), otherwise re-raise
                 if err.http_code in (404, 405):
+                    last_err = last_err or str(err)
                     continue
                 raise
             except IBMICAConnectionError as err:
+                # Keep the connection error: it says more than a later 404 from a wrong path
                 last_err = str(err)
                 continue
 
@@ -526,6 +543,7 @@ class IBMICAClient:
         max_tokens: int = 100,
         model_id: str | None = None,
         tools: list[dict] | None = None,
+        timeout: int | None = None,
     ) -> dict[str, Any]:
         """
         Send chat completion request.
@@ -535,6 +553,7 @@ class IBMICAClient:
             max_tokens: Maximum tokens to generate
             model_id: Override model ID for this request
             tools: Optional OpenAI-style tool/function definitions to offer the model
+            timeout: Override the request timeout (seconds) for this request
 
         Returns:
             Dictionary with keys:
@@ -560,7 +579,7 @@ class IBMICAClient:
         if tools:
             payload["tools"] = tools
 
-        raw, used_url = self._send_chat(payload, self.last_url)
+        raw, used_url = self._send_chat(payload, self.last_url, timeout)
         reply = self._extract_text(raw)
         prompt_tokens, completion_tokens, total_tokens, estimated = self._extract_usage(
             raw, messages, reply
@@ -585,5 +604,6 @@ __all__ = [
     "IBMICAConfigError",
     "IBMICAAuthError",
     "IBMICAConnectionError",
+    "IBMICATimeoutError",
     "IBMICAResponseError",
 ]

@@ -6,7 +6,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import config
-from .routers import attachment_files_router, attachments_router, messages_router, sessions_router
+from .json_migration import import_json_if_needed
+from .routers import (
+    attachment_files_router,
+    attachments_router,
+    messages_router,
+    projects_router,
+    search_router,
+    sessions_router,
+)
 from .svg_api import router as svg_router
 
 # INFO-level logging so streaming diagnostics (see ibm_ica_client.chat_stream)
@@ -15,6 +23,13 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message
 
 # Ensure directories exist
 config.ensure_directories()
+
+# One-time import of the old JSON chats and files into SQLite (data/assistant.db).
+# The JSON files are backed up and left in place.
+try:
+    import_json_if_needed()
+except Exception:
+    logging.getLogger(__name__).exception("JSON import into SQLite failed; will retry on next startup")
 
 # Create FastAPI app
 app = FastAPI(
@@ -34,6 +49,8 @@ app.add_middleware(
 
 # Include routers
 app.include_router(sessions_router, prefix=config.API_PREFIX)
+app.include_router(projects_router, prefix=config.API_PREFIX)
+app.include_router(search_router, prefix=config.API_PREFIX)
 app.include_router(messages_router, prefix=config.API_PREFIX)
 app.include_router(attachments_router, prefix=config.API_PREFIX)
 app.include_router(attachment_files_router, prefix=config.API_PREFIX)

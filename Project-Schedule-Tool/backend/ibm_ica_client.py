@@ -47,7 +47,7 @@ class IBMICAClient:
         client = IBMICAClient(
             endpoint="https://your-ibm-ica-url",
             api_key="your-api-key",
-            model_id="claude-sonnet-5"
+            model_id="claude-opus-5-5"
         )
         
         result = client.chat([
@@ -57,7 +57,7 @@ class IBMICAClient:
         print(result["text"])
     """
     
-    TIMEOUT = 60
+    TIMEOUT = 180
     CANDIDATE_PATHS = [
         "/v1/chat/completions",
         "/ai/v1/chat/completions",
@@ -68,7 +68,7 @@ class IBMICAClient:
         self,
         endpoint: str,
         api_key: str,
-        model_id: str = "claude-sonnet-5",
+        model_id: str = "claude-opus-5-5",
         timeout: int = TIMEOUT,
         insecure_tls: bool | None = None,
     ):
@@ -78,7 +78,7 @@ class IBMICAClient:
         Args:
             endpoint: Base URL of the IBM ICA endpoint
             api_key: API key for authentication
-            model_id: Model identifier (default: claude-sonnet-5)
+            model_id: Model identifier (default: claude-opus-5-5)
             timeout: Request timeout in seconds
             insecure_tls: Skip SSL verification (for testing only)
         """
@@ -89,7 +89,7 @@ class IBMICAClient:
 
         self.endpoint = endpoint.strip().rstrip("/")
         self.api_key = api_key.strip()
-        self.model_id = model_id.strip() or "claude-sonnet-5"
+        self.model_id = model_id.strip() or "claude-opus-5-5"
         self.timeout = timeout
         
         # Allow override or read from environment
@@ -144,6 +144,11 @@ class IBMICAClient:
                 "Content-Type": "application/json",
                 "Accept": "application/json",
                 "Authorization": f"Bearer {self.api_key}",
+                "User-Agent": (
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/120.0.0.0 Safari/537.36"
+                ),
             },
         )
 

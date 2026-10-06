@@ -8,7 +8,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from ..config import config
-from ..services import ModelRateLimitError, get_attachment_service
+from ..services import ModelRateLimitError, get_attachment_service, get_session_service
 
 router = APIRouter(prefix="/sessions/{session_id}/attachments", tags=["attachments"])
 
@@ -31,9 +31,12 @@ class AttachmentResponse(BaseModel):
 
 @router.post("", response_model=AttachmentResponse)
 async def upload_attachment(session_id: str, file: UploadFile = File(...)):
-    """Upload an attachment."""
+    """Upload an attachment to a chat."""
     attachment_service = get_attachment_service()
-    
+
+    if not get_session_service().get_session(session_id):
+        raise HTTPException(status_code=404, detail="Session not found")
+
     if not file.filename:
         raise HTTPException(status_code=400, detail="Filename is required")
     
@@ -49,6 +52,7 @@ async def upload_attachment(session_id: str, file: UploadFile = File(...)):
             file=file.file,
             filename=file.filename,
             size_bytes=size_bytes,
+            session_id=session_id,
         )
         
         return AttachmentResponse(
@@ -56,7 +60,7 @@ async def upload_attachment(session_id: str, file: UploadFile = File(...)):
             filename=attachment.filename,
             mime_type=attachment.mime_type,
             size_bytes=attachment.size_bytes,
-            status=attachment.status.value,
+            status=getattr(attachment.status, "value", attachment.status),
             markdown_available=attachment.content_markdown_path is not None,
             image_count=len(attachment.images),
         )
@@ -86,7 +90,7 @@ async def get_attachment(session_id: str, attachment_id: str):
         filename=attachment.filename,
         mime_type=attachment.mime_type,
         size_bytes=attachment.size_bytes,
-        status=attachment.status.value,
+        status=getattr(attachment.status, "value", attachment.status),
         markdown_available=attachment.content_markdown_path is not None,
         image_count=len(attachment.images),
     )
