@@ -26,6 +26,12 @@ export interface SoWGenerationRequest {
   tasks?: SoWTaskSummary[];
 }
 
+export interface SoWDocxExportRequest {
+  project_name: string;
+  sow_content: string;
+  tasks?: SoWTaskSummary[];
+}
+
 export interface SoWGenerationResponse {
   success: boolean;
   sow_content?: string;
@@ -59,5 +65,25 @@ export const sowApi = {
       console.error('SoW generation error:', error);
       throw error;
     }
+  },
+
+  /**
+   * Render the SoW draft into the IBM Word template and return the .docx file
+   */
+  exportSoWDocx: async (request: SoWDocxExportRequest): Promise<Blob> => {
+    const response = await fetch(`${API_BASE_URL}/export/sow-docx`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      const detail = await response.json().catch(() => null);
+      throw new Error(detail?.detail || `Word export failed: ${response.statusText}`);
+    }
+
+    return response.blob();
   },
 };

@@ -28,6 +28,7 @@ from dotenv import load_dotenv
 
 from llm_client import UniversalLLMClient, LLMClientError
 from ibm_ica_client import IBMICAClient, IBMICAError
+from sow_docx import TEMPLATE_PATH as SOW_TEMPLATE_PATH, build_sow_docx, parse_date, project_date_range
 from pptx import Presentation
 from pptx.util import Inches, Pt
 
@@ -665,63 +666,77 @@ SOW_SECTION_TASKS: List[tuple] = [
         """SECTION TASK: Write the "## Background and Context" section.
 - 1 to 4 paragraphs (only as many as the material supports) explaining the business context, \
 current state, and why this project is needed.
-- Base it strictly on the BACKGROUND text given below - do not introduce scope or deliverable \
-details here.""",
-    ),
-    (
-        "Scope and Out of Scope",
-        """SECTION TASK: Write the "## Scope" and "## Out of Scope" sections.
-
-For Scope:
-- Break the work into numbered subsections (### 1.1, ### 1.2, etc.) that map to logical groupings \
-of the PROJECT SCHEDULE tasks below (group related tasks together; do not invent scope areas that \
-have no corresponding task).
-- Each subsection: a short "Scope Overview" paragraph, then a "Scope of Work" bullet list of what \
-will actually be done (grounded in the matching tasks). Only add a "Key Outcomes" bullet list if \
-there is something concrete to state - skip it otherwise.
-
-For Out of Scope:
-- Present as a markdown table: | Scope Area | Details |
-- Base rows strictly on the OUT OF SCOPE text below. If nothing was provided, write a single-row \
-table noting that exclusions were not specified and should be confirmed with the client - do not \
-invent a full exclusions list from scratch.""",
+- If the BACKGROUND text lists the key scope points of this phase, you may end with one short \
+lead-in sentence followed by a "- " bullet list of those points. Otherwise use paragraphs only.
+- Base it strictly on the BACKGROUND text given below - do not introduce deliverable details here.""",
     ),
     (
         "Deliverables and Work Products",
-        """SECTION TASK: Write the "## Deliverables and Work Products" section.
-- "### Deliverables" table: | Item | Description | Target Date/Phase | - formal outputs given to \
-the client. Map these to the PROJECT SCHEDULE tasks and their dates/phases where possible.
-- "### Work Products" table: | Item | Description | Purpose | - internal/supporting artifacts \
-produced during execution.
-- Base both tables primarily on the MAW DELIVERABLES text and the PROJECT SCHEDULE below. If MAW \
-DELIVERABLES is "Not provided", derive the list directly from the schedule's tasks only - do not \
-invent deliverables unrelated to any task.""",
+        """SECTION TASK: Write the "## Deliverables and Work Products" section as ONE markdown table \
+and nothing else (no intro sentence, no sub-headings):
+| Ref Id | Work Product Name | Description | Owner | Indicative Week |
+- Ref Id: "WKP01", "WKP02", ... for work products produced during delivery, and "DL01", "DL02", ... \
+for formal documentary deliverables that need client acceptance (designs, plans, reports).
+- Description: one short phrase.
+- Owner: the party that produces the item (IBM unless the input says otherwise).
+- Indicative Week: "Week N", taken from the finish week of the matching PROJECT SCHEDULE task.
+- Base rows on the MAW DELIVERABLES text and the PROJECT SCHEDULE. If MAW DELIVERABLES is "Not \
+provided", derive the rows from the schedule tasks only - do not invent items unrelated to any task.""",
     ),
     (
-        "Risks and Dependencies",
-        """SECTION TASK: Write the "## Risks" and "## Dependencies" sections.
+        "Scope",
+        """SECTION TASK: Write the "## Scope" section in exactly this structure:
+- First, a 1 to 3 sentence scope overview paragraph directly under "## Scope" (no label).
+- Then one "### <Title>" sub-heading per logical grouping of the PROJECT SCHEDULE tasks (group \
+related tasks; do not invent scope areas that have no corresponding task). Do not number the titles.
+- Inside each sub-heading, use these labels, each on its own line and written exactly as shown, \
+followed by its content:
+  **Overview** - then 1 to 2 sentences.
+  **Scope of Work** - then "- " bullets of what will actually be done.
+  **Approach** - then "- " bullets. Include only if the input says something about how the work \
+will be done.
+  **Key Outcomes** - then "- " bullets. Include only if there is something concrete to state.""",
+    ),
+    (
+        "Out of Scope and Assumptions",
+        """SECTION TASK: Write the "## Out of Scope" and "## Assumptions" sections.
 
-For Risks:
-- Table: | Risk Category | Description | Impact | Mitigation Strategy |
-- Base risks on what the BACKGROUND, ASSUMPTIONS, and PROJECT SCHEDULE actually suggest (e.g. \
-tight dependency chains, tasks with no buffer, external dependencies mentioned in the text). \
-Impact is High/Medium/Low. Do not pad this out with a fixed catalog of generic risk categories - \
-include only risks the input actually supports.
+For "## Out of Scope":
+- ONE markdown table: | Scope Area | Details |
+- One exclusion per row. Reuse the same Scope Area value for related exclusions (e.g. Development, \
+Testing, Performance, Business Logic, Other) so they can be grouped.
+- Base rows strictly on the OUT OF SCOPE text below. If nothing was provided, write a single row \
+noting that exclusions were not specified and should be confirmed with the client - do not invent \
+a full exclusions list from scratch.
 
-For Dependencies:
-- Table: | Dependency Type | Description | Owner | Status |
-- Base rows on dependencies stated in ASSUMPTIONS/BACKGROUND and on task-level dependency \
-relationships in the PROJECT SCHEDULE. Owner is IBM, Client, or Third-party; Status is Required, \
-Optional, or Critical.""",
+For "## Assumptions":
+- A "- " bullet list, one assumption per bullet, written as a complete sentence.
+- Base it on the ASSUMPTIONS text below. You may add an assumption only when the PROJECT SCHEDULE \
+directly implies it (e.g. durations that assume timely access to systems or people).""",
+    ),
+    (
+        "Dependencies and Risks",
+        """SECTION TASK: Write the "## Dependencies" and "## Risks" sections.
+
+For "## Dependencies":
+- ONE markdown table: | Dependency | Accountable | Date Required |
+- Things the client (or a third party) must provide or do for delivery to proceed, based on the \
+ASSUMPTIONS/BACKGROUND text and the task dependencies in the PROJECT SCHEDULE.
+- Accountable: the client name or the third party responsible.
+- Date Required: "Prior to Week 1" or "Week N", taken from the schedule task that needs it.
+
+For "## Risks":
+- ONE markdown table: | Risk Category | Description | Impact | Mitigation Strategy |
+- Base risks on what the BACKGROUND, ASSUMPTIONS, and PROJECT SCHEDULE actually suggest. Impact is \
+High/Medium/Low. Include only risks the input actually supports.""",
     ),
     (
         "RACI Matrix",
-        """SECTION TASK: Write the "## RACI Matrix" section.
-- Table: | Activity/Task | IBM | Client |
-- Use the PROJECT SCHEDULE task list below as the row source - one row per task/activity (group \
-very granular sub-activities under their parent task if there are many). Do not invent activities \
-that aren't in the schedule.
-- Use standard RACI letters (R/A/C/I), multiple letters per cell where appropriate.""",
+        """SECTION TASK: Write the "## RACI Matrix" section as ONE markdown table and nothing else:
+| Activity | IBM | {customer} |
+- One row per PROJECT SCHEDULE task (group very granular sub-activities under their parent task). \
+Do not invent activities that aren't in the schedule.
+- Use RACI letters (R/A/C/I) in the IBM and {customer} columns, e.g. "R/A" or "C/I".""",
     ),
 ]
 
@@ -730,6 +745,14 @@ def _render_task_list(tasks: Optional[List[Dict[str, Any]]]) -> str:
     """Render the Planner's task list into a compact, factual plain-text block."""
     if not tasks:
         return "Not provided."
+
+    project_start, _ = project_date_range(tasks)
+
+    def week_of(value: Any) -> str:
+        parsed = parse_date(value)
+        if not parsed or not project_start:
+            return "?"
+        return str((parsed - project_start).days // 7 + 1)
 
     lines: List[str] = []
     for t in tasks:
@@ -743,7 +766,8 @@ def _render_task_list(tasks: Optional[List[Dict[str, Any]]]) -> str:
         finish = t.get("calculatedFinishDate") or "TBD"
         lines.append(
             f"{index}. {activity} - {days} day(s), {weeks} week(s), FTE {fte}, "
-            f"depends on: {dependency}, {start} to {finish}"
+            f"depends on: {dependency}, {start} to {finish} "
+            f"(Week {week_of(start)} to Week {week_of(finish)})"
         )
         for sub in (t.get("subActivities") or []):
             lines.append(f"    - {sub}")
@@ -783,8 +807,8 @@ async def generate_sow(
     """
     Generate a professional Statement of Work (SoW) document.
 
-    Generates the document as independent sections (Background, Scope & Out of
-    Scope, Deliverables, Risks & Dependencies, RACI), each grounded in the same
+    Generates the document as independent sections (Background, Deliverables, Scope,
+    Out of Scope & Assumptions, Dependencies & Risks, RACI), each grounded in the same
     background/assumptions/out-of-scope/deliverables text plus the real Planner
     task schedule. Sections are generated concurrently (one AI call per section,
     dispatched in parallel) and stitched together in a fixed order.
@@ -806,7 +830,8 @@ async def generate_sow(
         shared_context = _build_shared_sow_context(request)
 
         section_prompts = [
-            (name, SOW_RULES_PREAMBLE + "\n" + shared_context + "\n" + task)
+            (name, SOW_RULES_PREAMBLE + "\n" + shared_context + "\n"
+             + task.replace("{customer}", request.customer))
             for name, task in SOW_SECTION_TASKS
         ]
 
@@ -856,6 +881,35 @@ async def generate_sow(
             needs_more_info=False,
             timestamp=datetime.now().isoformat()
         )
+
+
+class SoWDocxExportRequest(BaseModel):
+    """Request to render the (possibly edited) SoW draft into the Word template"""
+    project_name: str
+    sow_content: str
+    tasks: Optional[List[Dict[str, Any]]] = None
+
+
+@app.post("/export/sow-docx")
+async def export_sow_docx(request: SoWDocxExportRequest):
+    """Fill IBM-SoW-Template.docx with the SoW draft and return it as a .docx download."""
+    if not SOW_TEMPLATE_PATH.exists():
+        raise HTTPException(status_code=500, detail=f"SoW template not found at {SOW_TEMPLATE_PATH}")
+    if not request.sow_content.strip():
+        raise HTTPException(status_code=400, detail="SoW content is empty.")
+
+    try:
+        data = build_sow_docx(request.sow_content, request.project_name, request.tasks)
+    except Exception as e:
+        logger.error(f"SoW Word export error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to build SoW document: {e}")
+
+    safe_name = re.sub(r"[^A-Za-z0-9_-]+", "_", request.project_name).strip("_") or "SoW"
+    return StreamingResponse(
+        io.BytesIO(data),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{safe_name}_Statement_of_Work.docx"'},
+    )
 
 
 # --- ISBD slide deck generation: grounded in the already-generated SoW ----

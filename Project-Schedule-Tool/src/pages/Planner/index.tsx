@@ -61,7 +61,7 @@ import { sowApi } from '../../services/api/sowApi';
 import type { SoWGenerationResponse, SoWTaskSummary } from '../../services/api/sowApi';
 import { isbdApi } from '../../services/api/isbdApi';
 import { SoWModal } from '../../components/SoWModal';
-import { exportSoWToWord } from '../../utils/wordExport';
+import { saveAs } from 'file-saver';
 import { saveSoWDraft, loadSoWDraft } from '../../utils/sowStorage';
 import type { SoWDraft } from '../../utils/sowStorage';
 
@@ -898,7 +898,12 @@ export function Planner() {
 
   const handleExportSoWToWord = async (content: string) => {
     try {
-      await exportSoWToWord(content, project.name);
+      const blob = await sowApi.exportSoWDocx({
+        project_name: project.name,
+        sow_content: content,
+        tasks: buildSoWTaskSummary(),
+      });
+      saveAs(blob, `${project.name.replace(/\s+/g, '_')}_Statement_of_Work.docx`);
       setSnackbarSeverity('success');
       setSnackbarMessage('Statement of Work exported to Word successfully!');
       setSnackbarOpen(true);
