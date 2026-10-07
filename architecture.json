@@ -14,7 +14,7 @@
       "id": "claude",
       "label": "Anthropic Claude",
       "type": "ai",
-      "description": "Claude Sonnet/Opus \u2014 article review, CV generation, procurement negotiations, interview eval, SoW generation, NL-to-SQL ReAct agent.",
+      "description": "Claude Sonnet/Opus: article review, CV generation, procurement negotiations, interview eval, NL-to-SQL ReAct agent.",
       "tech": [
         "Claude Sonnet 4",
         "Claude Opus"
@@ -57,9 +57,10 @@
       "id": "ibm",
       "label": "IBM ICA",
       "type": "ai",
-      "description": "IBM watsonx Code Assistant \u2014 Claude Sonnet 5 hosted on IBM infrastructure for internal AI chat.",
+      "description": "IBM watsonx Code Assistant gateway: Claude Opus 5.5 and Gemini 3.7 Flash hosted on IBM infrastructure. Primary model provider for Project Schedule Tool, Daily Articles Pages, Skills Generator, My Own AI Assistant and Hero Motion Studio.",
       "tech": [
-        "Claude Sonnet 5",
+        "Claude Opus 5.5",
+        "Gemini 3.7 Flash",
         "watsonx Code Assistant"
       ]
     },
@@ -140,13 +141,14 @@
       "id": "schedule",
       "label": "Project Schedule Tool",
       "type": "project",
-      "description": "AI scheduling workspace. Dual-grid (metadata + Gantt). Claude generates SoW docs. ExcelJS exports with live formulas. Critical path engine.",
+      "description": "AI scheduling workspace. Dual-grid (metadata + Gantt). Claude on IBM ICA generates SoW docs. ExcelJS exports with live formulas. Critical path engine.",
       "tech": [
         "FastAPI",
         "React 19",
         "Material-UI v9",
         "AG Grid",
-        "ExcelJS"
+        "ExcelJS",
+        "IBM ICA Client"
       ]
     },
     {
@@ -165,13 +167,13 @@
       "id": "magazine",
       "label": "Daily Articles Pages",
       "type": "project",
-      "description": "AI tech magazine: 10 RSS feeds \u2192 Gemini enrichment \u2192 Claude editorial curation \u2192 10 visual spread styles. PDF export, email delivery.",
+      "description": "AI tech magazine: 10 RSS feeds \u2192 Gemini enrichment \u2192 Claude editorial curation (both via IBM ICA) \u2192 10 visual spread styles. PDF export, email delivery.",
       "tech": [
         "FastAPI",
         "React 19",
         "feedparser",
         "Playwright",
-        "SAP AI Core"
+        "IBM ICA Client"
       ]
     },
     {
@@ -240,12 +242,13 @@
       "id": "skillsgen",
       "label": "Skills Generator",
       "type": "project",
-      "description": "AI skill definition generator for Claude/Gemini/Azure. Converts NL \u2192 SKILL.md. Auto-syncs to .claude/skills/ for Claude Code CLI.",
+      "description": "Turns an idea into a full Claude Code skill bundle (SKILL.md, references, scripts, templates, evals) via IBM ICA. Static validation with model repair, evals, one-click install to ~/.claude/skills.",
       "tech": [
         "FastAPI",
+        "Vite",
+        "Tailwind CSS",
         "Vanilla JS",
-        "Anthropic SDK",
-        "google-genai"
+        "IBM ICA Client"
       ]
     },
     {
@@ -362,24 +365,9 @@
       "label": "CV gen"
     },
     {
-      "from": "schedule",
-      "to": "sap",
-      "label": "Claude SoW"
-    },
-    {
       "from": "chatdb",
       "to": "claude",
       "label": "ReAct agent"
-    },
-    {
-      "from": "magazine",
-      "to": "gemini",
-      "label": "enrichment"
-    },
-    {
-      "from": "magazine",
-      "to": "sap",
-      "label": "Claude curation"
     },
     {
       "from": "energy",
@@ -402,24 +390,24 @@
       "label": "GPT-5.4+5.3"
     },
     {
-      "from": "skillsgen",
-      "to": "claude",
-      "label": "Anthropic"
-    },
-    {
-      "from": "skillsgen",
-      "to": "gemini",
-      "label": "Gemini"
-    },
-    {
-      "from": "skillsgen",
-      "to": "azure",
-      "label": "Azure GPT"
-    },
-    {
       "from": "docproc",
       "to": "azure",
       "label": "vision OCR"
+    },
+    {
+      "from": "schedule",
+      "to": "ibm",
+      "label": "Claude SoW"
+    },
+    {
+      "from": "magazine",
+      "to": "ibm",
+      "label": "Gemini+Claude"
+    },
+    {
+      "from": "skillsgen",
+      "to": "ibm",
+      "label": "bundle gen"
     },
     {
       "from": "myownai",
@@ -577,19 +565,19 @@
       "id": "f6",
       "name": "Daily Magazine Generation",
       "project": "Daily Articles Pages",
-      "description": "RSS feeds \u2192 Gemini enrichment \u2192 Claude editorial curation \u2192 HTML magazine",
+      "description": "RSS feeds \u2192 Gemini enrichment \u2192 Claude editorial curation (via IBM ICA) \u2192 HTML magazine",
       "steps": [
         {
           "node": "magazine",
           "action": "User selects 1-5 tech sources (HN, TechCrunch, Wired) and clicks Generate"
         },
         {
-          "node": "gemini",
-          "action": "Gemini 2.0 Flash enriches each story: summary, key facts, applies_to_me, category"
+          "node": "ibm",
+          "action": "Gemini 3.7 Flash (via IBM ICA) enriches each story: summary, key facts, applies_to_me, category"
         },
         {
-          "node": "claude",
-          "action": "Claude Sonnet 4 curates top 10: headlines, decks, body, pull quotes, 10 spread styles"
+          "node": "ibm",
+          "action": "Claude Opus 5.5 (via IBM ICA) curates top 10: headlines, decks, body, pull quotes, 10 spread styles"
         },
         {
           "node": "magazine",
@@ -664,8 +652,8 @@
           "action": "SchedulingEngine: topological sort, critical path, weekend-aware Gantt date calculations"
         },
         {
-          "node": "claude",
-          "action": "Claude 4.7 Opus generates SoW: Background, Scope, Deliverables, RACI Matrix"
+          "node": "ibm",
+          "action": "Claude Opus 5.5 (via IBM ICA) generates SoW: Background, Scope, Deliverables, RACI Matrix"
         },
         {
           "node": "schedule",
@@ -681,27 +669,27 @@
       "id": "f10",
       "name": "Skill Generation and Deploy",
       "project": "Skills Generator",
-      "description": "Natural language \u2192 SKILL.md \u2192 Claude Code CLI auto-sync + .zip download",
+      "description": "Idea \u2192 IBM ICA skill bundle \u2192 validate + repair \u2192 install to Claude Code or .zip download",
       "steps": [
         {
           "node": "skillsgen",
-          "action": "User selects platform (Anthropic/Gemini/Azure) and describes skill in natural language"
+          "action": "User describes the skill idea and picks invocation, scripts and script language"
         },
         {
-          "node": "claude",
-          "action": "Selected LLM generates SKILL.md: YAML frontmatter + markdown sections"
-        },
-        {
-          "node": "skillsgen",
-          "action": "If Anthropic: auto-synced to .claude/skills/ for Claude Code CLI integration"
+          "node": "ibm",
+          "action": "Claude Opus 5.5 (via IBM ICA) designs the bundle and writes SKILL.md, reference docs, scripts, templates and evals (SSE progress)"
         },
         {
           "node": "skillsgen",
-          "action": "Second LLM call generates usage notes. Test cases generated and executed."
+          "action": "Static validator checks frontmatter, links and script syntax; errors sent back to the model for repair"
         },
         {
           "node": "skillsgen",
-          "action": "Download as .zip (SKILL.md + README + LICENSE) for Claude.ai upload"
+          "action": "Evals run each scenario and grade expected behaviours with reasons"
+        },
+        {
+          "node": "skillsgen",
+          "action": "Install to ~/.claude/skills, sync to .claude/skills/, or download as .zip"
         }
       ]
     },
