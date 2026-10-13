@@ -1,5 +1,6 @@
 export interface MotionText {
   intro: string; // shown before the hero on the toggle, then bends away
+  ending: string; // replaces the intro on the final frame; blank = same as intro (seamless loop)
   hero: string;
   stat: string; // e.g. "+22%": the spring graph overshoots by this amount
   words: string[]; // orbit the dot in the kinetic-type scene
@@ -23,6 +24,7 @@ export type WordsStyle = "orbit" | "float" | "list" | "tags";
 export interface MotionConfig {
   text: MotionText;
   style: MotionStyle;
+  outro: { mode: "toggle" | "logo"; logo: string; logoName: string }; // final frame: toggle row, or an uploaded logo revealed by a data sweep
   scenes: { stat: StatStyle; shape: ShapeStyle; words: WordsStyle; show: Record<"stat" | "shape" | "words" | "card", boolean> };
   duration: number; // seconds for one full loop
   sound: { enabled: boolean }; // reserved: not wired into exports yet
@@ -39,6 +41,7 @@ export interface OutputSize {
 export const DEFAULT_CONFIG: MotionConfig = {
   text: {
     intro: "Meet",
+    ending: "",
     hero: "Parag Jain",
     stat: "+22%",
     words: ["SPRINGS", "EASING", "KINETIC TYPE", "3D", "SOUND"],
@@ -47,6 +50,7 @@ export const DEFAULT_CONFIG: MotionConfig = {
     cardFootnote: "0 keyframes",
   },
   style: { theme: "paper", accent: "#FF5A1F", paper: "#F3EEE4", ink: "#0E0E0E", font: "Inter Tight" },
+  outro: { mode: "toggle", logo: "", logoName: "" },
   scenes: { stat: "spring", shape: "pill", words: "orbit", show: { stat: true, shape: true, words: true, card: true } },
   duration: 16.5,
   sound: { enabled: false },
@@ -103,4 +107,5 @@ export const KEY_MOMENTS: { id: string; name: string; t: number; scene?: "stat" 
   { id: "shape", name: "Shape", t: 7.6, scene: "shape" },
   { id: "type", name: "Words", t: 10.4, scene: "words" },
   { id: "card", name: "End card", t: 13.2, scene: "card" },
+  { id: "ending", name: "Ending", t: 14.97 },
 ];

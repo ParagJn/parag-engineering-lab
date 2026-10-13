@@ -25,14 +25,17 @@ export interface Film {
  * The toggle/hero opening and the return trip are always on so the loop closes.
  */
 export type SceneId = "stat" | "shape" | "words" | "card";
-const SEGMENTS: { id: "open" | SceneId | "return"; a: number; b: number; pace: number; skip: number }[] = [
+const SEGMENTS: { id: "open" | SceneId | "return" | "outro"; a: number; b: number; pace: number; skip: number }[] = [
   { id: "open", a: 0, b: 3.0, pace: 1, skip: 0 },
   { id: "stat", a: 3.0, b: 6.5, pace: 1.25, skip: 0.8 },
   { id: "shape", a: 6.5, b: 9.0, pace: 1, skip: 0.9 },
   { id: "words", a: 9.0, b: 10.75, pace: 1.35, skip: 0.25 },
   { id: "card", a: 10.75, b: 13.55, pace: 1, skip: 0.6 },
-  { id: "return", a: 13.55, b: TIMELINE, pace: 1, skip: 0 },
+  { id: "return", a: 13.55, b: 14.3, pace: 1, skip: 0 },
+  // Toggle-row ending at base pace; the logo outro is stretched so the sweep runs ~1.2s and then holds.
+  { id: "outro", a: 14.3, b: TIMELINE, pace: 1, skip: 0 },
 ];
+const LOGO_OUTRO_PACE = 3.2;
 
 export function sceneOn(cfg: MotionConfig, id: SceneId) {
   return cfg.scenes.show?.[id] !== false;
@@ -40,7 +43,12 @@ export function sceneOn(cfg: MotionConfig, id: SceneId) {
 
 /** Maps real seconds onto the internal timeline (and back), honouring pace and switched-off scenes. */
 export function timeline(cfg: MotionConfig) {
-  const segs = SEGMENTS.map((s) => ({ ...s, len: s.id !== "open" && s.id !== "return" && !sceneOn(cfg, s.id) ? s.skip : (s.b - s.a) * s.pace }));
+  const logoOutro = cfg.outro?.mode === "logo" && !!cfg.outro.logo;
+  const segs = SEGMENTS.map((s) => {
+    if (s.id === "outro") return { ...s, len: (s.b - s.a) * (logoOutro ? LOGO_OUTRO_PACE : 1) };
+    if (s.id === "open" || s.id === "return") return { ...s, len: (s.b - s.a) * s.pace };
+    return { ...s, len: sceneOn(cfg, s.id) ? (s.b - s.a) * s.pace : s.skip };
+  });
   const natural = segs.reduce((n, s) => n + s.len, 0);
   return {
     /** Loop length in seconds at the designed pace. */
@@ -113,13 +121,24 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
   const hero = cfg.text.hero.trim() || "Hello";
   const intro = cfg.text.intro.trim();
   const label = intro ? `${intro} ${hero}` : hero;
+  // The film ends on the toggle row again. A custom ending replaces the intro word there;
+  // left blank, the last frame matches the first so the loop is seamless.
+  const ending = (cfg.text.ending ?? "").trim();
+  const endLabel = ending ? `${ending} ${hero}` : label;
   const words = cfg.text.words.map((w) => w.trim()).filter(Boolean);
   if (!words.length) words.push("MOTION");
   const stat = cfg.text.stat.trim() || "+22%";
   // "+22%" -> prefix "+", 22, suffix "%": counters animate the number and keep the rest.
   const sm = stat.match(/^(.*?)(\d+(?:\.\d+)?)(.*)$/);
   const statNum = sm ? { prefix: sm[1], num: parseFloat(sm[2]), dec: (sm[2].split(".")[1] || "").length, suffix: sm[3] } : null;
-  const fmtStat = (k: number) => (statNum ? statNum.prefix + (statNum.num * Math.max(0, k)).toFixed(statNum.dec) + statNum.suffix : stat);
+  const fmtStat = (k: number) => {
+    if (!statNum) return stat;
+    const v = (statNum.num * Math.max(0, k)).toFixed(statNum.dec);
+    const prefix = Number(v) === 0 ? statNum.prefix.replace(/[-\u2212\u2013\u2193+\u2191]/g, "") : statNum.prefix;
+    return prefix + v + statNum.suffix;
+  };
+  // A negative stat (e.g. a saving: "-40%", "−12%", "↓8%") is shown as a drop below the baseline in every style.
+  const negative = /[-\u2212\u2013\u2193]/.test(statNum ? statNum.prefix : stat);
   const percent = statNum?.num ?? 22;
   const isPercent = !!statNum && statNum.suffix.includes("%");
   const cardText = [cfg.text.cardTitle.trim() || hero, cfg.text.cardSubtitle.trim(), cfg.text.cardFootnote.trim()];
@@ -177,8 +196,11 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
   const labelDot = h0 + heroDot.k;
   const DR = heroDot.spec.r * HS * 1.15;
 
-  const G0: Pt = { x: 340, y: 800 }, GW = 980, GH = 400;
-  const E: Pt = { x: G0.x + GW, y: G0.y - GH * gy(1) };
+  const UP = negative ? 1 : -1; // screen direction of "more of the stat"
+  const GW = 980, GH = Math.min(400, 560 / (1 + OS));
+  const G0: Pt = { x: 340, y: negative ? 340 : 800 };
+  const gY = (x: number) => G0.y + UP * gy(x) * GH;
+  const E: Pt = { x: G0.x + GW, y: gY(1) };
   const P1: Pt = { x: 520, y: 800 }, P2: Pt = { x: P1.x + 640, y: P1.y - 220 * gy(1) };
   const BIG = halfDiag + 150; // clears all four corners of any output aspect
 
@@ -189,27 +211,35 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
 
   const BW = 120, BGAP = 70, BX0 = 360, BASE = 800, H5 = 440;
   const lift = clamp(percent / 100, 0.05, 1.5);
-  const barHs = [0.55, 0.78, 0.66, 1].map((k) => (k * H5) / (1 + lift)).concat(H5);
+  const BREF = 400, cut = clamp(percent / 100, 0.05, 0.9);
+  const barHs = negative
+    ? [0.7, 0.95, 0.85, 1].map((k) => k * BREF).concat(BREF * (1 - cut))
+    : [0.55, 0.78, 0.66, 1].map((k) => (k * H5) / (1 + lift)).concat(H5);
+  const heroBarH = (t: number) =>
+    negative
+      ? t < 5.0 ? BREF * sp(prog(t, 4.7, 5.0), 0.6, 15) : lerp(BREF, barHs[4], sp(prog(t, 5.0, 5.5), 0.42, 15))
+      : H5 * sp(prog(t, 4.7, 5.4), 0.42, 15);
   const barX = (i: number) => BX0 + i * (BW + BGAP) + BW / 2;
   const barH = (i: number, t: number) =>
-    i < 4 ? barHs[i] * sp(prog(t, 3.15 + i * 0.12, 3.6 + i * 0.12), 0.6, 14) : barHs[4] * sp(prog(t, 4.7, 5.4), 0.42, 15);
+    i < 4 ? barHs[i] * sp(prog(t, 3.15 + i * 0.12, 3.6 + i * 0.12), 0.6, 14) : heroBarH(t);
   const barTop = (i: number, t: number): Pt => ({ x: barX(i), y: BASE - (i < 4 ? barH(i, t) : 0) - DR });
 
   const TX0 = 460, TX1 = 1460, TY = 780;
+  const CT0 = negative ? TX1 : TX0, CT1 = negative ? TX0 : TX1; // where the count starts and ends
   const ringFrac = isPercent ? clamp(percent / 100, 0.04, 1) : 0.72;
   const RGX = CX, RGY = CY, RGR = 280;
-  const ringAng = (k: number) => -Math.PI / 2 + 2 * Math.PI * ringFrac * k;
+  const ringAng = (k: number) => -Math.PI / 2 - UP * 2 * Math.PI * ringFrac * k;
   const ringPt = (k: number): Pt => ({ x: RGX + RGR * Math.cos(ringAng(k)), y: RGY + RGR * Math.sin(ringAng(k)) });
 
   const STATS: Record<string, { land: Pt; end: Pt; dot: (t: number) => Dot }> = {
     spring: {
       land: G0,
       end: E,
-      dot: (t) => { const tau = prog(t, 3.5, 5.5), s = squash(t, 3.5); return { x: G0.x + tau * GW, y: G0.y - gy(tau) * GH, r: DR, sx: 1 + s, sy: 1 - s }; },
+      dot: (t) => { const tau = prog(t, 3.5, 5.5), s = squash(t, 3.5); return { x: G0.x + tau * GW, y: gY(tau), r: DR, sx: 1 + s, sy: 1 - s }; },
     },
     bars: {
       land: barTop(0, 3.5),
-      end: { x: barX(4), y: BASE - H5 - DR },
+      end: { x: barX(4), y: BASE - barHs[4] - DR },
       dot: (t) => {
         if (t < 4.7) {
           const h = Math.min(3, Math.floor((t - 3.5) / 0.3)), e = prog(t, 3.5 + h * 0.3, 3.8 + h * 0.3);
@@ -221,9 +251,9 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
       },
     },
     counter: {
-      land: { x: TX0, y: TY },
-      end: { x: TX1, y: TY },
-      dot: (t) => { const s = squash(t, 3.5); return { x: lerp(TX0, TX1, statSpring(t)), y: TY, r: DR, sx: 1 + s, sy: 1 - s }; },
+      land: { x: CT0, y: TY },
+      end: { x: CT1, y: TY },
+      dot: (t) => { const s = squash(t, 3.5); return { x: lerp(CT0, CT1, statSpring(t)), y: TY, r: DR, sx: 1 + s, sy: 1 - s }; },
     },
     ring: {
       land: ringPt(0),
@@ -236,6 +266,22 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
   const SE = statScene.end;
 
   const cRest: Pt = { x: knobOn.x + 230, y: CY + 190 };
+  const endX0 = (DW - (TW + GAP + textW(endLabel, LS, 800))) / 2;
+  const endTrack = { ...track, cx: endX0 + TW / 2 };
+  const endKnob: Pt = { x: endX0 + 40, y: CY };
+  const endL = lineLayout(endLabel, LS, 800, endX0 + TW + GAP, CY + 0.36 * LS);
+  const endDot = endLabel.length - hero.length + heroDot.k;
+  const endRest: Pt = { x: endX0 + TW - 40 + 230, y: CY + 190 };
+
+  // Logo outro: the uploaded logo fitted inside a 1.5in square at slide centre
+  // (1.5 / 13.333in of a 16:9 slide's width = 216 design px).
+  const logo = cfg.outro?.mode === "logo" ? getLogo(cfg.outro.logo) : null;
+  const LOGO_BOX = (1920 * 1.5) / 13.333;
+  const logoW = logo ? (logo.aspect >= 1 ? LOGO_BOX : LOGO_BOX * logo.aspect) : 0;
+  const logoH = logo ? logoW / logo.aspect : 0;
+  const logoX = CX - logoW / 2, logoY = CY - logoH / 2, sweepBand = logoW * 0.18;
+  const sweepAt = (t: number) => { const p = prog(t, 14.45, 14.85); return 1 - (1 - p) * (1 - p); }; // slight ease-out
+  const sweepFront = (t: number) => logoX + (logoW + sweepBand) * sweepAt(t);
   const cClick: Pt = { x: track.cx, y: track.cy };
   const cOff: Pt = { x: Math.max(V.x1, cRest.x) + 80, y: Math.max(V.y1, cRest.y) + 80 };
 
@@ -373,10 +419,6 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
   function labelXf(i: number, t: number): Xf {
     const c = labelL[i], k = i - h0;
     let x = c.x, y = c.y, size = LS, rot = 0;
-    if (t >= 14.4) {
-      const r = sp(prog(t, 14.45 + i * 0.017, 14.7 + i * 0.017), 0.6, 15);
-      return { x, y: y + (1 - r) * 56, size, rot, a: clamp(r * 1.6) };
-    }
     if (k < 0) {
       const j = exitOrder[i], q = ein(prog(t, 1.45 + j * 0.05, 1.85 + j * 0.05));
       return { x: x - 40 * q, y: y + 100 * q, size, rot: -0.9 * q, a: 1 - q };
@@ -386,6 +428,11 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
     rot = Math.sin(Math.PI * clamp(p)) * 0.14 * (k % 2 ? 1 : -1);
     const q = ein(prog(t, 3.0 + k * 0.025, 3.4 + k * 0.025));
     return { x, y: y + 180 * q, size, rot: rot + 0.4 * q * (k % 2 ? 1 : -1), a: 1 - q };
+  }
+  // Return: the ending row's letters rise into place.
+  function endXf(i: number, t: number): Xf {
+    const c = endL[i], r = sp(prog(t, 14.45 + i * 0.017, 14.7 + i * 0.017), 0.6, 15);
+    return { x: c.x, y: c.y + (1 - r) * 56, size: LS, rot: 0, a: clamp(r * 1.6) };
   }
   const heroTittle = (t: number) => tittleAt(labelXf(labelDot, t), labelL[labelDot].u, heroDot.spec);
 
@@ -451,10 +498,17 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
     } else if (t < 14.35) {
       const tau = prog(t, 13.95, 14.35), s = squash(t, 13.95);
       x = P1.x + tau * 640; y = P1.y - gy(tau) * 220; r = DR; sx = 1 + s; sy = 1 - s;
+    } else if (logo) {
+      if (t < 14.45) {
+        const e = eio(prog(t, 14.35, 14.45));
+        x = lerp(P2.x, logoX, e); y = lerp(P2.y, CY, e) - Math.sin(Math.PI * e) * 120; r = lerp(DR, 9, e);
+      } else {
+        x = Math.min(sweepFront(t), logoX + logoW); y = CY; r = 9 * (1 - prog(t, 14.8, 14.88));
+      }
     } else if (t < 14.92) {
       const p = sp(prog(t, 14.35, 14.92), 0.6, 15);
-      x = lerp(P2.x, knobOff.x, p); y = lerp(P2.y, knobOff.y, p) - Math.sin(Math.PI * clamp(p)) * 180; r = lerp(DR, KR, clamp(p));
-    } else { x = knobOff.x; y = knobOff.y; r = KR; }
+      x = lerp(P2.x, endKnob.x, p); y = lerp(P2.y, endKnob.y, p) - Math.sin(Math.PI * clamp(p)) * 180; r = lerp(DR, KR, clamp(p));
+    } else { x = endKnob.x; y = endKnob.y; r = KR; }
     return { x, y, r, sx, sy };
   }
 
@@ -467,23 +521,25 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
     if (t < 1.0) return { ...cClick, s: 1 - 0.12 * eout(prog(t, 0.85, 1.0)) };
     if (t < 1.3) return { ...cClick, s: lerp(0.88, 1, eout(prog(t, 1.0, 1.15))) };
     if (t < 1.9) { const e = ein(prog(t, 1.3, 1.9)); return { x: lerp(cClick.x, cOff.x, e), y: lerp(cClick.y, cOff.y, e), s: 1 }; }
-    if (t < 14.35) return null;
+    if (t < 14.35 || logo) return null;
     const e = eout(prog(t, 14.35, 14.95));
-    return { x: lerp(cOff.x, cRest.x, e), y: lerp(cOff.y, cRest.y, e), s: 1 };
+    return { x: lerp(cOff.x, endRest.x, e), y: lerp(cOff.y, endRest.y, e), s: 1 };
   }
 
   // ------------------------------------------------------------ scenes
   function drawTrack(g: CanvasRenderingContext2D, t: number) {
     let s: number, col = MUTE;
     if (t < 2.0) { col = mixHex(MUTE, INK, prog(t, 1.0, 1.18)); s = 1 - einBack(prog(t, 1.55, 1.95)); }
-    else if (t >= 14.5) s = sp(prog(t, 14.5, 14.9), 0.6, 15);
+    else if (t >= 14.5 && !logo) s = sp(prog(t, 14.5, 14.9), 0.6, 15);
     else return;
-    shapeState(g, { x: track.cx, y: track.cy, w: track.w * s, h: track.h * s, rad: Infinity }, col);
+    const tr = t >= 14.5 ? endTrack : track;
+    shapeState(g, { x: tr.cx, y: tr.cy, w: tr.w * s, h: tr.h * s, rad: Infinity }, col);
   }
 
   function drawLabel(g: CanvasRenderingContext2D, t: number) {
-    labelL.forEach((c, i) => {
-      const xf = labelXf(i, t), isDot = i === labelDot && heroDot.real;
+    const atEnd = t >= 14.4, row = atEnd ? endL : labelL, dotIdx = atEnd ? endDot : labelDot;
+    row.forEach((c, i) => {
+      const xf = atEnd ? endXf(i, t) : labelXf(i, t), isDot = i === dotIdx && heroDot.real;
       drawGlyph(g, isDot ? c.dl : c.ch, xf, c.u, 800, INK);
       if (isDot) {
         const s = t < 3.7 ? 1 - prog(t, 2.22, 2.32) : 1; // ink tittle hands over to the accent dot
@@ -529,7 +585,17 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
       if (h > 0.5) shapeState(g, { x: barX(i), y: BASE - h / 2 - 3, w: BW, h, rad: 12 }, i < 4 ? mixHex(PAPER, INK, 0.22) : INK);
     }
     g.restore();
-    drawCallout(g, t, barX(4) + BW / 2 + 50, BASE - H5 + 40);
+    if (negative) {
+      // indicative baseline (the previous level) and a dashed ghost of what was saved
+      const b = eout(prog(t, 4.95, 5.25)), top = BASE - BREF, h = barH(4, t);
+      if (b > 0) {
+        g.save(); g.setLineDash([12, 10]); g.strokeStyle = INK; g.lineWidth = 3; g.globalAlpha = 0.45;
+        line(g, barX(3) - BW / 2, top, lerp(barX(3) - BW / 2, barX(4) + BW / 2 + 30, b), top);
+        if (h < BREF - 2 && t >= 5.0) { g.beginPath(); g.rect(barX(4) - BW / 2, top, BW, BREF - h - 3); g.stroke(); }
+        g.restore();
+      }
+    }
+    drawCallout(g, t, barX(4) + BW / 2 + 50, BASE - (negative ? BREF : H5) + 40);
   }
 
   function drawCounter(g: CanvasRenderingContext2D, t: number) {
@@ -538,10 +604,10 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
     wipeClip(g, t, TX0 - 60, TX1 - TX0 + 200);
     g.lineCap = "round"; g.lineWidth = 8;
     g.strokeStyle = mixHex(PAPER, INK, 0.18); line(g, TX0, TY, lerp(TX0, TX1, a), TY);
-    if (t >= 3.5) { g.strokeStyle = INK; line(g, TX0, TY, lerp(TX0, TX1, k), TY); }
+    if (t >= 3.5) { g.strokeStyle = INK; line(g, CT0, TY, lerp(CT0, CT1, k), TY); }
     g.font = f(500, 26); g.fillStyle = INK; g.globalAlpha = 0.5 * a;
-    g.textAlign = "left"; g.fillText("0", TX0 - 8, TY + 52);
-    g.textAlign = "right"; g.fillText(fmtStat(1), TX1 + 8, TY + 52);
+    g.textAlign = "left"; g.fillText(negative ? fmtStat(1) : "0", TX0 - 8, TY + 52);
+    g.textAlign = "right"; g.fillText(negative ? "0" : fmtStat(1), TX1 + 8, TY + 52);
     g.restore();
 
     const pop = sp(prog(t, 3.35, 3.75), 0.55, 14);
@@ -559,7 +625,7 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
     g.lineCap = "round"; g.lineWidth = 22;
     g.strokeStyle = mixHex(PAPER, INK, 0.14);
     g.beginPath(); g.arc(RGX, RGY, RGR, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * a); g.stroke();
-    if (t >= 3.5 && k > 0.001) { g.strokeStyle = INK; g.beginPath(); g.arc(RGX, RGY, RGR, -Math.PI / 2, ringAng(k)); g.stroke(); }
+    if (t >= 3.5 && k > 0.001) { g.strokeStyle = INK; g.beginPath(); g.arc(RGX, RGY, RGR, -Math.PI / 2, ringAng(k), negative); g.stroke(); }
     const pop = sp(prog(t, 3.35, 3.75), 0.55, 14);
     if (pop > 0.001) {
       const size = Math.min(150, (150 * 400) / textW(fmtStat(1), 150, 800));
@@ -574,23 +640,23 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
     g.save();
     wipeClip(g, t, G0.x - 60, GW + 200);
     g.lineCap = "round"; g.strokeStyle = INK; g.lineWidth = 5;
-    line(g, G0.x, G0.y, G0.x, G0.y - GH * 1.5 * a);
+    line(g, G0.x, G0.y, G0.x, G0.y + UP * GH * 1.5 * a);
     line(g, G0.x, G0.y, G0.x + (GW + 40) * a, G0.y);
     const tp = eio(prog(t, 3.25, 3.7));
-    if (tp > 0) { g.save(); g.setLineDash([14, 14]); g.globalAlpha = 0.4; g.lineWidth = 3; line(g, G0.x, G0.y - GH, G0.x + (GW + 40) * tp, G0.y - GH); g.restore(); }
+    if (tp > 0) { g.save(); g.setLineDash([14, 14]); g.globalAlpha = 0.4; g.lineWidth = 3; line(g, G0.x, G0.y + UP * GH, G0.x + (GW + 40) * tp, G0.y + UP * GH); g.restore(); }
     g.save(); g.globalAlpha = a; g.font = f(500, 26); g.fillStyle = INK; g.textAlign = "right";
-    g.fillText("1.0", G0.x - 22, G0.y - GH + 9); g.fillText("0", G0.x - 22, G0.y + 9); g.restore();
+    g.fillText(negative ? "\u22121.0" : "1.0", G0.x - 22, G0.y + UP * GH + 9); g.fillText("0", G0.x - 22, G0.y + 9); g.restore();
 
     // Curve: drawn from the exact function that moves the dot.
     const tau = prog(t, 3.5, 5.5);
     if (tau > 0) {
       g.lineWidth = 6; g.lineJoin = "round"; g.beginPath();
       const N = Math.ceil(260 * tau) + 1;
-      for (let i = 0; i <= N; i++) { const x = (tau * i) / N, px = G0.x + x * GW, py = G0.y - gy(x) * GH; if (i) g.lineTo(px, py); else g.moveTo(px, py); }
+      for (let i = 0; i <= N; i++) { const x = (tau * i) / N, px = G0.x + x * GW, py = gY(x); if (i) g.lineTo(px, py); else g.moveTo(px, py); }
       g.stroke();
     }
     if (t >= 4.0) {
-      const pk = { x: G0.x + 0.25 * GW, y: G0.y - (1 + OS) * GH }, p = prog(t, 4.0, 4.4);
+      const pk = { x: G0.x + 0.25 * GW, y: G0.y + UP * (1 + OS) * GH }, p = prog(t, 4.0, 4.4);
       g.save(); g.setLineDash([6, 10]); g.globalAlpha = 0.3; g.lineWidth = 3;
       line(g, pk.x, pk.y, lerp(pk.x, G0.x, eout(prog(t, 4.0, 4.3))), pk.y); g.restore();
       if (p < 1) { g.save(); g.globalAlpha = 1 - p; g.lineWidth = 3; g.beginPath(); g.arc(pk.x, pk.y, 20 + 60 * eout(p), 0, Math.PI * 2); g.stroke(); g.restore(); }
@@ -797,6 +863,34 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
     g.restore();
   }
 
+  // Data sweep: left of the band the logo is solid; inside it the logo forms out of horizontal
+  // data lines that thicken away from the front; short accent streaks run just ahead of it.
+  function drawLogo(g: CanvasRenderingContext2D, t: number) {
+    if (!logo) return;
+    const front = sweepFront(t), rows = 8, pitch = logoH / rows;
+    const reveal = (x0: number, x1: number, thick: number) => {
+      x0 = Math.max(x0, logoX); x1 = Math.min(x1, logoX + logoW);
+      if (x1 <= x0) return;
+      g.save(); g.beginPath();
+      if (thick >= 1) g.rect(x0, logoY, x1 - x0, logoH);
+      else for (let r = 0; r < rows; r++) g.rect(x0, logoY + (r + (1 - thick) / 2) * pitch, x1 - x0, pitch * thick);
+      g.clip(); g.drawImage(logo.img, logoX, logoY, logoW, logoH); g.restore();
+    };
+    reveal(logoX, front - sweepBand, 1);
+    [0.25, 0.45, 0.65, 0.85].forEach((k, i) => reveal(front - ((i + 1) * sweepBand) / 4, front - (i * sweepBand) / 4, k));
+
+    const active = Math.sin(Math.PI * sweepAt(t));
+    if (active <= 0.01) return;
+    g.save(); g.strokeStyle = ACCENT; g.lineCap = "round"; g.lineWidth = 2;
+    for (let r = 0; r < rows; r++) for (let k = 0; k < 2; k++) {
+      const h = Math.abs(Math.sin((r * 7 + k * 13 + 1) * 12.9898) * 43758.5453) % 1;
+      const x = front + 6 + h * 110, len = 10 + ((h * 7.3) % 1) * 36;
+      g.globalAlpha = 0.55 * (1 - h) * active;
+      line(g, x, logoY + (r + 0.5) * pitch, x + len, logoY + (r + 0.5) * pitch);
+    }
+    g.restore();
+  }
+
   // Pure function of t: no state carried between frames.
   function draw(g: CanvasRenderingContext2D, t: number) {
     g.textAlign = "left"; g.textBaseline = "alphabetic";
@@ -806,7 +900,8 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
     drawEcho(g, t);
     drawWipe(g, t);
     drawTrack(g, t);
-    if (t < 3.7 || t >= 14.4) drawLabel(g, t);
+    if (t < 3.7 || (t >= 14.4 && !logo)) drawLabel(g, t);
+    if (logo && t >= 14.45) drawLogo(g, t);
     if (showStat && t >= 3.0 && t < 6.5) drawStat(g, t);
     if (showWords) drawWords(g, t);
     if (showCard) drawCard(g, t);
@@ -826,6 +921,41 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
       g.restore();
     },
   };
+}
+
+// Uploaded logos (data URLs), decoded once and shared by the preview and every export.
+interface Logo { img: HTMLImageElement; aspect: number }
+const logoCache = new Map<string, Logo>();
+export const getLogo = (src: string | undefined) => (src ? logoCache.get(src) ?? null : null);
+
+/** Decode a logo data URL; SVGs without width/height get them from their viewBox so they draw at full size. */
+export async function loadLogo(src: string | undefined) {
+  if (!src || logoCache.has(src)) return;
+  let url = src, aspect = 0;
+  if (src.startsWith("data:image/svg+xml")) {
+    try {
+      const comma = src.indexOf(","), body = src.slice(comma + 1);
+      const text = src.slice(0, comma).includes(";base64") ? decodeURIComponent(escape(atob(body))) : decodeURIComponent(body);
+      const doc = new DOMParser().parseFromString(text, "image/svg+xml"), svg = doc.documentElement;
+      const vb = (svg.getAttribute("viewBox") || "").split(/[\s,]+/).map(Number);
+      const w = parseFloat(svg.getAttribute("width") || "") || vb[2], h = parseFloat(svg.getAttribute("height") || "") || vb[3];
+      if (w > 0 && h > 0) {
+        aspect = w / h;
+        svg.setAttribute("width", String(w * 10)); svg.setAttribute("height", String(h * 10));
+        url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(new XMLSerializer().serializeToString(svg));
+      }
+    } catch { /* fall back to the raw data URL */ }
+  }
+  const img = new Image();
+  img.src = url;
+  try { await img.decode(); } catch { return; }
+  aspect = aspect || (img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : 1);
+  logoCache.set(src, { img, aspect });
+}
+
+/** Everything a frame needs before it can be drawn: web fonts and the uploaded logo. */
+export async function prepareAssets(cfg: MotionConfig) {
+  await Promise.all([loadFont(cfg.style.font), loadLogo(cfg.outro?.mode === "logo" ? cfg.outro.logo : undefined)]);
 }
 
 /** Wait for the chosen font so glyph metrics and tittle detection are right. */

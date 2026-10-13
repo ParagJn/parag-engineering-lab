@@ -84,7 +84,7 @@ export default function Preview({ cfg, w, h, fontVersion, timeRef }: Props) {
           type="range"
           className="min-w-[200px] flex-1 accent-[var(--accent)]"
           min={0}
-          max={film.duration}
+          max={film.duration - 1 / 60} // the loop point itself wraps to frame 0, so stop on the last frame
           step={1 / 60}
           value={t}
           onChange={(e) => { pause(); seekTo(+e.target.value); }}

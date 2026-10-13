@@ -3,7 +3,7 @@ import AiBrief from "./components/AiBrief";
 import ControlsPanel from "./components/ControlsPanel";
 import ExportPanel from "./components/ExportPanel";
 import Preview from "./components/Preview";
-import { loadFont } from "./engine/film";
+import { prepareAssets } from "./engine/film";
 import { DEFAULT_CONFIG, SHAPE_STYLES, SIZES, STAT_STYLES, WORDS_STYLES, type MotionConfig } from "./engine/types";
 
 const STORE_KEY = "hero-motion-studio:v1";
@@ -19,7 +19,7 @@ function loadSaved(): { cfg: MotionConfig; sizeId: string; custom: { w: number; 
     if (!SHAPE_STYLES.some((o) => o.id === sc.shape)) sc.shape = DEFAULT_CONFIG.scenes.shape;
     if (!WORDS_STYLES.some((o) => o.id === sc.words)) sc.words = DEFAULT_CONFIG.scenes.words;
     return {
-      cfg: { ...DEFAULT_CONFIG, ...s.cfg, text: { ...DEFAULT_CONFIG.text, ...s.cfg?.text }, style: { ...DEFAULT_CONFIG.style, ...s.cfg?.style }, scenes: sc, sound: { enabled: false } },
+      cfg: { ...DEFAULT_CONFIG, ...s.cfg, text: { ...DEFAULT_CONFIG.text, ...s.cfg?.text }, style: { ...DEFAULT_CONFIG.style, ...s.cfg?.style }, outro: { ...DEFAULT_CONFIG.outro, ...s.cfg?.outro }, scenes: sc, sound: { enabled: false } },
       sizeId: SIZES.some((z) => z.id === s.sizeId) ? s.sizeId : "hero",
       custom: s.custom ?? fallback.custom,
     };
@@ -44,9 +44,10 @@ export default function App() {
 
   useEffect(() => {
     let live = true;
-    loadFont(cfg.style.font).then(() => live && setFontVersion((v) => v + 1));
+    prepareAssets(cfg).then(() => live && setFontVersion((v) => v + 1));
     return () => { live = false; };
-  }, [cfg.style.font]);
+    // only the inputs that need loading: the font and the logo
+  }, [cfg.style.font, cfg.outro.mode, cfg.outro.logo]);
 
   const size = SIZES.find((z) => z.id === sizeId)!;
   const w = sizeId === "custom" ? even(custom.w) : size.w;

@@ -1,7 +1,7 @@
 import { applyPalette, GIFEncoder, quantize } from "gifenc";
 import { ArrayBufferTarget, Muxer } from "mp4-muxer";
 import pptxgen from "pptxgenjs";
-import { createFilm, loadFont } from "../engine/film";
+import { createFilm, prepareAssets } from "../engine/film";
 import type { MotionConfig } from "../engine/types";
 
 export interface ExportJob {
@@ -42,7 +42,7 @@ const blobToDataUrl = (blob: Blob) =>
 
 // ------------------------------------------------------------ PNG
 export async function exportPng(job: ExportJob, seconds: number): Promise<Blob> {
-  await loadFont(job.cfg.style.font);
+  await prepareAssets(job.cfg);
   const { canvas, g } = frameCanvas(job.w, job.h);
   createFilm(job.cfg, job.w, job.h).seek(g, seconds);
   return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("PNG encode failed"))), "image/png"));
@@ -62,7 +62,7 @@ export async function exportMp4(job: ExportJob, fps: number): Promise<Blob> {
   }
   if (!codec) throw new Error(`This browser cannot encode H.264 at ${w}×${h}.`);
 
-  await loadFont(job.cfg.style.font);
+  await prepareAssets(job.cfg);
   const film = createFilm(job.cfg, w, h);
   const { canvas, g } = frameCanvas(w, h);
   const muxer = new Muxer({ target: new ArrayBufferTarget(), video: { codec: "avc", width: w, height: h, frameRate: fps }, fastStart: "in-memory" });
@@ -96,7 +96,7 @@ export async function exportMp4(job: ExportJob, fps: number): Promise<Blob> {
 export async function exportGif(job: ExportJob, fps: number, maxWidth: number): Promise<Blob> {
   const scale = Math.min(1, maxWidth / job.w);
   const w = Math.round(job.w * scale), h = Math.round(job.h * scale);
-  await loadFont(job.cfg.style.font);
+  await prepareAssets(job.cfg);
   const film = createFilm(job.cfg, w, h);
   const { g } = frameCanvas(w, h);
   const gif = GIFEncoder();

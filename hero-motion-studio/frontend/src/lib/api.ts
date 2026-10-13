@@ -6,6 +6,7 @@ export interface Health {
 
 export interface Suggestion {
   intro: string;
+  ending: string;
   hero: string;
   stat: string;
   words: string[];

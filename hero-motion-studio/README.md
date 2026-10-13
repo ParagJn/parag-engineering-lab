@@ -63,10 +63,11 @@ Keyboard: `Space` play/pause · `←` / `→` step one frame.
 
 | Area | Options |
 |---|---|
-| **Text** | Intro word · hero word (an `i` or `j` gets the accent dot as its tittle) · stat (the spring graph really overshoots by this %, and counters keep any prefix/suffix such as `$1.2M` or `3.5x`) · 3–6 orbit words · end-card title, subtitle and footnote |
+| **Text** | Intro word · ending word (replaces the intro on the final frame; blank keeps the loop seamless) · hero word (an `i` or `j` gets the accent dot as its tittle) · stat (the spring graph really overshoots by this %, and counters keep any prefix/suffix such as `$1.2M` or `3.5x`) · 3–6 orbit words · end-card title, subtitle and footnote |
 | **Stat style** | Spring graph · Bar chart · Counter · Progress ring |
 | **Shape style** | Square → pill · Triangle → circle · Star burst · Blob |
 | **Words style** | Orbit · Floating · List (dot is the bullet) · Tags |
+| **Ending** | *Toggle row*: the last frame reads "[Ending] [hero]" (blank = same as the intro, seamless loop) · *Logo sweep*: upload your own SVG/PNG logo; the dot becomes a scan head and the logo forms from data lines left → right over ~1.2s, then holds static, fitted in a 1.5 × 1.5 in box at slide centre |
 | **Scene switches** | Stat, shape, words and end card can each be turned off. The dot bridges the gap. The toggle/hero opening and the return trip always play so the loop closes. |
 | **Style** | Themes: warm paper, night, cool grey, navy · accent swatches or any colour · custom background and ink · fonts: Inter Tight, Archivo, Manrope, Sora, Plus Jakarta Sans, Outfit |
 | **Timing** | Loop duration 6–30s. The stat and words scenes play slower than the rest so they can be read. |
@@ -116,7 +117,7 @@ The engine runs on an internal 15-unit timeline. A timing map stretches or colla
 | 6.5 – 9.0 | **Shape** | The dot grows past all four corners, the chosen black shape spins and morphs inside it, then everything contracts to a dot on black. |
 | 9.0 – 10.75 | **Words** · 1.35× slower | The words appear around the dot in the chosen style. |
 | 10.75 – 13.55 | **Reveal / end card** | Letters fly outward into dots, a halftone field grows past the frame edges and flips to ink, and the end card rises. The dot lands on the title's i. |
-| 13.55 – 15.0 | **Return** (always on) | The dot travels back through a halftone echo and a small spring curve to the toggle. The last frame matches the first. |
+| 13.55 – 15.0 | **Return** (always on) | The dot travels back through a halftone echo and a small spring curve to the toggle. With no Ending set, the last frame matches the first; with one, the toggle row reads "[Ending] [hero]". |
 
 When a scene is switched off, it collapses to a short bridge: for example, with the stat off, the dot hops straight from the hero's i to the centre.
 

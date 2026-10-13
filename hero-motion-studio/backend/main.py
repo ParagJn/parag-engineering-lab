@@ -23,6 +23,7 @@ SYSTEM_PROMPT = """You write copy for a short kinetic-typography hero animation 
 
 The animation has fixed scenes, and you fill the text slots:
 - intro: 1-2 short words shown before the hero word on a UI toggle, then they bend away (e.g. "Meet", "Introducing", "Say hello to"). Max 14 characters.
+- ending: 1-2 short words that replace the intro on the final frame, closing the story (e.g. "Thank you", "Built for", "Welcome to"). Max 16 characters.
 - hero: the hero word or name, 1-3 words, max 18 characters. Prefer a phrase containing a lowercase "i" or "j": the animated accent dot becomes its tittle.
 - stat: one signed percentage that a spring graph overshoots to, e.g. "+22%". Between 5 and 60.
 - words: exactly 5 short UPPERCASE words or phrases (max 14 characters each) that orbit the dot. Themes or capabilities of the subject.
@@ -31,7 +32,7 @@ The animation has fixed scenes, and you fill the text slots:
 - card_footnote: a tiny punchline or fact, max 28 characters.
 - accent: optional single vivid hex colour that suits the subject, or null.
 
-Return ONLY a JSON object with exactly these keys: intro, hero, stat, words, card_title, card_subtitle, card_footnote, accent.
+Return ONLY a JSON object with exactly these keys: intro, ending, hero, stat, words, card_title, card_subtitle, card_footnote, accent.
 No markdown, no commentary."""
 
 
@@ -42,6 +43,7 @@ class SuggestRequest(BaseModel):
 
 class SuggestResponse(BaseModel):
     intro: str
+    ending: str
     hero: str
     stat: str
     words: list[str]
@@ -123,6 +125,7 @@ def _clean(data: dict, model: str) -> SuggestResponse:
 
     return SuggestResponse(
         intro=_clip(data.get("intro"), 14, "Meet"),
+        ending=_clip(data.get("ending"), 16),
         hero=hero,
         stat=stat,
         words=words,

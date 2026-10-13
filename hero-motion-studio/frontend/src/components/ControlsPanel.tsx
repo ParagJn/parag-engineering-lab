@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { timeline, type SceneId } from "../engine/film";
 import { ACCENTS, FONTS, SHAPE_STYLES, STAT_STYLES, THEMES, WORDS_STYLES, type MotionConfig, type MotionText } from "../engine/types";
 
@@ -53,7 +54,18 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 export default function ControlsPanel({ cfg, setCfg }: Props) {
   const setText = <K extends keyof MotionText>(k: K, v: MotionText[K]) => setCfg((c) => ({ ...c, text: { ...c.text, [k]: v } }));
   const setStyle = (patch: Partial<MotionConfig["style"]>) => setCfg((c) => ({ ...c, style: { ...c.style, ...patch } }));
-  const { text, style } = cfg;
+  const { text, style, outro } = cfg;
+  const [logoError, setLogoError] = useState("");
+  const setOutro = (patch: Partial<MotionConfig["outro"]>) => setCfg((c) => ({ ...c, outro: { ...c.outro, ...patch } }));
+  const onLogo = (file: File | undefined) => {
+    setLogoError("");
+    if (!file) return;
+    if (file.size > 2_000_000) { setLogoError("Logo is over 2 MB — please use an SVG or a smaller PNG."); return; }
+    const r = new FileReader();
+    r.onload = () => setOutro({ logo: String(r.result), logoName: file.name });
+    r.onerror = () => setLogoError("Could not read that file.");
+    r.readAsDataURL(file);
+  };
   const show = cfg.scenes.show;
   const setShow = (id: SceneId, on: boolean) => setCfg((c) => ({ ...c, scenes: { ...c.scenes, show: { ...c.scenes.show, [id]: on } } }));
   const natural = Math.round(timeline(cfg).natural * 2) / 2;
@@ -64,6 +76,40 @@ export default function ControlsPanel({ cfg, setCfg }: Props) {
         <div className="grid grid-cols-[1fr_2fr] gap-2">
           <Field label="Intro"><input className="input" value={text.intro} maxLength={14} onChange={(e) => setText("intro", e.target.value)} /></Field>
           <Field label="Hero word" hint="an i or j gets the dot"><input className="input" value={text.hero} maxLength={24} onChange={(e) => setText("hero", e.target.value)} /></Field>
+        </div>
+        <div className="flex flex-col gap-2 rounded-md border border-neutral-800 p-2.5">
+          <span className="text-sm text-neutral-300">Ending <span className="text-xs text-neutral-500">· the last frame</span></span>
+          <div className="flex gap-2">
+            {(["toggle", "logo"] as const).map((m) => (
+              <button key={m} className={`chip ${outro.mode === m ? "chip-on" : ""}`} onClick={() => setOutro({ mode: m })}>
+                {m === "toggle" ? "Toggle row" : "Logo sweep"}
+              </button>
+            ))}
+          </div>
+          {outro.mode === "toggle" ? (
+            <Field label="Ending word" hint="ending + hero word · blank = loops back to intro">
+              <input className="input" value={text.ending} maxLength={16} placeholder={text.intro || "e.g. Thank you"} onChange={(e) => setText("ending", e.target.value)} />
+            </Field>
+          ) : (
+            <>
+              <p className="text-xs text-neutral-500">Your logo is revealed left to right by a data sweep, then holds, 1.5 × 1.5 in at slide centre. Use an official file you are authorised to use (SVG or transparent PNG).</p>
+              <div className="flex items-center gap-2">
+                <label className="btn cursor-pointer">
+                  {outro.logo ? "Replace logo" : "Upload logo"}
+                  <input type="file" accept="image/svg+xml,image/png,image/webp,image/jpeg" className="hidden" onChange={(e) => onLogo(e.target.files?.[0])} />
+                </label>
+                {outro.logo && (
+                  <>
+                    <img src={outro.logo} alt="" className="h-8 max-w-24 rounded bg-neutral-200 object-contain p-1" />
+                    <span className="min-w-0 flex-1 truncate text-xs text-neutral-400">{outro.logoName}</span>
+                    <button className="text-xs text-neutral-500 hover:text-neutral-300" onClick={() => setOutro({ logo: "", logoName: "" })}>Remove</button>
+                  </>
+                )}
+              </div>
+              {logoError && <p className="text-xs text-red-400">{logoError}</p>}
+              {!outro.logo && <p className="text-xs text-amber-400/80">Until a logo is uploaded, the film ends on the toggle row.</p>}
+            </>
+          )}
         </div>
         <Field label="Stat" hint="graph overshoots by this %"><input className="input" value={text.stat} maxLength={8} onChange={(e) => setText("stat", e.target.value)} /></Field>
         <Field label="Orbit words" hint="comma separated, 3–6">

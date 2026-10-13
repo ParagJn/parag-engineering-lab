@@ -26,7 +26,7 @@ export default function AiBrief({ setCfg }: Props) {
       const s = await suggest(brief, tone);
       setCfg((c) => ({
         ...c,
-        text: { intro: s.intro, hero: s.hero, stat: s.stat, words: s.words, cardTitle: s.card_title, cardSubtitle: s.card_subtitle, cardFootnote: s.card_footnote },
+        text: { intro: s.intro, ending: s.ending, hero: s.hero, stat: s.stat, words: s.words, cardTitle: s.card_title, cardSubtitle: s.card_subtitle, cardFootnote: s.card_footnote },
         style: useAccent && s.accent ? { ...c.style, accent: s.accent } : c.style,
       }));
     } catch (e) {
