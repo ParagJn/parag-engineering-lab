@@ -1,5 +1,5 @@
 import { clamp, ein, einBack, eio, eout, expLerp, lerp, mixHex, prog, smooth, sp, springStep, squash } from "./math";
-import type { MotionConfig } from "./types";
+import type { MotionConfig, MotionFeel } from "./types";
 
 /**
  * The orange-dot film as a pure function of time.
@@ -20,41 +20,79 @@ export interface Film {
 }
 
 /**
- * Scene segments on the internal timeline. `pace` > 1 plays a scene slower than the base timeline;
- * a scene that is switched off collapses to `skip` units, where the dot makes a short bridging move.
+ * Scene segments on the internal timeline. `pace` > 1 plays a stretch slower than the base timeline.
+ * Holds (`hold`) are the stretches where text sits still on screen; with readable holds on they are
+ * stretched to the reading time of that text. A switched-off scene collapses to its scene's `skip`
+ * units (shared across its stretches), where the dot makes a short bridging move.
  * The toggle/hero opening and the return trip are always on so the loop closes.
  */
 export type SceneId = "stat" | "shape" | "words" | "card";
-const SEGMENTS: { id: "open" | SceneId | "return" | "outro"; a: number; b: number; pace: number; skip: number }[] = [
-  { id: "open", a: 0, b: 3.0, pace: 1, skip: 0 },
-  { id: "stat", a: 3.0, b: 6.5, pace: 1.25, skip: 0.8 },
-  { id: "shape", a: 6.5, b: 9.0, pace: 1, skip: 0.9 },
-  { id: "words", a: 9.0, b: 10.75, pace: 1.35, skip: 0.25 },
-  { id: "card", a: 10.75, b: 13.55, pace: 1, skip: 0.6 },
-  { id: "return", a: 13.55, b: 14.3, pace: 1, skip: 0 },
+type HoldId = "hero" | "stat" | "words" | "card";
+const SEGMENTS: { scene?: SceneId; a: number; b: number; pace: number; hold?: HoldId; outro?: true }[] = [
+  { a: 0, b: 2.4, pace: 1 },
+  { a: 2.4, b: 3.0, pace: 1, hold: "hero" },
+  { scene: "stat", a: 3.0, b: 5.45, pace: 1.25 },
+  { scene: "stat", a: 5.45, b: 5.95, pace: 1.25, hold: "stat" },
+  { scene: "stat", a: 5.95, b: 6.5, pace: 1.25 },
+  { scene: "shape", a: 6.5, b: 9.0, pace: 1 },
+  { scene: "words", a: 9.0, b: 10.75, pace: 1.35, hold: "words" },
+  { scene: "card", a: 10.75, b: 12.7, pace: 1 },
+  { scene: "card", a: 12.7, b: 13.5, pace: 1, hold: "card" },
+  { scene: "card", a: 13.5, b: 13.55, pace: 1 },
+  { a: 13.55, b: 14.3, pace: 1 },
   // Toggle-row ending at base pace; the logo outro is stretched so the sweep runs ~1.2s and then holds.
-  { id: "outro", a: 14.3, b: TIMELINE, pace: 1, skip: 0 },
+  { a: 14.3, b: TIMELINE, pace: 1, outro: true },
 ];
+const SCENE_SPAN: Record<SceneId, [number, number, number]> = { stat: [3.0, 6.5, 0.8], shape: [6.5, 9.0, 0.9], words: [9.0, 10.75, 0.25], card: [10.75, 13.55, 0.6] };
 const LOGO_OUTRO_PACE = 3.2;
+
+/**
+ * Motion feel: spring damping per element class (higher = less overshoot), how much the dot
+ * squashes on landings, and how much longer text holds.
+ */
+export const FEELS: Record<MotionFeel, { ui: number; text: number; shape: number; data: number; dot: number; squash: number; hold: number }> = {
+  precise: { ui: 0.9, text: 0.88, shape: 0.78, data: 0.75, dot: 0.82, squash: 0.35, hold: 1 },
+  lively: { ui: 0.55, text: 0.6, shape: 0.55, data: 0.42, dot: 0.6, squash: 1, hold: 1 },
+  bold: { ui: 0.62, text: 0.8, shape: 0.4, data: 0.38, dot: 0.5, squash: 1.4, hold: 1.3 },
+};
+export const feelOf = (cfg: MotionConfig) => FEELS[cfg.motion?.feel ?? "lively"] ?? FEELS.lively;
+
+const countWords = (s: string) => s.trim().split(/\s+/).filter(Boolean).length;
+
+/** How much a hold stretches so its text can be read (≈ reading time / designed hold time). */
+function holdPace(cfg: MotionConfig, id: HoldId, base: number) {
+  if (cfg.motion?.readable === false) return base;
+  const mul = feelOf(cfg).hold, len = { hero: 0.6, stat: 0.5, words: 1.75, card: 0.8 }[id];
+  const words = cfg.text.words.filter((w) => w.trim()).length;
+  const cardWords = countWords([cfg.text.cardTitle || cfg.text.hero, cfg.text.cardSubtitle, cfg.text.cardFootnote].join(" "));
+  const need = { hero: 0.35 + 0.25 * countWords(cfg.text.hero), stat: 0.9, words: 0.8 + 0.4 * words, card: 0.5 + 0.3 * cardWords }[id];
+  return Math.min(4, Math.max(base, need / len)) * mul;
+}
 
 export function sceneOn(cfg: MotionConfig, id: SceneId) {
   return cfg.scenes.show?.[id] !== false;
 }
 
-/** Maps real seconds onto the internal timeline (and back), honouring pace and switched-off scenes. */
+/** Maps real seconds onto the internal timeline (and back), honouring pace, reading holds and switched-off scenes. */
 export function timeline(cfg: MotionConfig) {
   const logoOutro = cfg.outro?.mode === "logo" && !!cfg.outro.logo;
   const segs = SEGMENTS.map((s) => {
-    if (s.id === "outro") return { ...s, len: (s.b - s.a) * (logoOutro ? LOGO_OUTRO_PACE : 1) };
-    if (s.id === "open" || s.id === "return") return { ...s, len: (s.b - s.a) * s.pace };
-    return { ...s, len: sceneOn(cfg, s.id) ? (s.b - s.a) * s.pace : s.skip };
+    if (s.scene && !sceneOn(cfg, s.scene)) {
+      const [a, b, skip] = SCENE_SPAN[s.scene];
+      return { ...s, len: (skip * (s.b - s.a)) / (b - a) };
+    }
+    const pace = s.outro ? (logoOutro ? LOGO_OUTRO_PACE : 1) : s.hold ? holdPace(cfg, s.hold, s.pace) : s.pace;
+    return { ...s, len: (s.b - s.a) * pace };
   });
   const natural = segs.reduce((n, s) => n + s.len, 0);
+  const duration = cfg.autoDuration ? natural : cfg.duration;
   return {
     /** Loop length in seconds at the designed pace. */
     natural,
+    /** Loop length actually used: the designed pace when Auto is on. */
+    duration,
     toInternal(seconds: number) {
-      let tau = ((((seconds / cfg.duration) % 1) + 1) % 1) * natural;
+      let tau = ((((seconds / duration) % 1) + 1) % 1) * natural;
       for (const s of segs) {
         if (tau <= s.len) return s.len > 0 ? s.a + ((s.b - s.a) * tau) / s.len : s.b;
         tau -= s.len;
@@ -64,10 +102,10 @@ export function timeline(cfg: MotionConfig) {
     toSeconds(t: number) {
       let acc = 0;
       for (const s of segs) {
-        if (t <= s.b) return ((acc + (clamp((t - s.a) / (s.b - s.a)) * s.len)) / natural) * cfg.duration;
+        if (t <= s.b) return ((acc + (clamp((t - s.a) / (s.b - s.a)) * s.len)) / natural) * duration;
         acc += s.len;
       }
-      return cfg.duration;
+      return duration;
     },
   };
 }
@@ -114,6 +152,10 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
   const { style } = cfg;
   const showStat = sceneOn(cfg, "stat"), showShape = sceneOn(cfg, "shape"), showWords = sceneOn(cfg, "words"), showCard = sceneOn(cfg, "card");
   const tl = timeline(cfg);
+  const FEEL = feelOf(cfg);
+  const springOf = (z: number) => (p: number) => sp(p, Math.min(0.95, z), z < 0.5 ? 16 : 15);
+  const spUI = springOf(FEEL.ui), spText = springOf(FEEL.text), spShape = springOf(FEEL.shape), spData = springOf(FEEL.data), spDot = springOf(FEEL.dot);
+  const sq = (t: number, t0: number) => squash(t, t0, 0.3, 0.32 * FEEL.squash);
   const PAPER = style.paper, INK = style.ink, ACCENT = style.accent, MUTE = mixHex(PAPER, INK, 0.12);
   const FONT = `"${style.font}", "Helvetica Neue", Arial, sans-serif`;
   const f = (w: number, s: number) => `${w} ${s}px ${FONT}`;
@@ -155,6 +197,8 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
   const ox = width / 2 - CX * u, oy = height / 2 - CY * u;
   const V = { x0: -ox / u, y0: -oy / u, x1: (width - ox) / u, y1: (height - oy) / u };
   const halfDiag = Math.hypot(V.x1 - V.x0, V.y1 - V.y0) / 2;
+  // Small text never renders below ~13 real pixels, so tiles and small GIFs stay readable.
+  const legible = (size: number) => Math.max(size, 13 / u);
   const cornerDist = (p: Pt) => Math.max(...[[V.x0, V.y0], [V.x1, V.y0], [V.x0, V.y1], [V.x1, V.y1]].map(([x, y]) => Math.hypot(x - p.x, y - p.y)));
 
   // ------------------------------------------------------------ layout
@@ -217,11 +261,11 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
     : [0.55, 0.78, 0.66, 1].map((k) => (k * H5) / (1 + lift)).concat(H5);
   const heroBarH = (t: number) =>
     negative
-      ? t < 5.0 ? BREF * sp(prog(t, 4.7, 5.0), 0.6, 15) : lerp(BREF, barHs[4], sp(prog(t, 5.0, 5.5), 0.42, 15))
-      : H5 * sp(prog(t, 4.7, 5.4), 0.42, 15);
+      ? t < 5.0 ? BREF * spData(prog(t, 4.7, 5.0)) : lerp(BREF, barHs[4], spData(prog(t, 5.0, 5.5)))
+      : H5 * spData(prog(t, 4.7, 5.4));
   const barX = (i: number) => BX0 + i * (BW + BGAP) + BW / 2;
   const barH = (i: number, t: number) =>
-    i < 4 ? barHs[i] * sp(prog(t, 3.15 + i * 0.12, 3.6 + i * 0.12), 0.6, 14) : heroBarH(t);
+    i < 4 ? barHs[i] * spData(prog(t, 3.15 + i * 0.12, 3.6 + i * 0.12)) : heroBarH(t);
   const barTop = (i: number, t: number): Pt => ({ x: barX(i), y: BASE - (i < 4 ? barH(i, t) : 0) - DR });
 
   const TX0 = 460, TX1 = 1460, TY = 780;
@@ -235,7 +279,7 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
     spring: {
       land: G0,
       end: E,
-      dot: (t) => { const tau = prog(t, 3.5, 5.5), s = squash(t, 3.5); return { x: G0.x + tau * GW, y: gY(tau), r: DR, sx: 1 + s, sy: 1 - s }; },
+      dot: (t) => { const tau = prog(t, 3.5, 5.5), s = sq(t, 3.5); return { x: G0.x + tau * GW, y: gY(tau), r: DR, sx: 1 + s, sy: 1 - s }; },
     },
     bars: {
       land: barTop(0, 3.5),
@@ -243,22 +287,22 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
       dot: (t) => {
         if (t < 4.7) {
           const h = Math.min(3, Math.floor((t - 3.5) / 0.3)), e = prog(t, 3.5 + h * 0.3, 3.8 + h * 0.3);
-          const A = barTop(h, t), B = barTop(h + 1, t), s = squash(t, 3.5 + h * 0.3);
+          const A = barTop(h, t), B = barTop(h + 1, t), s = sq(t, 3.5 + h * 0.3);
           return { x: lerp(A.x, B.x, e), y: lerp(A.y, B.y, e) - 4 * 110 * e * (1 - e), r: DR, sx: 1 + s, sy: 1 - s };
         }
-        const s = squash(t, 4.7);
+        const s = sq(t, 4.7);
         return { x: barX(4), y: BASE - barH(4, t) - DR, r: DR, sx: 1 + s, sy: 1 - s };
       },
     },
     counter: {
       land: { x: CT0, y: TY },
       end: { x: CT1, y: TY },
-      dot: (t) => { const s = squash(t, 3.5); return { x: lerp(CT0, CT1, statSpring(t)), y: TY, r: DR, sx: 1 + s, sy: 1 - s }; },
+      dot: (t) => { const s = sq(t, 3.5); return { x: lerp(CT0, CT1, statSpring(t)), y: TY, r: DR, sx: 1 + s, sy: 1 - s }; },
     },
     ring: {
       land: ringPt(0),
       end: ringPt(1),
-      dot: (t) => { const s = squash(t, 3.5); return { ...ringPt(statSpring(t)), r: DR, sx: 1 + s, sy: 1 - s }; },
+      dot: (t) => { const s = sq(t, 3.5); return { ...ringPt(statSpring(t)), r: DR, sx: 1 + s, sy: 1 - s }; },
     },
   };
   const statStyle = STATS[cfg.scenes.stat] ? cfg.scenes.stat : "spring";
@@ -341,7 +385,7 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
   const tagSize = 50 * Math.min(1, 1400 / Math.max(...tagProbe.map((r) => r.total)));
   const tags = buildTags(tagSize).flatMap((r) => r.chips);
   const tagAt = (k: number, t: number) => {
-    const e = sp(prog(t, 9.0 + k * wordStep, 9.5 + k * wordStep), 0.6, 13), by = Math.sin(t * 2 + k * 1.3) * 8 * clamp(e);
+    const e = spText(prog(t, 9.0 + k * wordStep, 9.5 + k * wordStep)), by = Math.sin(t * 2 + k * 1.3) * 8 * clamp(e);
     return { x: lerp(C.x, tags[k].cx, e), y: lerp(C.y, tags[k].cy, e) + by, e };
   };
 
@@ -358,12 +402,19 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
       from = k ? pts[k - 1] : C; to = pts[k]; t0 = 9 + k * wordStep;
     }
     const hop = t >= 10.75 ? 0.3 : Math.min(0.3, wordStep);
-    const p = sp(prog(t, t0, t0 + hop), 0.6, 15), s = squash(t, t0 + hop);
+    const p = spDot(prog(t, t0, t0 + hop)), s = sq(t, t0 + hop);
     return { x: lerp(from.x, to.x, p), y: lerp(from.y, to.y, p) - Math.sin(Math.PI * clamp(p)) * 40, r: Math.min(DR, listSize * 0.22), sx: 1 + s, sy: 1 - s };
   }
 
   const c1 = Math.min(170, (170 * 1500) / textW(cardText[0], 170, 800));
-  const card = ([[cardText[0], c1, 800, 470], [cardText[1], 60, 500, 590], [cardText[2], 38, 500, 676]] as const).map(
+  // Subtitle and footnote are kept legible in small outputs but never wider than the title area.
+  const fitLine = (str: string, size: number, weight: number) => Math.min(size, (size * 1500) / Math.max(1, textW(str, size, weight)));
+  const cardSpec: [string, number, number, number][] = [
+    [cardText[0], c1, 800, 470],
+    [cardText[1], fitLine(cardText[1], legible(60), 500), 500, 590],
+    [cardText[2], fitLine(cardText[2], legible(38), 500), 500, 676],
+  ];
+  const card = cardSpec.map(
     ([s, size, weight, base]) => ({ size, weight, letters: lineLayout(s, size, weight, (DW - textW(s, size, weight)) / 2, base) }),
   );
   const cardDot = dotSpec(card[0].letters, dotIndex(cardText[0]));
@@ -423,7 +474,7 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
       const j = exitOrder[i], q = ein(prog(t, 1.45 + j * 0.05, 1.85 + j * 0.05));
       return { x: x - 40 * q, y: y + 100 * q, size, rot: -0.9 * q, a: 1 - q };
     }
-    const B = heroL[k], p = sp(prog(t, 1.7 + k * 0.03, 2.35 + k * 0.03), 0.6, 14);
+    const B = heroL[k], p = spText(prog(t, 1.7 + k * 0.03, 2.35 + k * 0.03));
     x = lerp(c.x, B.x, p); y = lerp(c.y, B.y, p); size = lerp(LS, HS, p);
     rot = Math.sin(Math.PI * clamp(p)) * 0.14 * (k % 2 ? 1 : -1);
     const q = ein(prog(t, 3.0 + k * 0.025, 3.4 + k * 0.025));
@@ -431,7 +482,7 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
   }
   // Return: the ending row's letters rise into place.
   function endXf(i: number, t: number): Xf {
-    const c = endL[i], r = sp(prog(t, 14.45 + i * 0.017, 14.7 + i * 0.017), 0.6, 15);
+    const c = endL[i], r = spText(prog(t, 14.45 + i * 0.017, 14.7 + i * 0.017));
     return { x: c.x, y: c.y + (1 - r) * 56, size: LS, rot: 0, a: clamp(r * 1.6) };
   }
   const heroTittle = (t: number) => tittleAt(labelXf(labelDot, t), labelL[labelDot].u, heroDot.spec);
@@ -439,7 +490,7 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
   const CARD_START = [12.35, 12.5, 12.62], CARD_STAG = [0.02, 0.01, 0.012];
   function cardXf(li: number, k: number, t: number): Xf {
     const l = card[li].letters[k];
-    const a = sp(prog(t, CARD_START[li] + k * CARD_STAG[li], CARD_START[li] + k * CARD_STAG[li] + 0.4), 0.6, 14);
+    const a = spText(prog(t, CARD_START[li] + k * CARD_STAG[li], CARD_START[li] + k * CARD_STAG[li] + 0.4));
     const q = ein(prog(t, 13.5 + l.gi * 0.008, 13.85 + l.gi * 0.008));
     return { x: l.x, y: l.y + (1 - a) * 50 + 120 * q, size: card[li].size, rot: 0.3 * q * (l.gi % 2 ? 1 : -1), a: clamp(a * 1.6) * (1 - q) };
   }
@@ -450,13 +501,13 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
     let x: number, y: number, r: number, sx = 1, sy = 1;
     if (t < 1.0) { x = knobOff.x; y = knobOff.y; r = KR; }
     else if (t < 1.6) {
-      const p = sp(prog(t, 1.0, 1.6), 0.55, 15), v = Math.sin(Math.PI * prog(t, 1.0, 1.35));
+      const p = spUI(prog(t, 1.0, 1.6)), v = Math.sin(Math.PI * prog(t, 1.0, 1.35));
       x = lerp(knobOff.x, knobOn.x, p); y = knobOn.y; r = KR; sx = 1 + 0.28 * v; sy = 1 - 0.18 * v;
     } else if (t < 2.3) {
       const T = heroTittle(t), e = eio(prog(t, 1.6, 2.3));
       x = lerp(knobOn.x, T.x, e); y = lerp(knobOn.y, T.y, e) - Math.sin(Math.PI * e) * 220; r = lerp(KR, DR, e);
     } else if (t < 3.0) {
-      const T = heroTittle(t), s = squash(t, 2.3), a = eio(prog(t, 2.78, 3.0));
+      const T = heroTittle(t), s = sq(t, 2.3), a = eio(prog(t, 2.78, 3.0));
       r = DR; x = T.x; y = T.y + r * 0.3 * a; sx = (1 + s) * (1 + 0.2 * a); sy = (1 - s) * (1 - 0.3 * a);
     } else if (t < 6.45 && !showStat) {
       // stat off: hop straight from the hero's i to the centre
@@ -484,19 +535,19 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
     } else if (t < 12.25) {
       let pulse = 0;
       for (let j = 0; j < words.length; j++) pulse += Math.sin(Math.PI * prog(t, 9 + j * wordStep, 9.2 + j * wordStep)) * 0.18;
-      const s = squash(t, 9.0);
+      const s = sq(t, 9.0);
       x = C.x; y = C.y; r = DR * (1 + pulse); sx = 1 + s; sy = 1 - s;
     } else if (t < 12.75) {
       const T = cardTittle(t), e = eio(prog(t, 12.25, 12.75));
       x = lerp(C.x, T.x, e); y = lerp(C.y, T.y, e) - Math.sin(Math.PI * e) * 170; r = lerp(DR, DR2, e);
     } else if (t < 13.55) {
-      const T = cardTittle(t), s = squash(t, 12.75), a = eio(prog(t, 13.35, 13.55));
+      const T = cardTittle(t), s = sq(t, 12.75), a = eio(prog(t, 13.35, 13.55));
       r = DR2; x = T.x; y = T.y + r * 0.3 * a; sx = (1 + s) * (1 + 0.2 * a); sy = (1 - s) * (1 - 0.3 * a);
     } else if (t < 13.95) {
       const S = showCard ? cardTittle(13.55) : C, e = prog(t, 13.55, 13.95);
       x = lerp(S.x, P1.x, e); y = lerp(S.y, P1.y, e) - 4 * 200 * e * (1 - e); r = lerp(showCard ? DR2 : DR, DR, e);
     } else if (t < 14.35) {
-      const tau = prog(t, 13.95, 14.35), s = squash(t, 13.95);
+      const tau = prog(t, 13.95, 14.35), s = sq(t, 13.95);
       x = P1.x + tau * 640; y = P1.y - gy(tau) * 220; r = DR; sx = 1 + s; sy = 1 - s;
     } else if (logo) {
       if (t < 14.45) {
@@ -506,7 +557,7 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
         x = Math.min(sweepFront(t), logoX + logoW); y = CY; r = 9 * (1 - prog(t, 14.8, 14.88));
       }
     } else if (t < 14.92) {
-      const p = sp(prog(t, 14.35, 14.92), 0.6, 15);
+      const p = spDot(prog(t, 14.35, 14.92));
       x = lerp(P2.x, endKnob.x, p); y = lerp(P2.y, endKnob.y, p) - Math.sin(Math.PI * clamp(p)) * 180; r = lerp(DR, KR, clamp(p));
     } else { x = endKnob.x; y = endKnob.y; r = KR; }
     return { x, y, r, sx, sy };
@@ -530,7 +581,7 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
   function drawTrack(g: CanvasRenderingContext2D, t: number) {
     let s: number, col = MUTE;
     if (t < 2.0) { col = mixHex(MUTE, INK, prog(t, 1.0, 1.18)); s = 1 - einBack(prog(t, 1.55, 1.95)); }
-    else if (t >= 14.5 && !logo) s = sp(prog(t, 14.5, 14.9), 0.6, 15);
+    else if (t >= 14.5 && !logo) s = spUI(prog(t, 14.5, 14.9));
     else return;
     const tr = t >= 14.5 ? endTrack : track;
     shapeState(g, { x: tr.cx, y: tr.cy, w: tr.w * s, h: tr.h * s, rad: Infinity }, col);
@@ -554,7 +605,7 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
     if (er > 0) { const cx = x0 + er * span; g.beginPath(); g.rect(cx, V.y0, V.x1 - cx, V.y1 - V.y0); g.clip(); }
   }
   function drawCallout(g: CanvasRenderingContext2D, t: number, x: number, y: number) {
-    const c = sp(prog(t, 5.0, 5.45), 0.5, 15) * (1 - einBack(prog(t, 6.0, 6.3)));
+    const c = spText(prog(t, 5.0, 5.45)) * (1 - einBack(prog(t, 6.0, 6.3)));
     if (c <= 0.001) return;
     const size = 130;
     g.save(); g.translate(x, y); g.scale(c, c);
@@ -605,12 +656,12 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
     g.lineCap = "round"; g.lineWidth = 8;
     g.strokeStyle = mixHex(PAPER, INK, 0.18); line(g, TX0, TY, lerp(TX0, TX1, a), TY);
     if (t >= 3.5) { g.strokeStyle = INK; line(g, CT0, TY, lerp(CT0, CT1, k), TY); }
-    g.font = f(500, 26); g.fillStyle = INK; g.globalAlpha = 0.5 * a;
+    g.font = f(500, legible(26)); g.fillStyle = INK; g.globalAlpha = 0.5 * a;
     g.textAlign = "left"; g.fillText(negative ? fmtStat(1) : "0", TX0 - 8, TY + 52);
     g.textAlign = "right"; g.fillText(negative ? "0" : fmtStat(1), TX1 + 8, TY + 52);
     g.restore();
 
-    const pop = sp(prog(t, 3.35, 3.75), 0.55, 14);
+    const pop = spText(prog(t, 3.35, 3.75));
     if (pop <= 0.001 || q >= 1) return;
     const size = Math.min(300, (300 * 1300) / textW(fmtStat(1), 300, 800));
     g.save(); g.globalAlpha = 1 - q; g.translate(CX, TY - 110 + 60 * q); g.scale(pop, pop);
@@ -626,7 +677,7 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
     g.strokeStyle = mixHex(PAPER, INK, 0.14);
     g.beginPath(); g.arc(RGX, RGY, RGR, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * a); g.stroke();
     if (t >= 3.5 && k > 0.001) { g.strokeStyle = INK; g.beginPath(); g.arc(RGX, RGY, RGR, -Math.PI / 2, ringAng(k), negative); g.stroke(); }
-    const pop = sp(prog(t, 3.35, 3.75), 0.55, 14);
+    const pop = spText(prog(t, 3.35, 3.75));
     if (pop > 0.001) {
       const size = Math.min(150, (150 * 400) / textW(fmtStat(1), 150, 800));
       g.translate(RGX, RGY); g.scale(pop, pop);
@@ -644,7 +695,7 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
     line(g, G0.x, G0.y, G0.x + (GW + 40) * a, G0.y);
     const tp = eio(prog(t, 3.25, 3.7));
     if (tp > 0) { g.save(); g.setLineDash([14, 14]); g.globalAlpha = 0.4; g.lineWidth = 3; line(g, G0.x, G0.y + UP * GH, G0.x + (GW + 40) * tp, G0.y + UP * GH); g.restore(); }
-    g.save(); g.globalAlpha = a; g.font = f(500, 26); g.fillStyle = INK; g.textAlign = "right";
+    g.save(); g.globalAlpha = a; g.font = f(500, legible(26)); g.fillStyle = INK; g.textAlign = "right";
     g.fillText(negative ? "\u22121.0" : "1.0", G0.x - 22, G0.y + UP * GH + 9); g.fillText("0", G0.x - 22, G0.y + 9); g.restore();
 
     // Curve: drawn from the exact function that moves the dot.
@@ -685,10 +736,10 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
   // Inner shape: grows out of the centre as a circle, becomes shape A, then morphs to shape B.
   function drawInner(g: CanvasRenderingContext2D, t: number) {
     if (t < 7.0 || t >= 9.0) return;
-    const s1 = sp(prog(t, 7.0, 7.45), 0.55, 14);
+    const s1 = spShape(prog(t, 7.0, 7.45));
     const k1 = eio(prog(t, 7.05, 7.5)); // circle -> shape A
-    const st = sp(prog(t, 7.75, 8.25), 0.55, 14); // shape A -> shape B
-    const spin = sp(prog(t, 7.0, 8.1), 0.5, 14);
+    const st = spShape(prog(t, 7.75, 8.25)); // shape A -> shape B
+    const spin = spShape(prog(t, 7.0, 8.1));
     const k = t >= 8.5 ? (dotAt(t).r - DR) / (BIG - DR) : 1; // contracts with the accent field
     const R = 140 * s1 * k;
     const blend = (a: (th: number) => number, b: (th: number) => number) => (th: number) => lerp(1, lerp(a(th), b(th), st), k1);
@@ -715,7 +766,7 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
     if (wordsStyle === "orbit") {
       const rotA = -0.32 * (t - 9) - 1.4 * ein(prog(t, 10.75, 11.5));
       for (const ch of ring) {
-        const t0 = 9.0 + ch.w * wordStep + ch.c * 0.012, e = sp(prog(t, t0, t0 + 0.45), 0.6, 14);
+        const t0 = 9.0 + ch.w * wordStep + ch.c * 0.012, e = spText(prog(t, t0, t0 + 0.45));
         if (e <= 0) continue;
         const ang = ch.a + rotA;
         out.push({ ch: ch.ch, x: C.x + RR * e * Math.cos(ang), y: C.y + RR * e * Math.sin(ang), rot: ang + Math.PI / 2,
@@ -726,7 +777,7 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
       floatWords.forEach((w, k) => {
         const bx = Math.cos(t * 1.5 + k * 2.1) * 10, by = Math.sin(t * 2.2 + k * 1.7) * 14, rot = Math.sin(t * 1.3 + k) * 0.06;
         w.letters.forEach((l, j) => {
-          const t0 = 9.0 + k * wordStep + j * 0.012, e = sp(prog(t, t0, t0 + 0.5), 0.6, 13);
+          const t0 = 9.0 + k * wordStep + j * 0.012, e = spText(prog(t, t0, t0 + 0.5));
           const d = (gi++ / floatCount) * 0.18;
           if (e <= 0) return;
           out.push({ ch: l.ch, x: C.x + (w.x + l.dx * Math.cos(rot) - C.x) * e + bx * clamp(e), y: C.y + (w.y + l.dx * Math.sin(rot) - C.y) * e + by * clamp(e),
@@ -737,7 +788,7 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
       listRows.forEach((row, k) => {
         const t0 = 9.0 + k * wordStep;
         row.letters.forEach((l, j) => {
-          const e = sp(prog(t, t0 + 0.05 + j * 0.01, t0 + 0.5 + j * 0.01), 0.6, 14);
+          const e = spText(prog(t, t0 + 0.05 + j * 0.01, t0 + 0.5 + j * 0.01));
           if (e <= 0) return;
           out.push({ ch: l.ch, x: lerp(row.bullet.x, listX + l.dx, e), y: row.y, rot: 0, size: listSize * lerp(0.6, 1, clamp(e)), a: clamp(e * 2), d: (k / words.length) * 0.15 });
         });
@@ -785,6 +836,32 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
       g.font = f(800, size); g.fillStyle = PAPER; g.fillText(gl.ch, 0, 0.36 * size); g.restore();
     }
     g.restore();
+  }
+
+  // End-card reveal: cover the frame in paper, then uncover to ink for the card.
+  function drawReveal(g: CanvasRenderingContext2D, t: number) {
+    const style = cfg.scenes.reveal ?? "halftone";
+    if (style === "halftone") return drawHalftone(g, t);
+    if (t < 10.85 || t >= 12.6) return;
+    const W = V.x1 - V.x0, H = V.y1 - V.y0;
+    const cover = t < 11.8, p1 = eio(prog(t, 10.85, 11.75)), p2 = eio(prog(t, 11.8, 12.55));
+    if (style === "iris") {
+      if (cover) circle(g, C.x, C.y, (halfDiag + 60) * p1, PAPER);
+      else { g.fillStyle = PAPER; g.fillRect(V.x0, V.y0, W, H); circle(g, C.x, C.y, (halfDiag + 60) * p2, INK); }
+    } else if (style === "stripes") {
+      // eight bars sweep left to right, echoing the data lines of the logo sweep
+      const rows = 8, rh = H / rows;
+      if (!cover) { g.fillStyle = PAPER; g.fillRect(V.x0, V.y0, W, H); }
+      g.fillStyle = cover ? PAPER : INK;
+      for (let r = 0; r < rows; r++) {
+        const pr = cover ? eio(prog(t, 10.85 + r * 0.05, 11.45 + r * 0.05)) : eio(prog(t, 11.8 + r * 0.04, 12.25 + r * 0.04));
+        if (pr > 0) g.fillRect(V.x0, V.y0 + r * rh, W * pr, rh + 1);
+      }
+    } else {
+      // slide: a paper panel pushes in from the right, then an ink panel over it
+      if (cover) { g.fillStyle = PAPER; g.fillRect(lerp(V.x1, V.x0, p1), V.y0, W, H); }
+      else { g.fillStyle = PAPER; g.fillRect(V.x0, V.y0, W, H); g.fillStyle = INK; g.fillRect(lerp(V.x1, V.x0, p2), V.y0, W, H); }
+    }
   }
 
   function drawHalftone(g: CanvasRenderingContext2D, t: number) {
@@ -896,7 +973,7 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
     g.textAlign = "left"; g.textBaseline = "alphabetic";
     g.fillStyle = t >= 7.0 && t < 14.65 ? INK : PAPER;
     g.fillRect(V.x0, V.y0, V.x1 - V.x0, V.y1 - V.y0);
-    if (showCard) drawHalftone(g, t);
+    if (showCard) drawReveal(g, t);
     drawEcho(g, t);
     drawWipe(g, t);
     drawTrack(g, t);
@@ -912,11 +989,16 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
   }
 
   return {
-    width, height, duration: cfg.duration,
+    width, height, duration: tl.duration,
     seek(g, seconds) {
       const t = tl.toInternal(seconds);
       g.save();
       g.setTransform(u, 0, 0, u, ox, oy);
+      if (cfg.motion?.camera) {
+        // Near-invisible push-in that peaks mid-film and is exactly 1x at the loop point.
+        const k = 1 + 0.035 * (1 - Math.cos((2 * Math.PI * t) / TIMELINE)) / 2;
+        g.translate(CX, CY); g.scale(k, k); g.translate(-CX, -CY);
+      }
       draw(g, t);
       g.restore();
     },

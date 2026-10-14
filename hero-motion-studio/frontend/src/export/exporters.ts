@@ -2,6 +2,7 @@ import { applyPalette, GIFEncoder, quantize } from "gifenc";
 import { ArrayBufferTarget, Muxer } from "mp4-muxer";
 import pptxgen from "pptxgenjs";
 import { createFilm, prepareAssets } from "../engine/film";
+import { renderSoundtrack } from "../engine/sound";
 import type { MotionConfig } from "../engine/types";
 
 export interface ExportJob {
@@ -9,6 +10,7 @@ export interface ExportJob {
   w: number;
   h: number;
   onProgress?: (p: number) => void;
+  onNote?: (msg: string) => void;
   signal?: AbortSignal;
 }
 
@@ -63,9 +65,15 @@ export async function exportMp4(job: ExportJob, fps: number): Promise<Blob> {
   if (!codec) throw new Error(`This browser cannot encode H.264 at ${w}×${h}.`);
 
   await prepareAssets(job.cfg);
+  const audio = await audioTrack(job);
   const film = createFilm(job.cfg, w, h);
   const { canvas, g } = frameCanvas(w, h);
-  const muxer = new Muxer({ target: new ArrayBufferTarget(), video: { codec: "avc", width: w, height: h, frameRate: fps }, fastStart: "in-memory" });
+  const muxer = new Muxer({
+    target: new ArrayBufferTarget(),
+    video: { codec: "avc", width: w, height: h, frameRate: fps },
+    audio: audio ? { codec: "aac", numberOfChannels: audio.buffer.numberOfChannels, sampleRate: audio.buffer.sampleRate } : undefined,
+    fastStart: "in-memory",
+  });
   let failure: unknown = null;
   const encoder = new VideoEncoder({ output: (chunk, meta) => muxer.addVideoChunk(chunk, meta), error: (e) => (failure = e) });
   encoder.configure({ codec, width: w, height: h, bitrate, framerate: fps });
@@ -84,12 +92,48 @@ export async function exportMp4(job: ExportJob, fps: number): Promise<Blob> {
     }
     await encoder.flush();
     if (failure) throw failure;
+    if (audio) await encodeAudio(audio, muxer, job.signal);
   } finally {
     if (encoder.state !== "closed") encoder.close();
   }
   muxer.finalize();
   job.onProgress?.(1);
   return new Blob([muxer.target.buffer], { type: "video/mp4" });
+}
+
+// AAC soundtrack for the MP4, when sound is on and the browser can encode it.
+const AAC = "mp4a.40.2";
+async function audioTrack(job: ExportJob) {
+  if ((job.cfg.sound?.preset ?? "off") === "off") return null;
+  if (typeof AudioEncoder === "undefined") { job.onNote?.("This browser can't encode audio, so the MP4 is silent."); return null; }
+  const buffer = await renderSoundtrack(job.cfg, 48000);
+  if (!buffer) return null;
+  const config: AudioEncoderConfig = { codec: AAC, sampleRate: buffer.sampleRate, numberOfChannels: buffer.numberOfChannels, bitrate: 160_000 };
+  if (!(await AudioEncoder.isConfigSupported(config)).supported) { job.onNote?.("This browser can't encode AAC audio, so the MP4 is silent."); return null; }
+  return { buffer, config };
+}
+
+async function encodeAudio(audio: { buffer: AudioBuffer; config: AudioEncoderConfig }, muxer: Muxer<ArrayBufferTarget>, signal?: AbortSignal) {
+  const { buffer } = audio, ch = buffer.numberOfChannels, sr = buffer.sampleRate, block = 4800;
+  let failure: unknown = null;
+  const enc = new AudioEncoder({ output: (chunk, meta) => muxer.addAudioChunk(chunk, meta), error: (e) => (failure = e) });
+  enc.configure(audio.config);
+  try {
+    const chans = Array.from({ length: ch }, (_, i) => buffer.getChannelData(i));
+    for (let off = 0; off < buffer.length; off += block) {
+      checkAbort(signal);
+      if (failure) throw failure;
+      const n = Math.min(block, buffer.length - off), planar = new Float32Array(n * ch);
+      chans.forEach((d, i) => planar.set(d.subarray(off, off + n), i * n));
+      const data = new AudioData({ format: "f32-planar", sampleRate: sr, numberOfFrames: n, numberOfChannels: ch, timestamp: Math.round((off / sr) * 1e6), data: planar });
+      enc.encode(data);
+      data.close();
+    }
+    await enc.flush();
+    if (failure) throw failure;
+  } finally {
+    if (enc.state !== "closed") enc.close();
+  }
 }
 
 // ------------------------------------------------------------ GIF

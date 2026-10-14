@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AiBrief from "./components/AiBrief";
 import ControlsPanel from "./components/ControlsPanel";
 import ExportPanel from "./components/ExportPanel";
 import Preview from "./components/Preview";
-import { prepareAssets } from "./engine/film";
-import { DEFAULT_CONFIG, SHAPE_STYLES, SIZES, STAT_STYLES, WORDS_STYLES, type MotionConfig } from "./engine/types";
+import { prepareAssets, timeline } from "./engine/film";
+import { DEFAULT_CONFIG, FEEL_OPTIONS, REVEAL_STYLES, SHAPE_STYLES, SIZES, STAT_STYLES, WORDS_STYLES, type MotionConfig } from "./engine/types";
 
 const STORE_KEY = "hero-motion-studio:v1";
 
@@ -18,8 +18,11 @@ function loadSaved(): { cfg: MotionConfig; sizeId: string; custom: { w: number; 
     if (!STAT_STYLES.some((o) => o.id === sc.stat)) sc.stat = DEFAULT_CONFIG.scenes.stat;
     if (!SHAPE_STYLES.some((o) => o.id === sc.shape)) sc.shape = DEFAULT_CONFIG.scenes.shape;
     if (!WORDS_STYLES.some((o) => o.id === sc.words)) sc.words = DEFAULT_CONFIG.scenes.words;
+    if (!REVEAL_STYLES.some((o) => o.id === sc.reveal)) sc.reveal = DEFAULT_CONFIG.scenes.reveal;
+    const motion = { ...DEFAULT_CONFIG.motion, ...s.cfg?.motion };
+    if (!FEEL_OPTIONS.some((o) => o.id === motion.feel)) motion.feel = DEFAULT_CONFIG.motion.feel;
     return {
-      cfg: { ...DEFAULT_CONFIG, ...s.cfg, text: { ...DEFAULT_CONFIG.text, ...s.cfg?.text }, style: { ...DEFAULT_CONFIG.style, ...s.cfg?.style }, outro: { ...DEFAULT_CONFIG.outro, ...s.cfg?.outro }, scenes: sc, sound: { enabled: false } },
+      cfg: { ...DEFAULT_CONFIG, ...s.cfg, text: { ...DEFAULT_CONFIG.text, ...s.cfg?.text }, style: { ...DEFAULT_CONFIG.style, ...s.cfg?.style }, outro: { ...DEFAULT_CONFIG.outro, ...s.cfg?.outro }, motion, scenes: sc, sound: { ...DEFAULT_CONFIG.sound, ...(s.cfg?.sound?.preset ? s.cfg.sound : {}) } },
       sizeId: SIZES.some((z) => z.id === s.sizeId) ? s.sizeId : "hero",
       custom: s.custom ?? fallback.custom,
     };
@@ -48,6 +51,9 @@ export default function App() {
     return () => { live = false; };
     // only the inputs that need loading: the font and the logo
   }, [cfg.style.font, cfg.outro.mode, cfg.outro.logo]);
+
+  // With Auto duration, the preview and exports get the designed pace as a concrete duration.
+  const live = useMemo<MotionConfig>(() => (cfg.autoDuration ? { ...cfg, duration: timeline(cfg).natural, autoDuration: false } : cfg), [cfg]);
 
   const size = SIZES.find((z) => z.id === sizeId)!;
   const w = sizeId === "custom" ? even(custom.w) : size.w;
@@ -91,8 +97,8 @@ export default function App() {
             </div>
           )}
 
-          <Preview cfg={cfg} w={w} h={h} fontVersion={fontVersion} timeRef={timeRef} />
-          <ExportPanel cfg={cfg} w={w} h={h} sizeId={sizeId} timeRef={timeRef} />
+          <Preview cfg={live} w={w} h={h} fontVersion={fontVersion} timeRef={timeRef} />
+          <ExportPanel cfg={live} w={w} h={h} sizeId={sizeId} timeRef={timeRef} />
         </main>
       </div>
     </div>

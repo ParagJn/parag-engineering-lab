@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { timeline, type SceneId } from "../engine/film";
-import { ACCENTS, FONTS, SHAPE_STYLES, STAT_STYLES, THEMES, WORDS_STYLES, type MotionConfig, type MotionText } from "../engine/types";
+import { bufferToWav, renderSoundtrack } from "../engine/sound";
+import { saveBlob } from "../export/exporters";
+import { ACCENTS, FEEL_OPTIONS, FONTS, REVEAL_STYLES, SHAPE_STYLES, SOUND_PRESETS, STAT_STYLES, THEMES, WORDS_STYLES, type MotionConfig, type MotionText } from "../engine/types";
 
 interface Props {
   cfg: MotionConfig;
@@ -56,6 +58,14 @@ export default function ControlsPanel({ cfg, setCfg }: Props) {
   const setStyle = (patch: Partial<MotionConfig["style"]>) => setCfg((c) => ({ ...c, style: { ...c.style, ...patch } }));
   const { text, style, outro } = cfg;
   const [logoError, setLogoError] = useState("");
+  const [wavBusy, setWavBusy] = useState(false);
+  const downloadWav = async () => {
+    setWavBusy(true);
+    try {
+      const buf = await renderSoundtrack(cfg);
+      if (buf) saveBlob(bufferToWav(buf), `${(text.hero || "hero").toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${cfg.sound.preset}.wav`);
+    } finally { setWavBusy(false); }
+  };
   const setOutro = (patch: Partial<MotionConfig["outro"]>) => setCfg((c) => ({ ...c, outro: { ...c.outro, ...patch } }));
   const onLogo = (file: File | undefined) => {
     setLogoError("");
@@ -68,7 +78,8 @@ export default function ControlsPanel({ cfg, setCfg }: Props) {
   };
   const show = cfg.scenes.show;
   const setShow = (id: SceneId, on: boolean) => setCfg((c) => ({ ...c, scenes: { ...c.scenes, show: { ...c.scenes.show, [id]: on } } }));
-  const natural = Math.round(timeline(cfg).natural * 2) / 2;
+  const natural = timeline(cfg).natural;
+  const setMotion = (patch: Partial<MotionConfig["motion"]>) => setCfg((c) => ({ ...c, motion: { ...c.motion, ...patch } }));
 
   return (
     <>
@@ -152,6 +163,25 @@ export default function ControlsPanel({ cfg, setCfg }: Props) {
             <Choices options={WORDS_STYLES} value={cfg.scenes.words} onChange={(words) => setCfg((c) => ({ ...c, scenes: { ...c.scenes, words } }))} />
           </>
         )}
+        {show.card && (
+          <>
+            <span className="text-sm text-neutral-300">End-card reveal</span>
+            <Choices options={REVEAL_STYLES} value={cfg.scenes.reveal} onChange={(reveal) => setCfg((c) => ({ ...c, scenes: { ...c.scenes, reveal } }))} />
+          </>
+        )}
+      </Section>
+
+      <Section title="Motion">
+        <span className="text-sm text-neutral-300">Feel</span>
+        <Choices options={FEEL_OPTIONS} value={cfg.motion.feel} onChange={(feel) => setMotion({ feel })} />
+        <label className="flex items-start gap-2 text-sm text-neutral-300">
+          <input type="checkbox" className="mt-1" checked={cfg.motion.readable} onChange={(e) => setMotion({ readable: e.target.checked })} />
+          <span>Readable holds <span className="block text-xs text-neutral-500">Text stays on screen long enough to read: longer for more words</span></span>
+        </label>
+        <label className="flex items-start gap-2 text-sm text-neutral-300">
+          <input type="checkbox" className="mt-1" checked={cfg.motion.camera} onChange={(e) => setMotion({ camera: e.target.checked })} />
+          <span>Camera glide <span className="block text-xs text-neutral-500">A near-invisible push-in that adds depth; loops seamlessly</span></span>
+        </label>
       </Section>
 
       <Section title="Style">
@@ -196,23 +226,33 @@ export default function ControlsPanel({ cfg, setCfg }: Props) {
       </Section>
 
       <Section title="Timing">
-        <Field label={`Duration · ${cfg.duration.toFixed(1)}s per loop`} hint="all scenes scale together">
-          <input type="range" className="accent-[var(--accent)]" min={6} max={30} step={0.5} value={cfg.duration} onChange={(e) => setCfg((c) => ({ ...c, duration: +e.target.value }))} />
+        <Field label={`Duration · ${(cfg.autoDuration ? natural : cfg.duration).toFixed(1)}s per loop${cfg.autoDuration ? " (auto)" : ""}`} hint="all scenes scale together">
+          <input type="range" className="accent-[var(--accent)]" min={6} max={30} step={0.5} value={cfg.autoDuration ? natural : cfg.duration} onChange={(e) => setCfg((c) => ({ ...c, duration: +e.target.value, autoDuration: false }))} />
         </Field>
         <p className="text-xs text-neutral-500">
-          Designed pace for these scenes: {natural.toFixed(1)}s
-          {Math.abs(cfg.duration - natural) > 0.25 && (
-            <button className="ml-2 text-[var(--accent)] hover:underline" onClick={() => setCfg((c) => ({ ...c, duration: natural }))}>use it</button>
-          )}
+          {cfg.autoDuration ? "Auto follows the designed pace, including reading holds." : `Designed pace for these scenes: ${natural.toFixed(1)}s`}
         </p>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <button className={`chip ${cfg.autoDuration ? "chip-on" : ""}`} onClick={() => setCfg((c) => ({ ...c, autoDuration: true }))}>Auto</button>
           {[8, 10, 15, 20].map((d) => (
-            <button key={d} className={`chip ${cfg.duration === d ? "chip-on" : ""}`} onClick={() => setCfg((c) => ({ ...c, duration: d }))}>{d}s</button>
+            <button key={d} className={`chip ${!cfg.autoDuration && cfg.duration === d ? "chip-on" : ""}`} onClick={() => setCfg((c) => ({ ...c, duration: d, autoDuration: false }))}>{d}s</button>
           ))}
         </div>
-        <label className="flex items-center gap-2 text-sm text-neutral-500" title="Sound will be added in a later version">
-          <input type="checkbox" disabled checked={cfg.sound.enabled} readOnly /> Sound track <span className="text-xs">(coming later)</span>
-        </label>
+      </Section>
+
+      <Section title="Sound">
+        <Choices options={SOUND_PRESETS} value={cfg.sound.preset} onChange={(preset) => setCfg((c) => ({ ...c, sound: { ...c.sound, preset } }))} />
+        {cfg.sound.preset !== "off" && (
+          <>
+            <Field label={`Volume · ${Math.round(cfg.sound.volume * 100)}%`}>
+              <input type="range" className="accent-[var(--accent)]" min={0} max={1} step={0.05} value={cfg.sound.volume} onChange={(e) => setCfg((c) => ({ ...c, sound: { ...c.sound, volume: +e.target.value } }))} />
+            </Field>
+            <div className="flex items-center gap-2">
+              <button className="btn text-xs" disabled={wavBusy} onClick={downloadWav}>{wavBusy ? "Rendering…" : "Download WAV"}</button>
+              <span className="text-xs text-neutral-500">Plays in the preview and is embedded in MP4 / PPTX. GIFs are silent.</span>
+            </div>
+          </>
+        )}
       </Section>
     </>
   );

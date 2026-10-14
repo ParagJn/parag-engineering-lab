@@ -42,7 +42,8 @@ export default function ExportPanel({ cfg, w, h, sizeId, timeRef }: Props) {
     abortRef.current = ctrl;
     setProgress(0);
     setMessage("");
-    const job: ExportJob = { cfg, w, h, signal: ctrl.signal, onProgress: setProgress };
+    let note = "";
+    const job: ExportJob = { cfg, w, h, signal: ctrl.signal, onProgress: setProgress, onNote: (m) => (note = m) };
     const started = performance.now();
     try {
       let blob: Blob, name: string;
@@ -51,7 +52,7 @@ export default function ExportPanel({ cfg, w, h, sizeId, timeRef }: Props) {
       else if (format === "gif") { blob = await exportGif(job, gifFps, gifWidth); name = `${base}.gif`; }
       else { blob = await exportPptx(job, { mode: pptMode, posterSeconds: frameSeconds(), fps }); name = `${base}.pptx`; }
       saveBlob(blob, name);
-      setMessage(`Saved ${name} · ${(blob.size / 1e6).toFixed(1)} MB · ${((performance.now() - started) / 1000).toFixed(1)}s`);
+      setMessage(`Saved ${name} · ${(blob.size / 1e6).toFixed(1)} MB · ${((performance.now() - started) / 1000).toFixed(1)}s${note ? ` · ${note}` : ""}`);
     } catch (e) {
       setMessage(e instanceof DOMException && e.name === "AbortError" ? "Export cancelled." : `Export failed: ${e instanceof Error ? e.message : e}`);
     } finally {
@@ -137,7 +138,8 @@ export default function ExportPanel({ cfg, w, h, sizeId, timeRef }: Props) {
         </div>
       )}
       {message && <p className="text-xs text-neutral-400">{message}</p>}
-      {format === "gif" && <p className="text-xs text-neutral-500">GIFs are large and limited to 256 colours; prefer MP4 for PowerPoint and Keynote.</p>}
+      {format === "gif" && <p className="text-xs text-neutral-500">GIFs are large, limited to 256 colours and always silent; prefer MP4 for PowerPoint and Keynote.</p>}
+      {(format === "mp4" || (format === "pptx" && pptMode === "video")) && cfg.sound.preset !== "off" && <p className="text-xs text-neutral-500">Includes the {cfg.sound.preset} soundtrack (AAC). Presenters often autoplay video muted, so check the slide's playback settings.</p>}
     </div>
   );
 }

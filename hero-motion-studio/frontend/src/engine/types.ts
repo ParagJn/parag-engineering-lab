@@ -20,14 +20,19 @@ export interface MotionStyle {
 export type StatStyle = "spring" | "bars" | "counter" | "ring";
 export type ShapeStyle = "pill" | "triangle" | "star" | "blob";
 export type WordsStyle = "orbit" | "float" | "list" | "tags";
+export type SoundPreset = "off" | "subtle" | "minimal" | "pulse";
+export type MotionFeel = "precise" | "lively" | "bold";
+export type RevealStyle = "halftone" | "iris" | "stripes" | "slide";
 
 export interface MotionConfig {
   text: MotionText;
   style: MotionStyle;
   outro: { mode: "toggle" | "logo"; logo: string; logoName: string }; // final frame: toggle row, or an uploaded logo revealed by a data sweep
-  scenes: { stat: StatStyle; shape: ShapeStyle; words: WordsStyle; show: Record<"stat" | "shape" | "words" | "card", boolean> };
-  duration: number; // seconds for one full loop
-  sound: { enabled: boolean }; // reserved: not wired into exports yet
+  motion: { feel: MotionFeel; readable: boolean; camera: boolean }; // spring feel, reading holds, camera glide
+  scenes: { stat: StatStyle; shape: ShapeStyle; words: WordsStyle; reveal: RevealStyle; show: Record<"stat" | "shape" | "words" | "card", boolean> };
+  duration: number; // seconds for one full loop (used when autoDuration is off)
+  autoDuration: boolean; // follow the designed pace, including reading holds
+  sound: { preset: SoundPreset; volume: number }; // procedural soundtrack, played in preview and embedded in MP4/PPTX
 }
 
 export interface OutputSize {
@@ -51,9 +56,11 @@ export const DEFAULT_CONFIG: MotionConfig = {
   },
   style: { theme: "paper", accent: "#FF5A1F", paper: "#F3EEE4", ink: "#0E0E0E", font: "Inter Tight" },
   outro: { mode: "toggle", logo: "", logoName: "" },
-  scenes: { stat: "spring", shape: "pill", words: "orbit", show: { stat: true, shape: true, words: true, card: true } },
+  motion: { feel: "lively", readable: true, camera: true },
+  scenes: { stat: "spring", shape: "pill", words: "orbit", reveal: "halftone", show: { stat: true, shape: true, words: true, card: true } },
   duration: 16.5,
-  sound: { enabled: false },
+  autoDuration: true,
+  sound: { preset: "off", volume: 0.8 },
 };
 
 export const THEMES = [
@@ -82,6 +89,26 @@ export const SHAPE_STYLES: { id: ShapeStyle; name: string; note: string }[] = [
   { id: "triangle", name: "Triangle → circle", note: "Triangle spins, puffs into a circle" },
   { id: "star", name: "Star burst", note: "Star spins, points shoot out sharper" },
   { id: "blob", name: "Blob", note: "Soft organic shape that wobbles" },
+];
+
+export const SOUND_PRESETS: { id: SoundPreset; name: string; note: string }[] = [
+  { id: "off", name: "Silent", note: "No audio track" },
+  { id: "subtle", name: "Subtle clicks", note: "Soft hits on the dot's moves only" },
+  { id: "minimal", name: "Minimal beat", note: "Hits plus a light kick and hat" },
+  { id: "pulse", name: "Corporate pulse", note: "Hits, beat, bass and a soft pad" },
+];
+
+export const FEEL_OPTIONS: { id: MotionFeel; name: string; note: string }[] = [
+  { id: "precise", name: "Precise", note: "Minimal overshoot, corporate and calm" },
+  { id: "lively", name: "Lively", note: "Small springy overshoots (original)" },
+  { id: "bold", name: "Bold", note: "Hard landings, bouncier shapes, longer holds" },
+];
+
+export const REVEAL_STYLES: { id: RevealStyle; name: string; note: string }[] = [
+  { id: "halftone", name: "Halftone", note: "Dot field grows, then flips to ink" },
+  { id: "iris", name: "Iris", note: "A circle opens from the dot, then closes to ink" },
+  { id: "stripes", name: "Stripes", note: "Eight bars sweep across, like data lines" },
+  { id: "slide", name: "Slide", note: "Panels push in from the right" },
 ];
 
 export const ACCENTS = ["#FF5A1F", "#0F62FE", "#24A148", "#8A3FFC", "#F1C21B", "#E5007E"];

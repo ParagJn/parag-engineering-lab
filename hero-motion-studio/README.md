@@ -68,11 +68,13 @@ Keyboard: `Space` play/pause · `←` / `→` step one frame.
 | **Shape style** | Square → pill · Triangle → circle · Star burst · Blob |
 | **Words style** | Orbit · Floating · List (dot is the bullet) · Tags |
 | **Ending** | *Toggle row*: the last frame reads "[Ending] [hero]" (blank = same as the intro, seamless loop) · *Logo sweep*: upload your own SVG/PNG logo; the dot becomes a scan head and the logo forms from data lines left → right over ~1.2s, then holds static, fitted in a 1.5 × 1.5 in box at slide centre |
+| **End-card reveal** | Halftone · Iris · Stripes · Slide |
 | **Scene switches** | Stat, shape, words and end card can each be turned off. The dot bridges the gap. The toggle/hero opening and the return trip always play so the loop closes. |
 | **Style** | Themes: warm paper, night, cool grey, navy · accent swatches or any colour · custom background and ink · fonts: Inter Tight, Archivo, Manrope, Sora, Plus Jakarta Sans, Outfit |
-| **Timing** | Loop duration 6–30s. The stat and words scenes play slower than the rest so they can be read. |
+| **Motion** | Feel: *Precise* (minimal overshoot), *Lively* (original), *Bold* (hard landings, bouncier shapes, longer holds); springs are tuned per element class (UI, text, shapes, data, dot) · *Readable holds* stretch each text moment to its reading time · *Camera glide*: a near-invisible push-in that is exactly 1× at the loop point |
+| **Timing** | *Auto* (default) follows the designed pace including reading holds, or set 6–30s manually; all scenes scale together |
 | **AI copy** | Brief + tone (confident, playful, executive, technical, bold), optional AI accent colour |
-| **Sound** | Reserved in the config, not wired up yet |
+| **Sound** | Silent · Subtle clicks · Minimal beat · Corporate pulse, plus volume. Synthesised in the browser (no samples, no models) and timed to the film's events, so hits land on the dot's moves at any duration and with scenes switched off. Plays in the preview (with a preview-only mute), embedded as AAC in MP4/PPTX, and downloadable as WAV. |
 
 ---
 
@@ -98,7 +100,7 @@ Every size is a full-bleed render, not a letterbox: the design is scaled to fit,
 | Format | Details | Best for |
 |---|---|---|
 | **PNG** | Current preview frame or any key moment (toggle, hero, stat, shape, words, end card) | Static hero or title slide |
-| **MP4** | H.264 at 30 or 60 fps, rendered frame by frame (not screen-recorded), so it is smooth and loops exactly | PowerPoint and Keynote, which play it inline |
+| **MP4** | H.264 at 30 or 60 fps plus an AAC soundtrack when sound is on, rendered frame by frame (not screen-recorded), so it is smooth and loops exactly | PowerPoint and Keynote, which play it inline |
 | **GIF** | 15/20/25 fps, width capped at 480–1280 px, 256 colours | Google Slides, email |
 | **PPTX** | One 16:9 slide with the MP4 embedded and a PNG poster frame, or just the still. Non-16:9 sizes are centred on the slide. | Ready-made slide |
 
@@ -166,6 +168,7 @@ hero-motion-studio/
         ├── App.tsx             # layout, size picker, saved settings
         ├── engine/
         │   ├── film.ts         # the motion system: layout, scenes, timing map, dot path
+    │   ├── sound.ts        # procedural soundtrack: event hits + beat bed, offline-rendered seamless loop
         │   ├── math.ts         # easing, closed-form springs, colour mix
         │   └── types.ts        # config, defaults, themes, sizes, style options
         ├── export/exporters.ts # PNG, MP4, GIF, PPTX
@@ -215,6 +218,7 @@ The backend trims and validates the model's JSON: length limits, a stat clamped 
 
 - Prototype, not production-hardened.
 - MP4 export needs WebCodecs (Chrome, Edge, Safari 17+).
+- Small text (graph labels, end-card subtitle and footnote) never renders below ~13 px, so tiles and small GIFs stay readable.
 - Fonts load from Google Fonts, so the first load needs internet; it falls back to Helvetica/Arial.
 - GIFs are large and limited to 256 colours; prefer MP4 for slides.
 - `mp4-muxer` is marked deprecated in favour of Mediabunny; it works, and swapping is contained in `exporters.ts`.
@@ -223,7 +227,9 @@ The backend trims and validates the model's JSON: length limits, a stat clamped 
 
 ## Roadmap
 
-- [ ] Sound track (synthesised beat timed to the motion) as an MP4 option
+- [x] Sound track (synthesised, timed to the motion) in preview, MP4 and PPTX
+- [ ] Claude picks the sound mood from the brief
+- [ ] Upload your own music track, trimmed and faded to the loop
 - [ ] More templates: line draw, grid tiles, type stack, particles
 - [ ] AI also suggests stat, shape and words styles from the brief
 - [ ] Saved, named presets for consistent decks
