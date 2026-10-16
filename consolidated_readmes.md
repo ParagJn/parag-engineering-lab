@@ -1,6 +1,6 @@
 # Consolidated Project Documentation — Parag Engineering Lab
 
-This document aggregates the specifications, features, technology stacks, and orchestration frameworks for all 16 AI-powered applications and utility tools in this repository.
+This document aggregates the specifications, features, technology stacks, and orchestration frameworks for all 17 AI-powered applications and utility tools in this repository.
 
 ---
 
@@ -21,6 +21,7 @@ This document aggregates the specifications, features, technology stacks, and or
 14. [Skills Generator](#14-skills-generator)
 15. [Document Processor for Vector Databases](#15-document-processor-for-vector-databases)
 16. [Hero Motion Studio](#16-hero-motion-studio)
+17. [Data Story Studio](#17-data-story-studio)
 
 ---
 
@@ -199,3 +200,14 @@ This document aggregates the specifications, features, technology stacks, and or
   - **Backend**: FastAPI, pydantic-settings, IBM ICA client (Claude).
 * **Orchestration Pattern**: **LLM Copywriter + Deterministic Renderer**. Claude returns strict JSON copy that the backend validates; the browser engine renders every frame as a pure function of time, so previews and frame-by-frame exports match exactly.
 * **Business Benefit**: Slide-ready motion heroes in minutes, in any slide size, exported as native PowerPoint/Keynote video or stills.
+
+---
+
+## 17. Data Story Studio
+* **Directory**: [Data-Story-Studio](file:///Users/paragjain/dev-works/parag-engineering-lab/Data-Story-Studio)
+* **Overview & Value**: Upload CSV or Excel files and get an animated dashboard that tells the story in the data: the headline finding, evidence, drivers and detail, plus an executive summary you can paste into reports.
+* **Tech Stack**:
+  - **Frontend**: Vite, React, TypeScript, Tailwind CSS, Apache ECharts.
+  - **Backend**: FastAPI, DuckDB, pandas, openpyxl, Playwright (PDF), IBM ICA client (Claude).
+* **Orchestration Pattern**: **Deterministic Insight Engine + Number-Guarded LLM Narrator**. Readiness checks and ~25 scored insight candidates are computed in DuckDB; Claude only orders panels and writes prose from a pre-formatted fact sheet, and any sentence with an unsupported figure is dropped. Q&A SQL is validated as a single read-only SELECT and sandboxed.
+* **Business Benefit**: Data to boardroom story in minutes, with figures you can trust and drill into, exportable as interactive HTML, PDF or an executive summary.

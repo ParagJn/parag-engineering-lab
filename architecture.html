@@ -1086,7 +1086,8 @@
       { id: "skills_gen", label: "Skills Generator", type: "utility", color: "#10b981", desc: "Turns an idea into a full Claude Code skill bundle (SKILL.md, references, scripts, templates, evals) via IBM ICA, with validation, repair and one-click install.", tech: "FastAPI · Vite · Tailwind · IBM ICA", dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/Skills-Generator", x: 434, y: 550 },
       { id: "doc_processor", label: "Document Processor", type: "utility", color: "#10b981", desc: "Extracts paragraph hierarchy and captions images via Azure Vision, outputting records structured for Milvus vectors databases.", tech: "FastAPI · React 18 · Azure OpenAI", dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/document_processor", x: 626, y: 550 },
       { id: "myownai", label: "My Own AI Assistant", type: "project", color: "#3b82f6", desc: "Personal ChatGPT-like interface powered by IBM ICA. Supports session management, document uploads, and conversation renaming. Internal use only.", tech: "FastAPI · React 18 · IBM ICA · PyPDF2", dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/My-Own-AI-Assistant", x: 818, y: 550 },
-      { id: "hero_motion", label: "Hero Motion Studio", type: "project", color: "#3b82f6", desc: "Animated presentation hero generator. One accent dot drives a looping canvas film; exports PNG, MP4 (WebCodecs), GIF and PPTX. Claude via IBM ICA writes the copy.", tech: "FastAPI · React 19 · Canvas · WebCodecs", dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/hero-motion-studio", x: 1010, y: 550 }
+      { id: "hero_motion", label: "Hero Motion Studio", type: "project", color: "#3b82f6", desc: "Animated presentation hero generator. One accent dot drives a looping canvas film; exports PNG, MP4 (WebCodecs), GIF and PPTX. Claude via IBM ICA writes the copy.", tech: "FastAPI · React 19 · Canvas · WebCodecs", dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/hero-motion-studio", x: 1010, y: 550 },
+      { id: "data_story", label: "Data Story Studio", type: "project", color: "#3b82f6", desc: "CSV/Excel to AI-built animated story dashboards: DuckDB-scored insights narrated by Claude via IBM ICA with a number guard; Q&A, HTML/PDF export and an executive summary.", tech: "FastAPI · DuckDB · React · ECharts · IBM ICA", dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/Data-Story-Studio", x: 1010, y: 670 },
     ];
 
     const EDGES = [
@@ -1117,7 +1118,8 @@
       { source: "skills_gen", target: "ibm_ica", color: "#10b981" },
       { source: "doc_processor", target: "azure_openai", color: "#10b981" },
       { source: "myownai", target: "ibm_ica", color: "#3b82f6" },
-      { source: "hero_motion", target: "ibm_ica", color: "#3b82f6" }
+      { source: "hero_motion", target: "ibm_ica", color: "#3b82f6" },
+      { source: "data_story", target: "ibm_ica", color: "#3b82f6" }
     ];
 
     const FLOWS = [
@@ -1435,6 +1437,23 @@
           { node: "ibm_ica", text: "Claude on IBM ICA returns strict JSON copy: intro, hero word, stat, orbit words and end-card lines, validated by FastAPI." },
           { node: "hero_motion", text: "The film engine renders every frame as a pure function of time; a timing map paces scenes and bridges any switched off." },
           { node: "hero_motion", text: "Exports render frame by frame offscreen: PNG stills, H.264 MP4 via WebCodecs, GIF, or a PPTX slide with video and poster." }
+        ]
+      },
+      {
+        id: "f19",
+        name: "Data to Story Dashboard",
+        project: "Data Story Studio",
+        color: "#10b981",
+        desc: "Computed insights, narrated: DuckDB finds and scores the findings, Claude (via IBM ICA) tells the story, and a number guard keeps every figure honest.",
+        nodes: ["data_story", "ibm_ica"],
+        edges: [
+          { source: "data_story", target: "ibm_ica" }
+        ],
+        steps: [
+          { node: "data_story", text: "CSV/Excel files are ingested into DuckDB and profiled; a readiness gate checks volume, file links, duplicates, dates and long-format tables." },
+          { node: "data_story", text: "About 25 candidate panels (trends, anomalies, drivers, concentration, correlations) are computed and scored by business significance." },
+          { node: "ibm_ica", text: "Claude on IBM ICA orders the panels into headline, evidence and drivers, writing prose only from a pre-formatted fact sheet." },
+          { node: "data_story", text: "A number guard drops unsupported figures; users explore, ask questions (sandboxed SQL) and export HTML, PDF or an Executive Summary." }
         ]
       }
     ];
@@ -1856,7 +1875,7 @@
       const minX = 50;
       const maxX = 1010 + NODE_WIDTH; // 1174
       const minY = 70;
-      const maxY = 550 + NODE_HEIGHT; // 602
+      const maxY = 670 + NODE_HEIGHT; // 722
       
       const diagramWidth = maxX - minX;
       const diagramHeight = maxY - minY;

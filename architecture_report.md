@@ -18,7 +18,7 @@ This report serves as the official architectural blueprint, detailing the file s
 
 ## 1. System Topology Overview
 
-The Parag Engineering Lab codebase consists of **16 functional projects** and **1 video product showcase directory**. The system architecture is organized into five layered conceptual tiers:
+The Parag Engineering Lab codebase consists of **17 functional projects** and **1 video product showcase directory**. The system architecture is organized into five layered conceptual tiers:
 
 ```mermaid
 graph TD
@@ -57,6 +57,7 @@ graph TD
         skills[Skills Generator]
         doc_proc[Document Processor]
         hero[Hero Motion Studio]
+        datastory[Data Story Studio]
     end
 
     %% Connections
@@ -83,6 +84,7 @@ graph TD
     strat_analyzer --> azure
     skills --> azure
     hero --> claude
+    datastory --> claude
     
     azure --> gpt
 ```
@@ -225,6 +227,12 @@ Below is a detailed breakdown of each project directory, detailing its business 
 * **Business Value**: Chunks and vectorizes Word documents for Retrieval-Augmented Generation (RAG) vector stores (Milvus).
 * **Tech Stack**: FastAPI, React 18, python-docx, Pillow, Azure OpenAI embeddings.
 * **AI Orchestration Pattern**: **Hierarchical Document Chunking**. Traces heading trails (h1-h6) to maintain context for text paragraphs. Optionally enriches images in the document using Azure OpenAI Vision OCR.
+
+#### 📊 Data Story Studio
+* **Directory**: [Data-Story-Studio](file:///Users/paragjain/dev-works/parag-engineering-lab/Data-Story-Studio)
+* **Business Value**: Turns CSV/Excel files into an animated, explorable story dashboard and a board-ready executive summary, with every figure computed from the data.
+* **Tech Stack**: FastAPI, DuckDB, pandas, Playwright, Vite, React, TypeScript, Tailwind CSS, ECharts, IBM ICA (Claude).
+* **AI Orchestration Pattern**: **Deterministic Insight Engine + Number-Guarded LLM Narrator**. A readiness gate and scored insight candidates are computed in DuckDB; Claude composes the story from a fact sheet and a guard drops unsupported numbers. Natural-language Q&A writes one validated, sandboxed SELECT.
 
 #### 🟠 Hero Motion Studio
 * **Directory**: [hero-motion-studio](file:///Users/paragjain/dev-works/parag-engineering-lab/hero-motion-studio)

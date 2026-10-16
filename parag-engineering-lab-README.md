@@ -58,6 +58,12 @@ An AI-powered skill definition generator that converts your ideas into fully str
 
 ---
 
+## Data Story Studio
+
+Turns uploaded CSV or Excel files into an AI-built, animated story dashboard. A readiness gate checks row volume, detects joins and unions between files, and flags quality issues before building. Insights are discovered deterministically and scored by business significance. Claude via IBM ICA composes the narrative, with a number guard that removes any unsupported figure. Includes click-to-filter exploration, natural-language Q&A with sandboxed SQL, panel redraws, a data previewer, HTML/PDF export, and an Executive Summary for reports (Markdown or PDF).
+
+---
+
 ## Hero Motion Studio
 
 Turns a short text brief into an animated hero for a presentation slide. A single accent dot drives a looping motion film (toggle, hero word, stat, shape morph, kinetic words, halftone reveal and end card), with selectable stat, shape and word styles, scene switches, slide-ready sizes from full slide to banner, and frame-by-frame export to PNG, MP4, GIF or PPTX. Claude via IBM ICA writes the copy.

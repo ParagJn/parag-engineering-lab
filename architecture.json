@@ -57,7 +57,7 @@
       "id": "ibm",
       "label": "IBM ICA",
       "type": "ai",
-      "description": "IBM watsonx Code Assistant gateway: Claude Opus 5.5 and Gemini 3.7 Flash hosted on IBM infrastructure. Primary model provider for Project Schedule Tool, Daily Articles Pages, Skills Generator, My Own AI Assistant and Hero Motion Studio.",
+      "description": "IBM watsonx Code Assistant gateway: Claude Opus 5.5 and Gemini 3.7 Flash hosted on IBM infrastructure. Primary model provider for Project Schedule Tool, Daily Articles Pages, Skills Generator, My Own AI Assistant, Hero Motion Studio and Data Story Studio.",
       "tech": [
         "Claude Opus 5.5",
         "Gemini 3.7 Flash",
@@ -291,6 +291,22 @@
         "pptxgenjs",
         "IBM ICA Client"
       ]
+    },
+    {
+      "id": "datastory",
+      "label": "Data Story Studio",
+      "type": "project",
+      "description": "CSV/Excel to AI-built animated story dashboards. DuckDB readiness gate and scored insight candidates; Claude via IBM ICA narrates with a number guard. Q&A over sandboxed SQL, data previewer, HTML/PDF export and an executive summary (Markdown/PDF).",
+      "tech": [
+        "FastAPI",
+        "DuckDB",
+        "pandas",
+        "React",
+        "TypeScript",
+        "ECharts",
+        "Playwright",
+        "IBM ICA Client"
+      ]
     }
   ],
   "edges": [
@@ -418,6 +434,11 @@
       "from": "heromotion",
       "to": "ibm",
       "label": "copywriter"
+    },
+    {
+      "from": "datastory",
+      "to": "ibm",
+      "label": "narrator"
     }
   ],
   "flows": [
@@ -742,6 +763,38 @@
         {
           "node": "heromotion",
           "action": "PNG / MP4 (WebCodecs + mp4-muxer) / GIF (gifenc) / PPTX (pptxgenjs) rendered frame by frame"
+        }
+      ]
+    },
+    {
+      "id": "f13",
+      "name": "Data to Story Dashboard",
+      "project": "Data Story Studio",
+      "description": "CSV/Excel \u2192 readiness gate \u2192 scored insights (DuckDB) \u2192 Claude narrative (IBM ICA) with number guard \u2192 explore, ask, export",
+      "steps": [
+        {
+          "node": "datastory",
+          "action": "Files ingested into DuckDB; columns profiled into measures, categories, dates and identifiers"
+        },
+        {
+          "node": "datastory",
+          "action": "Readiness gate: row volume, joins/unions with match rates, duplicates, ambiguous dates, long-format tables"
+        },
+        {
+          "node": "datastory",
+          "action": "About 25 candidate panels (trends, anomalies, drivers, concentration, correlations) computed and scored by significance"
+        },
+        {
+          "node": "ibm",
+          "action": "Claude orders panels into a story and writes headings and insights from a pre-formatted fact sheet"
+        },
+        {
+          "node": "datastory",
+          "action": "Number guard drops any sentence citing a figure not in the facts; Q&A SQL validated as one read-only SELECT"
+        },
+        {
+          "node": "datastory",
+          "action": "Export: self-contained HTML, PDF via Playwright, and an Executive Summary as Markdown or PDF"
         }
       ]
     }
