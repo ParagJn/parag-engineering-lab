@@ -1,0 +1,15 @@
+product_id,product_name,category,unit_price
+P01,Flat white,Hot coffee,5.2
+P02,Latte,Hot coffee,5.4
+P03,Cappuccino,Hot coffee,5.2
+P04,Long black,Hot coffee,4.6
+P05,Mocha,Hot coffee,5.9
+P06,Iced latte,Cold drinks,6.2
+P07,Cold brew,Cold drinks,6.0
+P08,Iced chocolate,Cold drinks,6.5
+P09,Chai latte,Tea,5.3
+P10,English breakfast,Tea,4.2
+P11,Almond croissant,Food,6.8
+P12,Banana bread,Food,5.5
+P13,Breakfast roll,Food,9.9
+P14,Avocado toast,Food,14.5

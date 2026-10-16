@@ -1,0 +1,142 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --color-page: #f4f3ef;
+  --color-surface: #fdfdfc;
+  --color-sunken: #f0efea;
+  --color-ink: #0b0b0b;
+  --color-ink-2: #52514e;
+  --color-muted: #898781;
+  --color-hair: #e1e0d9;
+  --color-line: #c3c2b7;
+  --color-accent: #2a78d6;
+  --color-accent-soft: #e6f0fc;
+  --color-good: #006300;
+  --color-good-mark: #0ca30c;
+  --color-warn: #8a5a00;
+  --color-warn-mark: #fab219;
+  --color-bad: #b42323;
+  --color-bad-mark: #d03b3b;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  background: var(--color-page);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid rgba(11, 11, 11, 0.08);
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(11, 11, 11, 0.03);
+}
+
+/* scroll reveal: content rises into place once it enters the viewport */
+.reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 600ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    transform 600ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.reveal.in {
+  opacity: 1;
+  transform: none;
+}
+
+@keyframes sweep {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.sweep {
+  transform-origin: left;
+  animation: sweep 900ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.spin {
+  animation: spin 900ms linear infinite;
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.pulse-soft {
+  animation: pulse-soft 1.6s ease-in-out infinite;
+}
+
+.motion-off .reveal {
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
+.motion-off .sweep,
+.motion-off .pulse-soft {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .sweep,
+  .pulse-soft {
+    animation: none;
+  }
+}
+
+.prose-sql {
+  white-space: pre;
+  tab-size: 2;
+}
+
+@media print {
+  @page {
+    size: A4;
+  }
+  html,
+  body {
+    background: #fff;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-avoid {
+    break-inside: avoid;
+  }
+  .print-break {
+    break-before: page;
+  }
+  .card {
+    box-shadow: none;
+  }
+}
