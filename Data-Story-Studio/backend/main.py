@@ -3,6 +3,7 @@
 Flow: upload files -> readiness report -> setup (goal, links) -> dashboard -> explore / ask / redraw / export
 """
 
+import json
 import re
 import shutil
 import time
@@ -16,6 +17,7 @@ from pydantic import BaseModel, Field
 
 from config import get_settings
 import brief
+import maps
 from export import ExportError, build_html, build_pdf, print_pdf, safe_filename
 from panels import Ctx, RecipeError, compile_panel
 from pipeline import apply_setup, dashboard_meta, generate_dashboard, get_scope, ingest_all, recompute
@@ -64,6 +66,17 @@ def health():
             "min_rows": get_settings().min_rows}
 
 
+@app.get("/api/geo/{key}")
+def geo_boundaries(key: str):
+    """Map boundaries (GeoJSON) for map panels; static, so the browser may cache them."""
+    try:
+        geo = maps.boundaries(key)
+    except KeyError:
+        raise HTTPException(404, "Unknown map")
+    return Response(json.dumps(geo, separators=(",", ":")), media_type="application/json",
+                    headers={"Cache-Control": "public, max-age=86400"})
+
+
 @app.get("/api/datasets")
 def list_datasets():
     return registry.list()
@@ -90,7 +103,7 @@ EXAMPLE_BRIEF = {
     "files": {
         "orders": "One row per order: when, which store and product, sales channel, quantity, discount and revenue.",
         "products": "The menu: product name, category and list price.",
-        "stores": "The six stores: name, area and format (Excel file).",
+        "stores": "The six stores: name, Australian state, area and format (Excel file).",
         "feedback": "Customer survey answers for about a third of orders: rating, wait time and whether they'd recommend us.",
     },
     "goal_suggestions": [
@@ -459,7 +472,7 @@ def _export_payload(ds, scope_id: str, req: ExportReq) -> tuple[dict, str]:
     scope = get_scope(ds, scope_id)
     panels = recompute(ds, scope_id, req.filters) if req.filters else dash["panels"]
     payload = {**dash, "panels": panels, "filters": req.filters, "meta": dashboard_meta(ds, scope),
-               "exported": time.time(), "static": True}
+               "exported": time.time(), "static": True, "geo": maps.used_boundaries(panels)}
     title = dash["story"]["headline"].get("title") or scope["label"]
     return payload, title
 

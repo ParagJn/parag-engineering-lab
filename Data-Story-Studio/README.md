@@ -21,10 +21,10 @@ Brightleaf Coffee Co. is a fictional six-store coffee chain with two years of da
 |---|---|---|
 | `orders.csv` | about 19K orders: hourly timestamp, store, product, channel, quantity, discount, revenue; includes 36 duplicate rows | — |
 | `products.csv` | menu: name, category, price | `orders.product_id` |
-| `stores.xlsx` | stores: name, area, format (Excel) | `orders.store_id` |
+| `stores.xlsx` | stores: name, Australian state, area, format (Excel) | `orders.store_id` |
 | `feedback.csv` | survey answers for about 30% of orders: rating, wait time, would recommend | `orders.order_id` (partial match) |
 
-Planted stories for the analysis to find: delivery grows from about 8% to 28% of orders; a new store opens in March 2025; Riverside closes for three weeks in August 2025; hot drink prices rise 8% in January 2026; cold drinks peak in summer; a weekday 7–9am rush; longer waits (peak hours, delivery) go with lower ratings.
+Planted stories for the analysis to find: delivery grows from about 8% to 28% of orders; a new store opens in March 2025; Riverside closes for three weeks in August 2025; hot drink prices rise 8% in January 2026; cold drinks peak in summer; a weekday 7–9am rush; longer waits (peak hours, delivery) go with lower ratings. The six stores sit in six Australian states, so revenue by state is drawn as a **map** (the example's map panel).
 
 Loading the example shows a step-by-step guide on the readiness screen and on the dashboard. To regenerate the data: `python scripts/make_example.py`.
 
@@ -52,9 +52,10 @@ Without IBM ICA configured, everything still works except Q&A and free-form redr
    - **Long-format tables**: when a column names the measure each row holds (e.g. `measure_name` with values on very different scales), adding rows together would mix units. Each measure gets its own dashboard tab instead (up to 20), and within a tab the value column leads and is averaged.
    - Optional goal and audience.
 3. **Insight discovery** (deterministic): about 25 candidate views are scored by business significance. Candidates cover KPI movement, trend fit, robust anomalies, period-over-period change with driver attribution (waterfall), concentration (top-N share, 80% rule), segment growth, time-of-week heatmaps, correlations and distributions. Partial first and last periods are detected and excluded from trends.
+   - **Maps** appear only when a dimension's values are places: at least 85% of its records name a country (names or ISO codes) or a state/province of the US, Canada, Australia, India, Brazil, China, Russia, Indonesia or South Africa (names or postal codes). The check reads values, not column names, so "Region = North / South", departments or cities stay as bar charts. A code-only column needs at least 6 matched regions so abbreviations like `HR` / `IT` aren't mistaken for countries. Boundaries are Natural Earth (public domain), bundled in `backend/geo/`. World shapes are 1:110m, so very small countries are hard to see. There are no city or county maps.
 4. **Story** (IBM ICA): the model picks and orders panels into headline, evidence, drivers and detail, and writes headings and insights (what happened, how big, evidence, why it may matter, next step). A **number guard** drops any sentence that cites a figure not present in the computed facts.
 5. **Explore**:
-   - Click a bar, series, period or heatmap cell to filter every panel. Titles are recomputed under the filter.
+   - Click a bar, series, period, heatmap cell or map region to filter every panel. Titles are recomputed under the filter.
    - Every panel has *Data* (sortable, downloadable as CSV) and *Query* (the exact SQL, editable and re-runnable read-only).
    - Click a KPI to see its definition, record count, its trend by period and the query behind it.
    - **Ask** in natural language. The model writes one SELECT, which is validated, sandboxed and retried once on error. The answer is phrased from the result only, and you can pin it to the dashboard.
@@ -62,7 +63,7 @@ Without IBM ICA configured, everything still works except Q&A and free-form redr
    - *Show more findings*: candidates the story left out can be added back.
 6. **Executive Summary**: board-ready commentary written from the dashboard's computed facts: bottom line, key metrics table (taken straight from the KPI cards), what happened, risks, opportunities, recommended actions, and notes on the data. The number guard applies. It's saved with the dashboard and can be copied, or downloaded as **Markdown** or **PDF**, to paste into reports. *Rewrite* regenerates it.
 7. **Export**:
-   - **HTML**: one self-contained file with the viewer bundle and data embedded. It works offline with animation, tooltips, data tables and SQL.
+   - **HTML**: one self-contained file with the viewer bundle and data embedded, plus the map boundaries the dashboard uses. It works offline with animation, tooltips, data tables and SQL.
    - **PDF**: the same report printed through headless Chromium with motion off, one section per page.
 
 ## Architecture
@@ -74,6 +75,8 @@ backend/
   readiness.py   the readiness gate: volume, relationships, quality issues
   model.py       analysis scopes: DuckDB views with unions, lookup joins, derived durations
   panels.py      panel recipes -> SQL -> data + chart encoding + computed, evidence-backed titles
+  maps.py        place detection (values -> countries / states) and boundary GeoJSON for map panels
+  geo/           Natural Earth boundaries: countries (1:110m), states/provinces of 9 countries (1:50m)
   insights.py    candidate generation and significance scoring; deterministic default story
   story.py       IBM ICA layer: compose story, Q&A, redraw; number guard
   brief.py       executive summary (Markdown + PDF), number-guarded
@@ -100,7 +103,7 @@ frontend/src/
 | Key | Default | |
 |---|---|---|
 | `IBM_ICA_ENDPOINT`, `IBM_ICA_API_KEY` | — | required for the AI narrative and Q&A |
-| `IBM_ICA_MODEL_ID` | `claude-opus-5-5` | |
+| `IBM_ICA_MODEL_ID` | `claude-sonnet-5-5` | `claude-opus-5-5` is rejected by the IBM gateway for this key (E003) as of 2026-10-17 |
 | `IBM_ICA_FALLBACK_MODEL_ID` | `claude-sonnet-5` | retried once when a reply is blocked by the content filter |
 | `MIN_ROWS` | `1000` | readiness volume threshold |
 | `MAX_UPLOAD_MB` | `200` | |

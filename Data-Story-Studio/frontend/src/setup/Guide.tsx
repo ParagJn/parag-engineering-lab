@@ -33,7 +33,8 @@ const STEPS: Record<"readiness" | "dashboard", { heading: string; steps: Step[] 
     heading: "Guided example · step 2 of 2: explore the story",
     steps: [
       { title: "Read the headline", body: "The top line is the most significant finding. KPI cards show the latest complete period compared with the one before. Click a KPI to see its definition, monthly values and query." },
-      { title: "Click to filter", body: "Click a bar (a channel or store) or a heatmap cell and every panel recomputes for that slice, titles included. Remove the filter with the chip at the top." },
+      { title: "Click to filter", body: "Click a bar (a channel or store), a heatmap cell or a state on the map and every panel recomputes for that slice, titles included. Remove the filter with the chip at the top." },
+      { title: "Look at the map", body: "The stores sit in six Australian states, so revenue by state is drawn as a map. Maps appear only when a column holds places (countries, or states for the US, Canada, Australia, India and a few more); the same data as bars is one click away in the wand menu." },
       { title: "Check the evidence", body: "Each panel has a table icon (the data behind it, downloadable as CSV) and a code icon (the exact SQL, which you can edit and run)." },
       { title: "Redraw a panel", body: "Click the wand on any panel. Switch the chart type, change the time grain, or type a change such as “split by channel” or “only the top 3”. Undo is there if you don't like it." },
       { title: "Ask a question", body: "Click Ask and try “Which store has the longest waits?” or “How did revenue change after January 2026?”. Pin a good answer to the dashboard." },

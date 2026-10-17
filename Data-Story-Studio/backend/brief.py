@@ -45,6 +45,9 @@ async def executive_summary(dash: dict, regenerate: bool = False) -> dict:
             summary.update(_fallback(story))
             summary["source"] = "computed"
             summary["notice"] = f"AI commentary unavailable ({err}); showing the computed findings."
+    for n in summary.pop("anomaly_notes", None) or []:
+        if f"Note: {n}" not in summary["notes"]:
+            summary["notes"].insert(-1, f"Note: {n}")
     summary["markdown"] = to_markdown(summary)
     dash["exec_summary"] = summary
     return summary
@@ -68,13 +71,16 @@ Write an executive summary an executive can paste into a board pack or monthly r
 Plain business English, no chart talk ("the bar chart shows"), no panel ids, no jargon.
 Lead with the "so what". Each bullet one or two sentences and at most one or two figures, copied exactly from FACTS.
 Phrase possible causes as hypotheses. Skip a section rather than pad it.
+Report the data at face value; never describe a figure as a data error or ask the reader to fix the data.
+Put any figure that looks unusually extreme only in "anomaly_notes" as one short neutral line.
 Return ONLY JSON:
 {{
   "bottom_line": "2-3 sentences: the single most important message and why it matters",
   "highlights": [{{"heading": "3-6 words", "text": "what happened and how big"}}],
   "risks": ["0-3 risks or watch items"],
   "opportunities": ["0-3 opportunities"],
-  "actions": ["2-4 concrete recommended actions, each starting with a verb"]
+  "actions": ["2-4 concrete recommended actions, each starting with a verb"],
+  "anomaly_notes": ["0-2 short neutral lines on figures that look unusually extreme; empty if none"]
 }}
 Give 3-5 highlights, ordered by business importance."""
     out = await _agent().complete_json(PRINCIPLES, prompt, 3000)
@@ -89,7 +95,7 @@ Give 3-5 highlights, ordered by business importance."""
     res = {"bottom_line": g(out.get("bottom_line"))}
     res["highlights"] = [h for h in ({"heading": g(x.get("heading")), "text": g(x.get("text"))}
                                      for x in (out.get("highlights") or [])[:6] if isinstance(x, dict)) if h["text"]]
-    for key in ("risks", "opportunities", "actions"):
+    for key in ("risks", "opportunities", "actions", "anomaly_notes"):
         res[key] = [s for s in (g(x) for x in (out.get(key) or [])[:5]) if s]
     if dropped:
         res["guarded"] = dropped
@@ -111,7 +117,7 @@ def _ordered_panels(dash: dict) -> list[dict]:
 
 
 def _story_text(story: dict) -> str:
-    lines = [story["headline"].get("title", ""), story["headline"].get("summary", "")]
+    lines = [story["headline"].get(k, "") for k in ("title", "finding", "summary")]
     for s in story["sections"]:
         lines += [s.get("heading", ""), s.get("note", "")]
     for ins in story.get("insights") or []:
@@ -156,6 +162,7 @@ def _notes(dash: dict) -> list[str]:
     files = ", ".join(f["name"] for f in meta.get("files") or [])
     if files:
         notes.append(f"Source: {files}" + (f", joined on {', '.join(j['on'] for j in meta['joins'])}" if meta.get("joins") else "") + ".")
+    notes += [f"Note: {n}" for n in dash["story"].get("anomaly_notes") or []]
     if dash.get("low_confidence"):
         notes.append("The dataset is small, so treat these findings as indicative rather than conclusive.")
     for pid in dash["story"]["kpis"]:
@@ -173,7 +180,7 @@ def _fallback(story: dict) -> dict:
         if s.get("heading") and s["heading"] != "More views":
             hl.append({"heading": "", "text": s["heading"].rstrip(".") + "." + (" " + s["note"] if s.get("note") else "")})
     return {
-        "bottom_line": story["headline"].get("summary") or story["headline"].get("title", ""),
+        "bottom_line": story["headline"].get("summary") or story["headline"].get("finding") or story["headline"].get("title", ""),
         "highlights": hl[:5],
         "risks": [],
         "opportunities": [],

@@ -1,13 +1,14 @@
 import * as echarts from "echarts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Panel } from "../lib/types";
+import { loadMap, mapReady } from "./geo";
 import { buildOption } from "./options";
 import { useMotion } from "../lib/motion";
 
 type Props = {
   panel: Panel;
   wide?: boolean;
-  onSelect?: (value: { kind: "category" | "period" | "cell" | "series"; value: any; value2?: any }) => void;
+  onSelect?: (value: { kind: "category" | "period" | "cell" | "series"; value: any; value2?: any; values?: any[] }) => void;
 };
 
 /** ECharts wrapper: animates on first view (scroll-triggered), morphs on data change, respects reduced motion. */
@@ -19,6 +20,23 @@ export function Chart({ panel, wide = false, onSelect }: Props) {
   const built = useMemo(() => buildOption(panel, wide), [panel, wide]);
   const selectRef = useRef(onSelect);
   selectRef.current = onSelect;
+  // map panels draw once their boundaries are registered (embedded in exports, fetched in the app)
+  const geo: string | undefined = panel.chart === "map" ? panel.map?.geo : undefined;
+  const [geoState, setGeoState] = useState<"ready" | "loading" | "failed">(() => (!geo || mapReady(geo) ? "ready" : "loading"));
+  useEffect(() => {
+    if (!geo || mapReady(geo)) {
+      setGeoState("ready");
+      return;
+    }
+    let live = true;
+    setGeoState("loading");
+    loadMap(geo)
+      .then(() => live && setGeoState("ready"))
+      .catch(() => live && setGeoState("failed"));
+    return () => {
+      live = false;
+    };
+  }, [geo]);
 
   useEffect(() => {
     if (!el.current) return;
@@ -56,7 +74,10 @@ export function Chart({ panel, wide = false, onSelect }: Props) {
         if (e.seriesName) fn({ kind: "series", value: e.seriesName });
       } else if (p.recipe?.kind === "timeseries" && e.dataIndex !== undefined) {
         fn({ kind: "period", value: p.data?.rows[e.dataIndex]?.[0] });
-      } else if (["breakdown", "change"].includes(p.recipe?.kind) && e.name) {
+      } else if (p.chart === "map") {
+        // a region can gather several spellings from the data ("USA", "United States"): filter on all of them
+        if (e.data?.labels?.length) fn({ kind: "category", value: e.data.name, values: e.data.labels });
+      } else if (["breakdown", "change", "map"].includes(p.recipe?.kind) && e.name) {
         if (p.chart === "waterfall" && (e.dataIndex === 0 || e.dataIndex === (p.data?.rows.length ?? 0) + 1)) return;
         fn({ kind: "category", value: e.name });
       } else if (p.chart === "treemap" && e.name) {
@@ -74,13 +95,19 @@ export function Chart({ panel, wide = false, onSelect }: Props) {
   const lastReplay = useRef(replayKey);
   useEffect(() => {
     const c = chart.current;
-    if (!c || !built) return;
+    if (!c || !built || geoState !== "ready") return;
     const replay = lastReplay.current !== replayKey;
     lastReplay.current = replayKey;
     if (replay) c.clear();
     c.setOption({ ...built.option, animation: animate, animationDurationUpdate: animate ? 650 : 0, animationEasingUpdate: "cubicInOut" }, { notMerge: true });
-  }, [built, visible, animate, replayKey]);
+  }, [built, visible, animate, replayKey, geoState]);
 
   if (!built) return null;
+  if (geoState === "failed")
+    return (
+      <div style={{ height: built.height }} className="grid place-items-center text-[12.5px] text-muted">
+        Map boundaries couldn't be loaded. Switch to bars, or see the Data tab.
+      </div>
+    );
   return <div ref={el} style={{ height: built.height, width: "100%" }} role="img" aria-label={panel.title} />;
 }

@@ -94,7 +94,7 @@ export function StoryView({
               {ps.map((p, pi) => {
                 const wide = ps.length === 1 || (ps.length % 2 === 1 && pi === 0) || ["table", "small_multiples"].includes(p.chart) || (p.chart === "heatmap" && (p.x_order?.length ?? 0) > 12);
                 return (
-                  <div key={p.id} className={wide ? "lg:col-span-2" : ""}>
+                  <div key={p.id} className={`flex ${wide ? "lg:col-span-2" : ""}`}>
                     <PanelCard panel={p} wide={wide} actions={actions} isStatic={isStatic} tag={p.id === story.headline.panel ? "Headline finding" : undefined} />
                   </div>
                 );
@@ -146,9 +146,15 @@ function Hero({ dash, period, toolbar }: { dash: Dashboard; period: string | nul
           {toolbar}
         </div>
       </div>
-      <h1 className="mt-5 text-[28px] sm:text-[40px] leading-[1.12] font-semibold tracking-tight text-ink max-w-[22ch] sm:max-w-[26ch] text-balance">{story.headline.title}</h1>
-      <div className="mt-4 h-[3px] w-24 rounded-full bg-accent sweep" />
+      <h1 className={`mt-5 font-semibold tracking-[-0.03em] text-ink text-balance ${story.headline.title.length > 34 ? "text-[30px] sm:text-[44px] leading-[1.08] max-w-[24ch]" : "text-[40px] sm:text-[68px] leading-[1.02] max-w-[16ch] sm:max-w-[18ch]"}`}>{story.headline.title}</h1>
+      <div className="mt-5 h-[3px] w-24 rounded-full bg-accent sweep" />
+      {story.headline.finding && <p className="mt-5 text-[19px] sm:text-[24px] leading-snug font-medium text-ink max-w-[36ch] sm:max-w-[44ch] text-balance">{story.headline.finding}</p>}
       {story.headline.summary && <p className="mt-4 text-[15.5px] sm:text-[17px] leading-relaxed text-ink-2 max-w-[68ch]">{story.headline.summary}</p>}
+      {!!story.anomaly_notes?.length && (
+        <p className="mt-2 text-[11.5px] leading-snug text-muted max-w-[80ch]">
+          <span className="font-medium">Note:</span> {story.anomaly_notes.join(" ")}
+        </p>
+      )}
       {meta.goal && (
         <p className="mt-3 text-[12.5px] text-muted">
           Built to answer: <span className="text-ink-2">“{meta.goal}”</span>

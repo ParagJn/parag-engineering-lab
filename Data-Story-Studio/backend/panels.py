@@ -10,6 +10,7 @@ import math
 import re
 from datetime import date, datetime, timedelta
 
+import maps
 from fmt import (MONTHS, WEEKDAYS, compact, fmt_change, fmt_pct, fmt_period, fmt_points, fmt_range,
                  fmt_value, is_num, to_date)
 from model import agg_sql, dimensions, humanize, measures
@@ -22,6 +23,7 @@ CHARTS = {
     "timeseries_split": ["line", "stacked_area", "stacked_column", "small_multiples"],
     "breakdown": ["bar", "column", "treemap", "lollipop"],
     "breakdown_avg": ["bar", "column", "lollipop"],
+    "map": ["map", "bar", "lollipop"],
     "change": ["waterfall", "bar"],
     "change_avg": ["bar"],
     "heatmap": ["heatmap"],
@@ -207,9 +209,14 @@ def partial_flags(ctx: Ctx, periods: list, grain: str, tcol: str) -> tuple[bool,
 
 def compile_panel(ctx: Ctx, recipe: dict, title_override: str = "") -> dict:
     kind = recipe.get("kind")
+    # chart switches between the two views of the same places change the recipe kind
+    if kind == "breakdown" and recipe.get("chart") == "map":
+        recipe = {"kind": "map", "measure": recipe["measure"], "dim": recipe["dim"], "chart": "map"}
+        kind = "map"
     fn = {
         "kpi": _kpi, "timeseries": _timeseries, "breakdown": _breakdown, "change": _change,
         "heatmap": _heatmap, "scatter": _scatter, "distribution": _distribution, "table": _table, "sql": _sql_panel,
+        "map": _map,
     }.get(kind)
     if fn is None:
         raise RecipeError(f"Unknown panel kind {kind}")
@@ -515,9 +522,12 @@ def _breakdown(ctx: Ctx, r: dict) -> dict:
     chart = _pick_chart(r, family)
     if r.get("sort") == "label":
         data["rows"].sort(key=lambda row: (row[0] == OTHER, str(row[0])))
+    allowed = list(CHARTS[family])
+    if maps.fit_dimension(ctx.ds, ctx.scope, dim):
+        allowed.append("map")  # switching to it turns the recipe into a map (compile_panel)
     panel = {"chart": chart, "sql": sql, "data": data, "unit": m["unit"], "measure": m["name"], "measure_label": m["label"],
              "dim": dim, "dim_label": dc["label"], "enc": {"cat": "label", "value": "value", "n": "n", "share": "share"},
-             "allowed_charts": CHARTS[family]}
+             "allowed_charts": allowed}
     panel.update(_breakdown_story(ctx, m, dc, data, additive))
     return panel
 
@@ -844,6 +854,84 @@ def _table(ctx: Ctx, r: dict) -> dict:
     title = r.get("title") or (f"Records with the highest {lc(ctx.col(sort)['label'])}" if sort else "Sample of records")
     return {"chart": "table", "sql": sql, "data": data, "labels": labels, "units": [ctx.col(c).get("unit") for c in cols],
             "title": title, "subtitle": f"Showing up to {limit} rows", "allowed_charts": CHARTS["table"]}
+
+
+def _map(ctx: Ctx, r: dict) -> dict:
+    """Choropleth of a dimension whose values are places (see maps.py). Can also be shown as bars or lollipops."""
+    m = ctx.measure(r["measure"])
+    dim = r["dim"]
+    dc = ctx.col(dim)
+    geo = r.get("geo")
+    if not geo:
+        fit = maps.fit_dimension(ctx.ds, ctx.scope, dim)
+        if not fit:
+            raise RecipeError(f"{dc['label']} doesn't hold places a map can show")
+        geo = fit["geo"]
+    if geo not in maps.keys():
+        raise RecipeError(f"No map boundaries for {geo}")
+    additive = m["agg"] in ("sum", "count")
+    weight = "value" if additive else "n"
+    sql = (f"WITH {ctx.base()},\ng AS (SELECT {dim_expr(dim)} AS label, {agg_sql(m)} AS value, count(*) AS n FROM base GROUP BY 1)\n"
+           f"SELECT label, value, n, {weight} / sum({weight}) OVER () AS share FROM g ORDER BY value DESC NULLS LAST")
+    data = run(ctx, sql)
+    matches, unplaced = maps.match(geo, [row[0] for row in data["rows"]])
+    base_total = sum(float((row[1] or 0) if additive else (row[2] or 0)) for row in data["rows"])
+    acc: dict[str, dict] = {}
+    for label, value, n, _ in data["rows"]:
+        region = matches.get(label)
+        if region is None or value is None:
+            continue
+        g = acc.setdefault(region, {"name": region, "labels": [], "total": 0.0, "n": 0})
+        value, n = float(value), int(n or 0)
+        g["labels"].append(label)
+        g["n"] += n
+        g["total"] += value if additive else value * n
+    regions = []
+    for g in acc.values():
+        value = g["total"] if additive else (g["total"] / g["n"] if g["n"] else None)
+        if value is None:
+            continue
+        share_of = g["total"] if additive else g["n"]
+        regions.append({"name": g["name"], "labels": g["labels"], "value": value, "n": g["n"],
+                        "share": share_of / base_total if base_total else None})
+    regions.sort(key=lambda g: -g["value"])
+    unit, label = m["unit"], m["label"]
+    plural_, singular = ("countries", "country") if geo == maps.WORLD else ("states and provinces", "state or province")
+    panel = {"chart": _pick_chart(r, "map"), "sql": sql, "data": data, "unit": unit, "measure": m["name"], "measure_label": label,
+             "agg": m["agg"], "dim": dim, "dim_label": dc["label"], "enc": {"cat": "label", "value": "value", "n": "n", "share": "share"},
+             "map": {"geo": geo, "regions": regions}, "allowed_charts": CHARTS["map"]}
+    if not regions:
+        if not ctx.filters:
+            raise RecipeError("None of the values could be placed on a map")
+        return {**panel, "title": f"No {plural_} to map under the current filters", "subtitle": "", "stats": {}}
+    top = regions[0]
+    placed = sum(g["share"] or 0 for g in regions)
+    stats = {"regions": len(regions), "coverage": placed, "top": top["name"], "top_value": top["value"], "top_share": top["share"]}
+    caveats = []
+    unplaced = [u for u in unplaced if u != BLANK]
+    if unplaced:
+        shown = ", ".join(str(u) for u in unplaced[:5]) + ("…" if len(unplaced) > 5 else "")
+        caveats.append(f"{len(unplaced)} value(s) couldn't be matched to a {singular} boundary, so they aren't on the map: {shown}.")
+    if additive:
+        if top["share"] >= 0.3 or len(regions) <= 3:
+            title = f"{top['name']} accounts for {fmt_pct(top['share'])} of {lc(label)}"
+        else:
+            title = f"{lc(label)[:1].upper() + lc(label)[1:]} is spread across {plural_}: {top['name']} leads with {fmt_pct(top['share'])}"
+        sub = f"{len(regions)} {plural_} mapped · {fmt_pct(placed)} of records placed on the map"
+    else:
+        all_rows = [row for row in data["rows"] if row[1] is not None]
+        overall = sum(row[1] * row[2] for row in all_rows) / max(sum(row[2] or 0 for row in all_rows), 1)
+        solid = [g for g in regions if g["n"] >= 20] or regions
+        hi = max(solid, key=lambda g: g["value"])
+        lo = min(solid, key=lambda g: g["value"])
+        spread = hi["value"] / lo["value"] if lo["value"] else None
+        stats.update({"overall": overall, "spread": spread})
+        if spread and spread >= 1.15 and len(solid) >= 2:
+            title = f"{hi['name']} has the highest {lc(label)}: {fmt_value(hi['value'], unit)} vs {fmt_value(overall, unit)} overall"
+        else:
+            title = f"{label} is similar across {plural_} (all within 15%)"
+        sub = f"Lowest: {lo['name']} at {fmt_value(lo['value'], unit)} · regions with fewer than 20 records are not ranked"
+    return {**panel, "highlight": top["labels"][0], "caveats": caveats, "title": title, "subtitle": sub, "stats": stats}
 
 
 SQL_SAFE_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_ ]*$")

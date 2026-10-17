@@ -12,6 +12,7 @@ const CHART_NAMES: Record<string, string> = {
   bar: "Bars",
   lollipop: "Lollipop",
   treemap: "Treemap",
+  map: "Map",
   stacked_area: "Stacked",
   stacked_column: "Stacked columns",
   small_multiples: "Small multiples",
@@ -27,7 +28,7 @@ const CHART_NAMES: Record<string, string> = {
 const GRAINS = ["day", "week", "month", "quarter", "year"];
 
 export type PanelActions = {
-  onSelect?: (p: Panel, sel: { kind: string; value: any; value2?: any }) => void;
+  onSelect?: (p: Panel, sel: { kind: string; value: any; value2?: any; values?: any[] }) => void;
   onSwitch?: (p: Panel, recipe: Record<string, any>) => Promise<void>;
   onRedraw?: (p: Panel, instruction: string) => Promise<void>;
   onUndo?: (p: Panel) => Promise<void>;
@@ -61,12 +62,16 @@ export function PanelCard({ panel, wide, actions, isStatic, tag }: { panel: Pane
   const showGrain = !isStatic && ["timeseries"].includes(panel.recipe?.kind);
 
   return (
-    <article ref={ref} className="reveal card p-4 sm:p-5 flex flex-col min-w-0 print-avoid" aria-busy={busy}>
+    <article ref={ref} className="reveal card p-4 sm:p-5 flex flex-col flex-1 min-w-0 print-avoid" aria-busy={busy}>
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           {tag && <div className="text-[11px] font-semibold uppercase tracking-wider text-accent mb-1">{tag}</div>}
-          <h3 className="text-[15.5px] sm:text-base font-semibold leading-snug text-ink text-balance">{panel.title}</h3>
-          {panel.subtitle && <p className="mt-1 text-[12.5px] text-ink-2 leading-snug">{panel.subtitle}</p>}
+          <h3 className="text-[15.5px] sm:text-base font-semibold leading-snug text-ink text-balance line-clamp-2 lg:min-h-[2lh]" title={panel.title}>
+            {panel.title}
+          </h3>
+          <p className="mt-1 text-[12.5px] text-ink-2 leading-snug line-clamp-2 lg:min-h-[2lh]" title={panel.subtitle || undefined}>
+            {panel.subtitle}
+          </p>
         </div>
         <div className="flex items-center gap-0.5 shrink-0 no-print">
           {busy && <Spinner className="text-muted mr-1" />}
@@ -177,6 +182,8 @@ export function PanelCard({ panel, wide, actions, isStatic, tag }: { panel: Pane
         {tab === "sql" && <SqlView panel={panel} onRun={isStatic ? undefined : actions.onRunSql} />}
       </div>
 
+      {/* footer notes sit at the bottom so equal-height cards keep their plots aligned */}
+      <div className="mt-auto" />
       {(panel.caveats?.length ?? 0) > 0 && (
         <ul className="mt-3 space-y-0.5">
           {panel.caveats!.map((c, i) => (

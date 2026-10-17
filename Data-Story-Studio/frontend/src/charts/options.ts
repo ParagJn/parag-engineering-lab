@@ -23,6 +23,10 @@ import {
 
 export type Built = { option: any; height: number };
 
+/** One plot height for every standard card, so cards side by side line up. Lists only grow past it when they must. */
+export const PLOT_H = 300;
+const listHeight = (n: number) => Math.max(PLOT_H, n * 30 + 30);
+
 const GRID = { left: 8, right: 20, top: 28, bottom: 8, containLabel: true };
 const EASE = "cubicOut";
 
@@ -65,6 +69,8 @@ export function buildOption(p: Panel, wide: boolean): Built | null {
       return breakdownBar(p);
     case "lollipop":
       return lollipop(p);
+    case "map":
+      return choropleth(p);
     case "treemap":
       return treemap(p);
     case "waterfall":
@@ -153,7 +159,7 @@ function timeSingle(p: Panel): Built {
     animationDelay: isCol ? (i: number) => i * 25 : 0,
   };
   return {
-    height: 300,
+    height: PLOT_H,
     option: {
       grid: GRID,
       tooltip: {
@@ -223,7 +229,7 @@ function timeSplit(p: Panel): Built {
     ...(hl && hl !== n && !stacked ? { lineStyle: { width: 2, color: colors[n], opacity: 0.35 } } : {}),
   }));
   return {
-    height: 320,
+    height: PLOT_H,
     option: {
       grid: { ...GRID, top: 40, right: direct ? 90 : 20 },
       legend: {
@@ -357,7 +363,7 @@ function breakdownBar(p: Panel): Built {
   const hl = p.highlight;
   const n = labels.length;
   return {
-    height: Math.max(160, n * 30 + 30),
+    height: listHeight(n),
     option: {
       grid: { ...GRID, right: 64, top: 8 },
       tooltip: breakdownTooltip(p, rows),
@@ -375,7 +381,7 @@ function breakdownBar(p: Panel): Built {
           type: "bar",
           data: values.map((v, i) => ({ value: v, itemStyle: { color: catColor(labels[i], hl, i) } })),
           barMaxWidth: 20,
-          barCategoryGap: "35%",
+          barCategoryGap: n <= 6 ? "55%" : "35%",
           itemStyle: { borderRadius: [0, 4, 4, 0] },
           label: { show: true, position: "right", color: INK2, fontSize: 11, fontFamily: FONT, formatter: (x: any) => fmtValue(x.value, p.unit) },
           animationDuration: 800,
@@ -392,7 +398,7 @@ function breakdownColumn(p: Panel): Built {
   const { labels, values, rows } = catRows(p);
   const hl = p.highlight;
   return {
-    height: 300,
+    height: PLOT_H,
     option: {
       grid: GRID,
       tooltip: breakdownTooltip(p, rows),
@@ -420,7 +426,7 @@ function lollipop(p: Panel): Built {
   const hl = p.highlight;
   const n = labels.length;
   return {
-    height: Math.max(160, n * 30 + 30),
+    height: listHeight(n),
     option: {
       grid: { ...GRID, right: 64, top: 8 },
       tooltip: breakdownTooltip(p, rows),
@@ -443,11 +449,77 @@ function lollipop(p: Panel): Built {
   };
 }
 
+// ---------------------------------------------------------------- maps
+
+type Region = { name: string; labels: string[]; value: number; n: number; share: number | null };
+
+/** Choropleth: regions shaded on the sequential ramp; unmatched land stays neutral. Boundaries are registered by geo.ts. */
+function choropleth(p: Panel): Built {
+  const regions: Region[] = p.map?.regions ?? [];
+  const values = regions.map((r) => r.value).filter(isNum);
+  const lo = values.length ? Math.min(...values) : 0;
+  const hi = values.length ? Math.max(...values) : 1;
+  const world = p.map?.geo === "world";
+  const additive = ["sum", "count"].includes(p.recipe?.agg) || p.recipe?.measure === "__records";
+  return {
+    height: PLOT_H + 40,
+    option: {
+      tooltip: {
+        ...tooltipBase,
+        trigger: "item",
+        formatter: (x: any) => {
+          const r: Region | undefined = x.data;
+          if (!r) return tip(x.name, [["", "No data"]]);
+          const items: [string, string][] = [[p.measure_label ?? "Value", fmtValue(r.value, p.unit)]];
+          if (isNum(r.share)) items.push([additive ? "Share" : "Share of records", `${(r.share * 100).toFixed(1)}%`]);
+          items.push(["Records", fmtValue(r.n)]);
+          const as = r.labels.filter((l) => l !== r.name);
+          return tip(as.length ? `${r.name} (${as.join(", ")})` : r.name, items);
+        },
+      },
+      visualMap: {
+        type: "continuous",
+        min: lo,
+        max: hi === lo ? lo + 1 : hi,
+        inRange: { color: RAMP.slice(1) },
+        calculable: false,
+        orient: "horizontal",
+        left: 8,
+        bottom: 4,
+        itemWidth: 10,
+        itemHeight: 120,
+        text: [fmtAxis(hi, p.unit), fmtAxis(lo, p.unit)],
+        textGap: 6,
+        textStyle: { color: MUTED, fontSize: 11, fontFamily: FONT },
+      },
+      series: [
+        {
+          id: "main",
+          type: "map",
+          map: p.map?.geo,
+          roam: false,
+          // the world map is wide; leave room for the legend under it
+          layoutCenter: ["50%", world ? "46%" : "45%"],
+          layoutSize: world ? "118%" : "92%",
+          selectedMode: false,
+          data: regions,
+          nameProperty: "name",
+          itemStyle: { areaColor: "#f1f0eb", borderColor: SURFACE, borderWidth: 0.6 },
+          emphasis: { label: { show: false }, itemStyle: { areaColor: ACCENT_SOFT, borderColor: INK2, borderWidth: 0.8 } },
+          label: { show: false },
+          animationDuration: 800,
+          animationEasing: EASE,
+        },
+      ],
+    },
+  };
+}
+
 function treemap(p: Panel): Built {
   const { labels, values, rows } = catRows(p);
   const total = values.reduce<number>((a, v) => a + (v ?? 0), 0);
   return {
-    height: 320,
+    height: PLOT_H,
     option: {
       tooltip: breakdownTooltip(p, rows),
       series: [
@@ -526,7 +598,7 @@ function waterfall(p: Panel): Built {
     formatter: (x: any) => (isNum(x.value) ? `${sign > 0 ? "+" : "-"}${fmtValue(x.value, unit)}` : ""),
   });
   return {
-    height: 320,
+    height: PLOT_H,
     option: {
       grid: GRID,
       tooltip: {
@@ -563,7 +635,7 @@ function deltaBars(p: Panel): Built {
   const unit = p.unit;
   const labels = rows.map((r) => nameOf(r[0]));
   return {
-    height: Math.max(160, rows.length * 30 + 30),
+    height: listHeight(rows.length),
     option: {
       grid: { ...GRID, left: 8, right: 70, top: 8 },
       tooltip: {
@@ -623,7 +695,7 @@ function heatmap(p: Panel): Built {
   });
   const cellH = ys.length > 10 ? 22 : 30;
   return {
-    height: Math.max(200, ys.length * cellH + 90),
+    height: Math.max(PLOT_H, ys.length * cellH + 90),
     option: {
       grid: { left: 8, right: 12, top: 8, bottom: 50, containLabel: true },
       tooltip: {
@@ -679,7 +751,7 @@ function sankey(p: Panel): Built {
   ];
   const links = rows.filter((r) => isNum(r[2]) && r[2] > 0).map((r) => ({ source: `${r[0]} `, target: ` ${r[1]}`, value: r[2] }));
   return {
-    height: Math.max(280, Math.max(xs.length, ys.length) * 34),
+    height: Math.max(PLOT_H, Math.max(xs.length, ys.length) * 34),
     option: {
       tooltip: {
         ...tooltipBase,
@@ -761,9 +833,9 @@ function scatter(p: Panel): Built {
     });
   }
   return {
-    height: 320,
+    height: PLOT_H,
     option: {
-      grid: { ...GRID, top: hasColor ? 36 : 20, bottom: 28, left: 16 },
+      grid: { ...GRID, top: hasColor ? 56 : 32, bottom: 28, left: 16 },
       legend: hasColor ? { top: 0, left: 0, icon: "circle", itemWidth: 9, textStyle: { color: INK2, fontSize: 12 }, data: names } : undefined,
       tooltip: {
         ...tooltipBase,
@@ -789,7 +861,8 @@ function scatter(p: Panel): Built {
         type: "value",
         scale: true,
         name: p.y_label,
-        nameTextStyle: { color: INK2, fontSize: 12, align: "left" },
+        nameGap: 12,
+        nameTextStyle: { color: INK2, fontSize: 12, align: "left", padding: [0, 0, 0, -8] },
         ...valueAxis,
         axisLabel: { ...valueAxis.axisLabel, formatter: (v: number) => fmtAxis(v, yu) },
       },
@@ -806,7 +879,7 @@ function histogram(p: Panel): Built {
     return i < 0 ? (v < rows[0][2] ? 0 : rows.length - 1) : i;
   };
   return {
-    height: 290,
+    height: PLOT_H,
     option: {
       grid: { ...GRID, top: 40 },
       tooltip: {
@@ -883,7 +956,7 @@ function sqlXY(p: Panel): Built {
   });
   const fmtX = (v: any) => (isTime ? fmtPeriodShort(v, guessGrain(xs as string[])) : String(v));
   return {
-    height: 300,
+    height: PLOT_H,
     option: {
       grid: { ...GRID, top: names.length > 1 ? 40 : 28 },
       legend: names.length > 1 ? { top: 0, left: 0, icon: "roundRect", itemWidth: 10, itemHeight: 10, textStyle: { color: INK2, fontSize: 12 } } : undefined,

@@ -1,6 +1,7 @@
 // Entry point for exported reports: renders the embedded dashboard JSON offline.
 import { useEffect } from "react";
 import { createRoot } from "react-dom/client";
+import { seedMaps } from "./charts/geo";
 import { StoryView } from "./dashboard/Story";
 import "./index.css";
 import { fmtDateTime } from "./lib/format";
@@ -33,6 +34,7 @@ function Viewer({ dash }: { dash: Dashboard }) {
 const el = document.getElementById("dashboard-data");
 const root = document.getElementById("root")!;
 const dash = JSON.parse(el?.textContent ?? "{}") as Dashboard;
+seedMaps(dash.geo);
 const print = root.dataset.print === "1" || !!dash.print;
 createRoot(root).render(
   <MotionProvider print={print}>

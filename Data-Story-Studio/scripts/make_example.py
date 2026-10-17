@@ -3,7 +3,7 @@
 Four related files that exercise every part of the tool:
   orders.csv      ~20K orders, hourly timestamps (fact table; includes a few exact duplicates)
   products.csv    lookup -> orders.product_id
-  stores.xlsx     lookup -> orders.store_id (Excel, to show Excel support)
+  stores.xlsx     lookup -> orders.store_id (Excel, to show Excel support; has each store's state for the map)
   feedback.csv    survey answers for ~30% of orders -> orders.order_id (partial match)
 
 Stories planted for the analysis to find:
@@ -13,6 +13,7 @@ Stories planted for the analysis to find:
   - Hot drink prices rise 8% in January 2026 (revenue up, volume flat)
   - Cold drinks peak in summer months
   - Weekday 7-9am rush; longer waits at peak and on delivery drive lower ratings
+  - Stores sit in six Australian states, so revenue by state is drawn as a map
 
 Usage: python scripts/make_example.py   (writes to data/Example/)
 """
@@ -38,14 +39,15 @@ products = pd.DataFrame([
     ("P13", "Breakfast roll", "Food", 9.90), ("P14", "Avocado toast", "Food", 14.50),
 ], columns=["product_id", "product_name", "category", "unit_price"])
 
+# the chain spans six Australian states, so the dashboard can draw a map of where revenue comes from
 stores = pd.DataFrame([
-    ("S1", "Central Station", "Metro", "Café"),
-    ("S2", "Riverside", "Metro", "Café"),
-    ("S3", "Northgate Mall", "Suburban", "Kiosk"),
-    ("S4", "Westfield Drive", "Suburban", "Drive-thru"),
-    ("S5", "Uni Quarter", "Metro", "Kiosk"),
-    ("S6", "Harbour Quay", "Metro", "Café"),
-], columns=["store_id", "store_name", "area", "format"])
+    ("S1", "Central Station", "New South Wales", "Metro", "Café"),
+    ("S2", "Riverside", "Victoria", "Metro", "Café"),
+    ("S3", "Northgate Mall", "Queensland", "Suburban", "Kiosk"),
+    ("S4", "Westfield Drive", "Western Australia", "Suburban", "Drive-thru"),
+    ("S5", "Uni Quarter", "South Australia", "Metro", "Kiosk"),
+    ("S6", "Harbour Quay", "Tasmania", "Metro", "Café"),
+], columns=["store_id", "store_name", "state", "area", "format"])
 store_weight = {"S1": 1.5, "S2": 1.2, "S3": 0.9, "S4": 1.0, "S5": 0.8, "S6": 1.1}
 
 # ---- order timestamps: daily volume x hourly profile

@@ -11,6 +11,7 @@ Without ICA configured everything still works deterministically; only prose/Q&A 
 import json
 import re
 
+import maps
 from config import get_settings
 from fmt import fmt_value, number_variants
 from insights import fact_sheet
@@ -26,7 +27,13 @@ Rules you never break:
 - Distinguish observation from interpretation. Phrase possible reasons as hypotheses ("may", "could indicate").
 - Never claim causation from correlation.
 - Headlines are insights, not labels: "Three regions account for most of the decline", not "Regional performance".
-- Be concise. Business audience. No jargon like 'r-squared' unless asked."""
+- Be concise. Business audience. No jargon like 'r-squared' unless asked.
+- You are a viewer of the data as given, not a data profiler. Report what the data shows at face value, in a confident
+  business tone. Never call a result a data error, join issue, bug or quality problem, and never tell the reader to fix
+  or validate the data in headlines, headings, summaries, insights or next steps.
+- If a figure looks unusually extreme (e.g. a very high rate or a value with no variation), still report it as the data
+  shows it, and mention it only in the separate "anomaly_notes" field: one short, neutral line suggesting a closer look
+  at how the figure correlates with the rest of the data."""
 
 
 def _agent():
@@ -94,7 +101,8 @@ async def setup_brief(state: dict) -> dict:
 # ------------------------------------------------------------------ compose
 
 
-async def compose(scope: dict, cands: list[dict], default: dict, goal: str, audience: str, low_confidence: bool) -> dict:
+async def compose(scope: dict, cands: list[dict], default: dict, goal: str, audience: str, low_confidence: bool,
+                  purpose: str = "") -> dict:
     """Pick and order panels into a narrative. Falls back to the deterministic default."""
     story = json.loads(json.dumps(default))
     story["source"] = "default"
@@ -105,7 +113,10 @@ async def compose(scope: dict, cands: list[dict], default: dict, goal: str, audi
     ids = {c["id"] for c in cands}
     facts = fact_sheet(cands)
     sl = scope.get("slice")
+    map_ids = [c["id"] for c in cands if c["chart"] == "map"]
+    map_rule = (f"Include the map panel {map_ids[0]} in a section: this data has places and readers expect the geography." if map_ids else "")
     prompt = f"""DATASET: {scope['label']} — {scope['rows']} records
+{('ABOUT THE DATA: ' + purpose) if purpose else ''}
 {f"SLICE: only rows where {sl['label']} = {sl['value']}; every value column measures {sl['value']}." if sl else ''}
 {('USER GOAL: ' + goal) if goal else 'USER GOAL: not given — find the most important story.'}
 {('AUDIENCE: ' + audience) if audience else ''}
@@ -119,8 +130,9 @@ FACTS (candidate panels already computed; ids in brackets):
 
 Design the dashboard as a story. Return ONLY JSON:
 {{
-  "headline": {{"title": "the single most important finding, max 14 words, numbers copied from FACTS",
-                "summary": "2-3 sentences: what happened, how big, why it may matter", "panel": "<hero panel id>"}},
+  "headline": {{"title": "the dashboard's hero title: a short editorial name, 2-6 words, like a magazine cover line. Name the business or subject and give it an angle, e.g. 'Brightleaf Coffee: Growth, Delivered' or 'The Rush Hour Ledger'. NO digits, no full sentence, no trailing full stop",
+                "finding": "the single most important finding as one sentence, 8-18 words, with its key number copied from FACTS",
+                "summary": "3-4 sentences for a busy reader: what happened and over what period, how big it is compared with a baseline, which segment or place drives it, and what it may mean (a hypothesis, not a cause)", "panel": "<hero panel id>"}},
   "kpis": ["2-4 kpi panel ids"],
   "sections": [{{"role": "evidence|change|drivers|patterns|detail", "heading": "insight-driven heading",
                  "panels": ["panel ids"], "note": "optional one-sentence takeaway"}}],
@@ -128,12 +140,15 @@ Design the dashboard as a story. Return ONLY JSON:
   "insights": [{{"title": "short", "what": "what happened", "significance": "how big",
                 "evidence": "which panel/figures", "why": "why it might matter (hypothesis)",
                 "next": "what to investigate or do next", "panels": ["ids"], "kind": "observation|hypothesis|recommendation"}}],
-  "next_steps": ["2-3 concrete things to investigate"]
+  "next_steps": ["2-3 concrete things to investigate"],
+  "anomaly_notes": ["0-2 short neutral lines on figures that look unusually extreme; empty if none"]
 }}
 Use 4-7 non-KPI panels in total, the most significant first, no two panels telling the same story.
-Prefer the user's goal when choosing. Skip weak findings rather than forcing them."""
+{map_rule}
+Prefer the user's goal when choosing. Skip weak findings rather than forcing them.
+Insights: 3-5 items, each specific to a panel's figures; the "why" and "next" fields must be concrete, not generic."""
     try:
-        out = await _agent().complete_json(PRINCIPLES, prompt, 6000)
+        out = await _agent().complete_json(PRINCIPLES, prompt, 10000)
     except (ProviderError, ValueError) as err:
         print(f"[story] compose failed, using default: {err}", flush=True)
         story["headline"]["summary"] = _fallback_summary(cands, default)
@@ -151,7 +166,13 @@ Prefer the user's goal when choosing. Skip weak findings rather than forcing the
     hl = out.get("headline") or {}
     hero = hl.get("panel") if hl.get("panel") in ids else default["headline"]["panel"]
     title = g(hl.get("title", ""))
-    story["headline"] = {"title": title or default["headline"]["title"], "summary": g(hl.get("summary", "")), "panel": hero}
+    finding = g(hl.get("finding", ""))
+    if not title or re.search(r"\d", title) or len(title.split()) > 9:
+        # not a name (a sentence or a figure): show it as the finding and let the dashboard name fall back
+        finding = finding or title
+        title = ""
+    story["headline"] = {"title": title or default["headline"]["title"], "finding": finding,
+                         "summary": g(hl.get("summary", "")), "panel": hero}
     kpis = [k for k in out.get("kpis") or [] if k in ids and _by_id(cands, k)["chart"] == "kpi"][:4]
     story["kpis"] = kpis or default["kpis"]
     sections, used = [], set(story["kpis"])
@@ -166,6 +187,7 @@ Prefer the user's goal when choosing. Skip weak findings rather than forcing the
         if hero and hero not in used and _by_id(cands, hero)["chart"] != "kpi":
             sections[0]["panels"].insert(0, hero)
         story["sections"] = sections
+    _keep_map(story, cands)
     story["panel_titles"] = {}
     for pid, t in (out.get("panel_titles") or {}).items():
         if pid in ids:
@@ -181,11 +203,28 @@ Prefer the user's goal when choosing. Skip weak findings rather than forcing the
         clean["kind"] = ins.get("kind") if ins.get("kind") in ("observation", "hypothesis", "recommendation") else "observation"
         story["insights"].append(clean)
     story["next_steps"] = [s for s in (g(x) for x in out.get("next_steps") or []) if s][:4]
+    story["anomaly_notes"] = [s for s in (g(x) for x in out.get("anomaly_notes") or []) if s][:2]
     story["source"] = "ai"
     if dropped:
         story["guarded"] = dropped
         print(f"[story] number guard dropped {len(dropped)} sentence(s): {dropped}", flush=True)
     return story
+
+
+def _keep_map(story: dict, cands: list[dict]) -> None:
+    """The model may leave the map out of its layout; when the data has places it still belongs on the dashboard."""
+    shown = {p for s in story["sections"] for p in s["panels"]} | set(story["kpis"])
+    best = next((c for c in sorted(cands, key=lambda c: -c["score"]) if c["chart"] == "map"), None)
+    if not best or best["id"] in shown:
+        return
+    dim = best["recipe"]["dim"]
+    if any(c["id"] in shown and c["recipe"]["kind"] == "breakdown" and c["recipe"].get("dim") == dim for c in cands):
+        return  # bars of the same places are already there
+    roomy = next((s for s in story["sections"][1:] if len(s["panels"]) < 2), None)
+    if roomy:
+        roomy["panels"].append(best["id"])
+    else:
+        story["sections"].append({"role": "patterns", "heading": best["title"], "panels": [best["id"]], "note": ""})
 
 
 def _by_id(cands: list[dict], pid: str) -> dict:
@@ -297,6 +336,8 @@ async def redraw(ds, scope: dict, panel: dict, instruction: str, filters: list) 
         return compile_panel(ctx, quick)
     if not llm_ready():
         raise RecipeError("Free-form redraw needs IBM ICA. Try a chart-type switch instead.")
+    places = [g["dim"] for g in maps.detect(ds, scope)]
+    map_kind = (f"- map {{measure, dim: one of {places}, chart: {CHARTS['map']}}} (choropleth of places)\n" if places else "")
     prompt = f"""TABLE {scope['view']} — {scope['label']}{f" (only {scope['slice']['label']} = {scope['slice']['value']})" if scope.get('slice') else ''}
 COLUMNS:
 {describe_columns(scope)}
@@ -311,7 +352,7 @@ RECIPE KINDS (fields):
 - breakdown {{measure, dim, top_n?, sort?: "value"|"label", chart: {CHARTS['breakdown']}}}
 - change {{measure, dim, grain?, compare?: "previous"|"yoy", chart: {CHARTS['change']}}}
 - heatmap {{measure, x: {{dim}}|{{part: hour|dow|month}}, y: same, chart: heatmap|sankey}}
-- scatter {{x, y, color?}}
+{map_kind}- scatter {{x, y, color?}}
 - distribution {{measure, bins?}}
 - table {{columns, sort?, asc?, limit?}}
 - sql {{sql: one SELECT over {scope['view']}, chart: {CHARTS['sql']}, enc: {{x,y,series,cat,value}}, title}}

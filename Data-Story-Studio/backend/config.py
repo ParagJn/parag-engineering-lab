@@ -11,7 +11,7 @@ _ENV_FILE = PROJECT_ROOT / ".env"
 class Settings(BaseSettings):
     ibm_ica_endpoint: str = ""
     ibm_ica_api_key: str = ""
-    ibm_ica_model_id: str = "claude-opus-5-5"
+    ibm_ica_model_id: str = "claude-sonnet-5-5"
     # Retried once when the primary model's reply is blocked by the content filter
     ibm_ica_fallback_model_id: str = "claude-sonnet-5"
 

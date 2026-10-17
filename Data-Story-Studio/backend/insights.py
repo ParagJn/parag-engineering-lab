@@ -8,6 +8,7 @@ numbers that weren't computed here.
 import itertools
 import json
 
+import maps
 from fmt import compact, fmt_change, fmt_pct, fmt_value
 from model import BOUND_NAME, dimensions, measures
 from panels import Ctx, RecipeError, compile_panel
@@ -72,6 +73,9 @@ def discover(ds, scope: dict, goal: str = "") -> dict:
     for m in avg_ms:
         for d in ds_[:2]:
             add({"kind": "breakdown", "measure": m["name"], "dim": d["name"]}, 0.75)
+    # maps only where the values are places (countries, or states for the covered countries)
+    for g in maps.detect(ds, scope)[:2]:
+        add({"kind": "map", "measure": primary["name"], "dim": g["dim"], "geo": g["geo"]}, 0.9)
     if len(ds_) >= 2 and ds_[0]["distinct"] <= 15 and ds_[1]["distinct"] <= 15:
         add({"kind": "heatmap", "measure": primary["name"], "x": {"dim": ds_[0]["name"]}, "y": {"dim": ds_[1]["name"]}}, 0.55)
 
@@ -122,6 +126,10 @@ def _significance(p: dict) -> float:
         rel = abs(s.get("rel") or 0)
         drv = abs(s.get("driver_share") or 0)
         return min(0.6 + rel * 2 + (0.4 if 0.4 <= drv <= 1 else 0), 2.0)
+    if p["recipe"]["kind"] == "map":
+        if "top_share" in s:
+            return 0.6 + min(s["top_share"] or 0, 0.8)
+        return min(0.5 + ((s.get("spread") or 1) - 1) * 2, 1.8)
     if p["recipe"]["kind"] == "breakdown":
         if "top_share" in s:
             return 0.6 + min(s["top_share"], 0.8) + (0.2 if s.get("top3_share", 0) >= 0.6 else 0)
@@ -148,6 +156,8 @@ def default_story(scope: dict, cands: list[dict], primary: dict) -> dict:
         r = c["recipe"]
         if r["kind"] == "timeseries" and not r.get("split"):
             key = ("trend",)
+        elif r["kind"] == "map":
+            key = ("breakdown", r["dim"])  # a map and bars of the same places say the same thing: keep the stronger
         else:
             key = (r["kind"], r.get("dim") or r.get("split") or json.dumps(r.get("x")) or r.get("measure"))
         fam = r["kind"] + ("_split" if r.get("split") else "")
@@ -158,7 +168,14 @@ def default_story(scope: dict, cands: list[dict], primary: dict) -> dict:
         picked.append(c)
         if len(picked) >= 6:
             break
-    table = next((c for c in cands if c["chart"] == "table"), None)
+    # a map is a different view from the bars and lines: when the data has places, the best map always gets a slot
+    best_map = next((c for c in rest if c["recipe"]["kind"] == "map"), None)
+    if best_map and best_map not in picked and ("breakdown", best_map["recipe"]["dim"]) not in seen:
+        if len(picked) >= 6:
+            picked[-1] = best_map
+        else:
+            picked.append(best_map)
+    table =next((c for c in cands if c["chart"] == "table"), None)
     hero = picked[0] if picked else (kpis[0] if kpis else None)
     sections = []
     if picked:
@@ -170,7 +187,8 @@ def default_story(scope: dict, cands: list[dict], primary: dict) -> dict:
     if table:
         sections.append({"role": "detail", "heading": "The records behind it", "panels": [table["id"]]})
     return {
-        "headline": {"title": hero["title"] if hero else scope["label"], "summary": "", "panel": hero["id"] if hero else None},
+        "headline": {"title": scope["label"], "finding": hero["title"] if hero else "", "summary": "",
+                     "panel": hero["id"] if hero else None},
         "kpis": [k["id"] for k in kpis],
         "sections": sections,
         "insights": [],
@@ -198,6 +216,8 @@ def fact_sheet(cands: list[dict]) -> str:
         s = c.get("stats") or {}
         if c["recipe"]["kind"] == "breakdown" and "top_share" in s:
             line += f"\n  top 3 share {fmt_pct(s['top3_share'])}; {s['k80']} groups make 80%"
+        if c["recipe"]["kind"] == "map":
+            line += f"\n  {s['regions']} regions on the map ({fmt_pct(s['coverage'])} of records)"
         if c["recipe"]["kind"] == "change" and s.get("rel") is not None:
             line += f"\n  total change {fmt_change(s['rel'])}"
         if c["chart"] == "scatter" and s.get("n"):

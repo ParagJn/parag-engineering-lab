@@ -91,7 +91,8 @@ async def generate_dashboard(ds, scope_id: str | None) -> dict:
     found = discover(ds, scope, setup.get("goal", ""))
     cands = found["candidates"]
     low_conf = scope["rows"] < get_settings().min_rows
-    story = await compose(scope, cands, found["default"], setup.get("goal", ""), setup.get("audience", ""), low_conf)
+    purpose = (ds.state.get("brief") or {}).get("purpose", "")
+    story = await compose(scope, cands, found["default"], setup.get("goal", ""), setup.get("audience", ""), low_conf, purpose)
     for pid, t in (story.pop("panel_titles", None) or {}).items():
         for c in cands:
             if c["id"] == pid:

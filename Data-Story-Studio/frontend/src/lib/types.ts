@@ -57,11 +57,12 @@ export type Insight = {
 };
 
 export type Story = {
-  headline: { title: string; summary: string; panel: string | null };
+  headline: { title: string; finding?: string; summary: string; panel: string | null };
   kpis: string[];
   sections: Section[];
   insights: Insight[];
   next_steps?: string[];
+  anomaly_notes?: string[];
   source: "ai" | "default";
   notice?: string;
   guarded?: string[];
@@ -104,6 +105,7 @@ export type Dashboard = {
   print?: boolean;
   exported?: number;
   filters?: Filter[];
+  geo?: Record<string, any>; // map boundaries used by the report's map panels
   variants?: Record<string, Record<string, Panel>>;
 };
 

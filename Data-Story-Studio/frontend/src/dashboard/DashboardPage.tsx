@@ -95,7 +95,8 @@ export function DashboardPage({ ds, onSetup, onHome, llm }: { ds: DatasetSummary
       const r = p.recipe;
       if (sel.value === undefined || sel.value === null || sel.value === "Other") return;
       if (sel.kind === "category" && r.dim) {
-        toggleFilter({ col: r.dim, op: "in", values: [String(sel.value)], label: `${colLabel(r.dim)}: ${sel.value}` });
+        const values = (sel.values ?? [sel.value]).map(String);
+        toggleFilter({ col: r.dim, op: "in", values, label: `${colLabel(r.dim)}: ${sel.value}` });
       } else if (sel.kind === "series" && r.split) {
         toggleFilter({ col: r.split, op: "in", values: [String(sel.value)], label: `${colLabel(r.split)}: ${sel.value}` });
       } else if (sel.kind === "period" && timeCol) {
