@@ -21,6 +21,7 @@ import maps
 from export import ExportError, build_html, build_pdf, print_pdf, safe_filename
 from panels import Ctx, RecipeError, compile_panel
 from pipeline import apply_setup, dashboard_meta, generate_dashboard, get_scope, ingest_all, recompute
+import history
 from story import ask, llm_ready, redraw, setup_brief
 from workspace import QueryError, registry, validate_select
 
@@ -331,6 +332,7 @@ class AskReq(BaseModel):
     question: str
     history: list[dict] = Field(default_factory=list)
     filters: list[dict] = Field(default_factory=list)
+    session_id: str = ""
 
 
 @app.post("/api/datasets/{ds_id}/dashboards/{scope_id}/ask")
@@ -339,7 +341,33 @@ async def ask_question(ds_id: str, scope_id: str, req: AskReq):
     scope = _scope(ds, scope_id)
     if not req.question.strip():
         raise HTTPException(400, "Ask a question")
-    return await ask(ds, scope, req.question.strip(), req.history, req.filters)
+    question = req.question.strip()
+    result = await ask(ds, scope, question, req.history, req.filters)
+    if history.valid_session(req.session_id):
+        history.record(ds, req.session_id, scope_id, question, result)
+    return result
+
+
+@app.get("/api/datasets/{ds_id}/dashboards/{scope_id}/ask/sessions")
+def ask_sessions(ds_id: str, scope_id: str):
+    ds = _ds(ds_id)
+    _scope(ds, scope_id)
+    return {"sessions": history.sessions(ds, scope_id)}
+
+
+@app.get("/api/datasets/{ds_id}/ask/sessions/{session_id}")
+def ask_session(ds_id: str, session_id: str):
+    if not history.valid_session(session_id):
+        raise HTTPException(400, "Bad session id")
+    return {"messages": history.messages(_ds(ds_id), session_id)}
+
+
+@app.delete("/api/datasets/{ds_id}/ask/sessions/{session_id}")
+def ask_session_delete(ds_id: str, session_id: str):
+    if not history.valid_session(session_id):
+        raise HTTPException(400, "Bad session id")
+    history.delete_session(_ds(ds_id), session_id)
+    return {"ok": True}
 
 
 class RedrawReq(BaseModel):

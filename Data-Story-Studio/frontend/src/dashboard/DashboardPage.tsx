@@ -179,7 +179,8 @@ export function DashboardPage({ ds, onSetup, onHome, llm }: { ds: DatasetSummary
   );
 
   return (
-    <div>
+    <div className="flex items-start">
+     <div className="flex-1 min-w-0">
       <nav className="sticky top-0 z-30 bg-page/85 backdrop-blur border-b border-hair no-print">
         <div className="mx-auto max-w-[1240px] px-4 sm:px-6 h-14 flex items-center gap-3">
           <button onClick={onHome} className="flex items-center gap-2 font-semibold text-[14px] shrink-0" title="Home">
@@ -262,6 +263,7 @@ export function DashboardPage({ ds, onSetup, onHome, llm }: { ds: DatasetSummary
           }} />}
         </>
       )}
+     </div>
       <AskPanel dsId={ds.id} scope={scope!} filters={filters} open={askOpen} onClose={() => setAskOpen(false)} onPin={pin} llm={llm} />
       {summaryOpen && dash && <ExecSummaryPanel key={`${scope}-${dash.generated}`} dsId={ds.id} scope={scope!} onClose={() => setSummaryOpen(false)} />}
     </div>

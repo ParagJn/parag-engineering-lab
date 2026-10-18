@@ -151,6 +151,8 @@ export type ColumnProfile = {
   stats: Record<string, any>;
   top_values: [any, number][];
   notes: string[];
+  zeros?: number;
+  negatives?: number;
 };
 
 export type Readiness = {
@@ -190,6 +192,8 @@ export type AskResult = {
   sql?: string;
   guarded?: string[];
 };
+
+export type AskSession = { session_id: string; started: string; last: string; n: number; first_q: string };
 
 export type ExecSummary = {
   title: string;

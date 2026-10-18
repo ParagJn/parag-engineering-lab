@@ -16,6 +16,7 @@ export function DataPreview({ dsId, table, title, cols, onClose }: { dsId: strin
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [profileOn, setProfileOn] = useState(true);
 
   // debounce typing so each keystroke doesn't scan the table
   useEffect(() => {
@@ -65,6 +66,14 @@ export function DataPreview({ dsId, table, title, cols, onClose }: { dsId: strin
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setProfileOn((o) => !o)}
+              aria-pressed={profileOn}
+              className={`px-2.5 py-1.5 rounded-lg border text-[12.5px] whitespace-nowrap ${profileOn ? "border-ink bg-ink text-white" : "border-hair text-ink-2 hover:bg-sunken"}`}
+              title="Show or hide per-column profile: empty share, distinct values, range, averages and top values"
+            >
+              Profile
+            </button>
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -112,6 +121,19 @@ export function DataPreview({ dsId, table, title, cols, onClose }: { dsId: strin
                 </tr>
               </thead>
               <tbody>
+                {profileOn && (
+                  <tr className="border-t border-hair bg-page align-top">
+                    <td className="px-3 py-2 text-right text-[11px] text-muted whitespace-nowrap">
+                      Profile
+                      <div className="font-normal">all rows</div>
+                    </td>
+                    {page.columns.map((name) => (
+                      <td key={name} className="px-3 py-2 max-w-[220px]">
+                        <ProfileCell c={byName[name]} />
+                      </td>
+                    ))}
+                  </tr>
+                )}
                 {page.rows.map((r, k) => (
                   <tr key={k} className="border-t border-hair hover:bg-[#f7f6f2]">
                     <td className="px-3 py-1.5 text-right text-muted tabular">{fmtValue(offset + k + 1)}</td>
@@ -166,6 +188,45 @@ export function DataPreview({ dsId, table, title, cols, onClose }: { dsId: strin
         </div>
       </div>
     </div>
+  );
+}
+
+/** Profile of one column over the whole table (not the search filter): what a reader needs before trusting it. */
+function ProfileCell({ c }: { c?: ColumnProfile }) {
+  if (!c) return null;
+  const s = c.stats ?? {};
+  const rows: [string, string, boolean?][] = [];
+  rows.push(["Empty", fmtPct(c.missing_pct, 1), c.missing_pct >= 0.2]);
+  rows.push(["Distinct", fmtValue(c.distinct)]);
+  if (c.dtype === "number" && s.min !== null && s.min !== undefined) {
+    rows.push(["Range", `${fmtValue(s.min, c.unit)} – ${fmtValue(s.max, c.unit)}`]);
+    if (c.role === "measure") {
+      rows.push(["Mean", fmtValue(s.mean, c.unit)]);
+      rows.push(["Median", fmtValue(s.median, c.unit)]);
+    }
+    if (c.zeros) rows.push(["Zeros", fmtValue(c.zeros)]);
+    if (c.negatives) rows.push(["Negative", fmtValue(c.negatives)]);
+  } else if ((c.dtype === "date" || c.dtype === "datetime") && s.min) {
+    rows.push(["From", String(s.min).slice(0, 16)]);
+    rows.push(["To", String(s.max).slice(0, 16)]);
+  } else if (c.role === "flag" && s.true_share !== undefined) {
+    rows.push(["Yes", fmtPct(s.true_share, 1)]);
+  } else if (s.avg_length !== undefined) {
+    rows.push(["Avg length", fmtValue(Math.round(s.avg_length))]);
+  }
+  const top = c.top_values?.[0];
+  if (top && c.count) rows.push(["Top", `${String(top[0] ?? "—")} · ${fmtPct(top[1] / c.count)}`]);
+  return (
+    <dl className="space-y-0.5 text-[11.5px] leading-snug">
+      {rows.map(([k, v, warn]) => (
+        <div key={k} className="flex gap-1.5 min-w-0">
+          <dt className="text-muted shrink-0">{k}</dt>
+          <dd className={`tabular truncate ${warn ? "text-warn" : "text-ink-2"}`} title={v}>
+            {v}
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 

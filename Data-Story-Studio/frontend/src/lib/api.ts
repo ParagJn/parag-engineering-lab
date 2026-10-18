@@ -1,4 +1,4 @@
-import type { AskResult, Dashboard, DatasetListItem, DatasetSummary, ExecSummary, Filter, Panel, QueryData, Story } from "./types";
+import type { AskResult, AskSession, Dashboard, DatasetListItem, DatasetSummary, ExecSummary, Filter, Panel, QueryData, Story } from "./types";
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api${path}`, init);
@@ -48,8 +48,12 @@ export const api = {
   generate: (id: string, scope: string) => req<Dashboard>(base(id, scope), { method: "POST" }),
   dashboard: (id: string, scope: string) => req<Dashboard>(base(id, scope)),
   filter: (id: string, scope: string, filters: Filter[]) => req<{ panels: Record<string, Panel> }>(`${base(id, scope)}/filter`, json({ filters })),
-  ask: (id: string, scope: string, question: string, history: { role: string; text: string }[], filters: Filter[]) =>
-    req<AskResult>(`${base(id, scope)}/ask`, json({ question, history, filters })),
+  ask: (id: string, scope: string, question: string, history: { role: string; text: string }[], filters: Filter[], sessionId: string) =>
+    req<AskResult>(`${base(id, scope)}/ask`, json({ question, history, filters, session_id: sessionId })),
+  askSessions: (id: string, scope: string) => req<{ sessions: AskSession[] }>(`${base(id, scope)}/ask/sessions`),
+  askSession: (id: string, sessionId: string) =>
+    req<{ messages: { asked_at: string; question: string; result: AskResult }[] }>(`/datasets/${id}/ask/sessions/${sessionId}`),
+  askSessionDelete: (id: string, sessionId: string) => req<{ ok: boolean }>(`/datasets/${id}/ask/sessions/${sessionId}`, { method: "DELETE" }),
   redraw: (id: string, scope: string, panel: string, body: { instruction?: string; recipe?: object; filters: Filter[] }) =>
     req<Panel>(`${base(id, scope)}/panels/${panel}/redraw`, json(body)),
   undo: (id: string, scope: string, panel: string) => req<Panel>(`${base(id, scope)}/panels/${panel}/undo`, { method: "POST" }),

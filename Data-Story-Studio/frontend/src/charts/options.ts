@@ -497,7 +497,9 @@ function choropleth(p: Panel): Built {
           id: "main",
           type: "map",
           map: p.map?.geo,
-          roam: false,
+          // drag to pan; zoom comes from the buttons and Ctrl/⌘ + wheel in Chart.tsx, so the page still scrolls normally
+          roam: "move",
+          scaleLimit: { min: 1, max: 14 },
           // the world map is wide; leave room for the legend under it
           layoutCenter: ["50%", world ? "46%" : "45%"],
           layoutSize: world ? "118%" : "92%",

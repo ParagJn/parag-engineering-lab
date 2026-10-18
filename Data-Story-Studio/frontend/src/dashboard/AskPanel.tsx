@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
-import type { AskResult, Filter, Panel } from "../lib/types";
+import type { AskResult, AskSession, Filter, Panel } from "../lib/types";
 import { PanelCard } from "./PanelCard";
 import { IconChat, IconPin, IconSend, IconX, Spinner } from "./icons";
+
+const newSessionId = () => crypto.randomUUID().replace(/-/g, "");
 
 type Msg = { role: "user" | "assistant"; text: string; result?: AskResult; pinned?: boolean };
 
@@ -13,7 +15,7 @@ const STARTERS = [
   "Compare the last two periods and explain the difference",
 ];
 
-/** Conversational Q&A drawer: every answer comes with the query and the data behind it. */
+/** Conversational Q&A panel (overlay on small screens, docked split view on large): every answer comes with the query and the data behind it. */
 export function AskPanel({ dsId, scope, filters, open, onClose, onPin, llm }: {
   dsId: string;
   scope: string;
@@ -26,6 +28,9 @@ export function AskPanel({ dsId, scope, filters, open, onClose, onPin, llm }: {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
+  const [sessionId, setSessionId] = useState(newSessionId);
+  const [view, setView] = useState<"chat" | "history">("chat");
+  const [sessions, setSessions] = useState<AskSession[] | null>(null);
   const end = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
 
@@ -36,6 +41,36 @@ export function AskPanel({ dsId, scope, filters, open, onClose, onPin, llm }: {
     if (open) setTimeout(() => input.current?.focus(), 50);
   }, [open]);
 
+  const openHistory = async () => {
+    setView("history");
+    try {
+      setSessions((await api.askSessions(dsId, scope)).sessions);
+    } catch {
+      setSessions([]);
+    }
+  };
+  const newChat = () => {
+    if (busy) return;
+    setMsgs([]);
+    setSessionId(newSessionId());
+    setView("chat");
+  };
+  const resume = async (s: AskSession) => {
+    if (busy) return;
+    const { messages } = await api.askSession(dsId, s.session_id);
+    setMsgs(messages.flatMap((m) => [
+      { role: "user" as const, text: m.question },
+      { role: "assistant" as const, text: m.result.answer, result: m.result },
+    ]));
+    setSessionId(s.session_id);
+    setView("chat");
+  };
+  const remove = async (s: AskSession) => {
+    await api.askSessionDelete(dsId, s.session_id);
+    setSessions((list) => (list ?? []).filter((x) => x.session_id !== s.session_id));
+    if (s.session_id === sessionId) newChat();
+  };
+
   const ask = async (question: string) => {
     if (!question.trim() || busy) return;
     const history = msgs.map((m) => ({ role: m.role, text: m.text }));
@@ -43,7 +78,7 @@ export function AskPanel({ dsId, scope, filters, open, onClose, onPin, llm }: {
     setQ("");
     setBusy(true);
     try {
-      const res = await api.ask(dsId, scope, question, history, filters);
+      const res = await api.ask(dsId, scope, question, history, filters, sessionId);
       setMsgs((m) => [...m, { role: "assistant", text: res.answer, result: res }]);
     } catch (e: any) {
       setMsgs((m) => [...m, { role: "assistant", text: `Something went wrong: ${e.message}`, result: { answer: e.message, kind: "error" } }]);
@@ -54,16 +89,46 @@ export function AskPanel({ dsId, scope, filters, open, onClose, onPin, llm }: {
 
   if (!open) return null;
   return (
-    <aside className="fixed z-40 inset-y-0 right-0 w-full sm:w-[480px] bg-surface border-l border-hair shadow-2xl flex flex-col no-print" aria-label="Ask about the data">
+    <aside className="fixed z-40 inset-y-0 right-0 w-full sm:w-[480px] bg-surface border-l border-hair shadow-2xl flex flex-col no-print lg:sticky lg:top-0 lg:h-screen lg:shrink-0 lg:z-auto lg:shadow-none" aria-label="Ask about the data">
       <header className="flex items-center justify-between px-5 py-4 border-b border-hair">
         <div className="flex items-center gap-2">
           <IconChat className="text-accent" />
           <h2 className="text-[15px] font-semibold">Ask about this data</h2>
         </div>
-        <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-sunken" aria-label="Close">
-          <IconX />
-        </button>
+        <div className="flex items-center gap-1">
+          <button onClick={newChat} className="px-2 py-1 rounded-lg text-[12.5px] text-ink-2 hover:bg-sunken">New chat</button>
+          <button
+            onClick={() => (view === "history" ? setView("chat") : openHistory())}
+            className={`px-2 py-1 rounded-lg text-[12.5px] ${view === "history" ? "bg-sunken text-ink" : "text-ink-2 hover:bg-sunken"}`}
+          >
+            History
+          </button>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-sunken" aria-label="Close">
+            <IconX />
+          </button>
+        </div>
       </header>
+      {view === "history" ? (
+        <div className="flex-1 overflow-auto px-5 py-4 space-y-2">
+          {sessions === null && <Spinner className="text-muted" />}
+          {sessions?.length === 0 && <p className="text-[13px] text-muted">No saved questions for this view yet.</p>}
+          {sessions?.map((s) => (
+            <div key={s.session_id} className="group flex items-start gap-2 rounded-lg bg-sunken hover:bg-hair px-3 py-2">
+              <button onClick={() => resume(s)} className="flex-1 min-w-0 text-left">
+                <div className="text-[13px] text-ink truncate">{s.first_q}</div>
+                <div className="text-[11.5px] text-muted">
+                  {new Date(s.started).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })} · {s.n} question{s.n > 1 ? "s" : ""}
+                  {s.session_id === sessionId && " · current"}
+                </div>
+              </button>
+              <button onClick={() => remove(s)} className="p-1 rounded text-muted hover:text-bad" aria-label="Delete conversation" title="Delete conversation">
+                <IconX className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : (
+      <>
       <div className="flex-1 overflow-auto px-5 py-4 space-y-4">
         {llm === false && (
           <p className="text-[13px] text-warn bg-[#fdf3dc] rounded-lg px-3 py-2">Questions need IBM ICA. Add IBM_ICA_ENDPOINT and IBM_ICA_API_KEY to .env and restart.</p>
@@ -151,6 +216,8 @@ export function AskPanel({ dsId, scope, filters, open, onClose, onPin, llm }: {
           <IconSend />
         </button>
       </form>
+      </>
+      )}
     </aside>
   );
 }

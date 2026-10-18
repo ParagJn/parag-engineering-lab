@@ -16,6 +16,8 @@ export function Chart({ panel, wide = false, onSelect }: Props) {
   const el = useRef<HTMLDivElement>(null);
   const chart = useRef<echarts.ECharts | null>(null);
   const [visible, setVisible] = useState(false);
+  const [zoomed, setZoomed] = useState(false);
+  const lastRoam = useRef(0);
   const { animate, replayKey, print } = useMotion();
   const built = useMemo(() => buildOption(panel, wide), [panel, wide]);
   const selectRef = useRef(onSelect);
@@ -63,9 +65,22 @@ export function Chart({ panel, wide = false, onSelect }: Props) {
     chart.current = c;
     const ro = new ResizeObserver(() => c.resize());
     ro.observe(el.current);
+    // maps: remember panning/zooming so the click that ends a drag doesn't filter the dashboard
+    c.on("georoam", () => {
+      lastRoam.current = Date.now();
+      setZoomed(true);
+    });
+    const onWheel = (ev: WheelEvent) => {
+      if (!(ev.ctrlKey || ev.metaKey)) return; // plain scrolling keeps moving the page
+      ev.preventDefault();
+      c.dispatchAction({ type: "geoRoam", componentType: "series", seriesId: "main", zoom: ev.deltaY < 0 ? 1.15 : 1 / 1.15, originX: ev.offsetX, originY: ev.offsetY });
+    };
+    const host = el.current;
+    if (panel.chart === "map") host.addEventListener("wheel", onWheel, { passive: false });
     c.on("click", (e: any) => {
       const fn = selectRef.current;
       if (!fn) return;
+      if (Date.now() - lastRoam.current < 250) return;
       const p = panel;
       if (p.chart === "heatmap") {
         const [xi, yi] = e.value ?? [];
@@ -85,6 +100,7 @@ export function Chart({ panel, wide = false, onSelect }: Props) {
       }
     });
     return () => {
+      host.removeEventListener("wheel", onWheel);
       ro.disconnect();
       c.dispose();
       chart.current = null;
@@ -99,6 +115,7 @@ export function Chart({ panel, wide = false, onSelect }: Props) {
     const replay = lastReplay.current !== replayKey;
     lastReplay.current = replayKey;
     if (replay) c.clear();
+    setZoomed(false); // a rebuilt option starts at the full view
     c.setOption({ ...built.option, animation: animate, animationDurationUpdate: animate ? 650 : 0, animationEasingUpdate: "cubicInOut" }, { notMerge: true });
   }, [built, visible, animate, replayKey, geoState]);
 
@@ -109,5 +126,40 @@ export function Chart({ panel, wide = false, onSelect }: Props) {
         Map boundaries couldn't be loaded. Switch to bars, or see the Data tab.
       </div>
     );
-  return <div ref={el} style={{ height: built.height, width: "100%" }} role="img" aria-label={panel.title} />;
+  const plot = <div ref={el} style={{ height: built.height, width: "100%" }} role="img" aria-label={panel.title} />;
+  if (panel.chart !== "map" || print) return plot;
+
+  const zoom = (factor: number) => {
+    const c = chart.current;
+    if (!c) return;
+    lastRoam.current = Date.now();
+    // ECharts needs the point to zoom around; without it the maths gives NaN and nothing moves
+    c.dispatchAction({ type: "geoRoam", componentType: "series", seriesId: "main", zoom: factor, originX: c.getWidth() / 2, originY: c.getHeight() / 2 });
+    setZoomed(true);
+  };
+  const reset = () => {
+    const c = chart.current;
+    if (!c) return;
+    c.setOption({ ...built.option, animation: animate }, { notMerge: true });
+    setZoomed(false);
+  };
+  const btn = "w-7 h-7 grid place-items-center rounded-md border border-hair bg-surface text-ink-2 hover:bg-sunken hover:text-ink text-[15px] leading-none";
+  return (
+    <div className="relative group no-print">
+      {plot}
+      <div className="absolute top-1 right-1 flex flex-col gap-1">
+        <button className={btn} onClick={() => zoom(1.5)} aria-label="Zoom in" title="Zoom in (Ctrl/⌘ + scroll also zooms; drag to move)">
+          +
+        </button>
+        <button className={btn} onClick={() => zoom(1 / 1.5)} aria-label="Zoom out" title="Zoom out">
+          −
+        </button>
+        {zoomed && (
+          <button className={`${btn} text-[11px]`} onClick={reset} aria-label="Reset view" title="Back to the full map">
+            ⟲
+          </button>
+        )}
+      </div>
+    </div>
+  );
 }
