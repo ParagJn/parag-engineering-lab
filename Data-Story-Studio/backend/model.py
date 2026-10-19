@@ -14,6 +14,8 @@ from profile import ColumnProfile, q, time_grain
 
 BOUND_NAME = re.compile(r"(lower|upper|_bound|confidence|_ci_|^ci_|_ci$|margin_of_error|_moe$|std_?err)")
 TIME_PREF = re.compile(r"(^date$|created|opened|order_date|start|logged|reported|timestamp|^time$|_date$|date_|month|period|day)")
+COORD_NAME = re.compile(r"(^|_)(latitude|longitude|lat|lng|lon)($|_)")
+RATING_NAME = re.compile(r"(rating|stars)")
 END_PREF = re.compile(r"(resolved|closed|completed|end|finished|shipped|delivered|updated)")
 
 
@@ -96,8 +98,12 @@ def build_scopes(con, state: dict, setup: dict) -> list[dict]:
         if u["name"] in used_as_lookup:
             continue
         view = f"scope_{u['name']}"
-        select = [f"f.{q(c.name)}" for c in u["cols"]]
+        unrated = _unrated_zeros(con, u)
+        select = [f"NULLIF(f.{q(c.name)}, 0) AS {q(c.name)}" if c.name in unrated else f"f.{q(c.name)}" for c in u["cols"]]
         cols = [_col_meta(c, u["tables"][0]) for c in u["cols"]]
+        for meta in cols:
+            if meta["name"] in unrated:
+                meta.update(unrated[meta["name"]])
         have = {c.name for c in u["cols"]}
         from_sql = f"{q(u['name'])} f"
         fact_cols = {c.name: c for c in u["cols"]}
@@ -146,6 +152,24 @@ def build_scopes(con, state: dict, setup: dict) -> list[dict]:
         scope["time"] = _pick_time(con, view, cols)
         scopes.append(scope)
     return scopes
+
+
+def _unrated_zeros(con, u: dict) -> dict:
+    """A rating that is 0 on a 1+ scale means 'not rated', not 'rated zero': read it as missing so averages,
+    correlations and histograms describe real ratings only. Returns {column: meta overrides}."""
+    out = {}
+    for c in u["cols"]:
+        if not (c.dtype == "number" and c.role == "measure" and RATING_NAME.search(c.name.lower()) and c.zeros):
+            continue
+        col = q(c.name)
+        n, z, pos_min = con.execute(f"SELECT count({col}), count(*) FILTER (WHERE {col} = 0), min({col}) FILTER (WHERE {col} > 0) "
+                                    f"FROM {q(u['name'])}").fetchone()
+        if not n or pos_min is None or pos_min < 1 or not 0.01 <= z / n <= 0.6:
+            continue  # zero is a real value here, or the scale has no gap before it
+        mn, mx, mean, med = con.execute(f"SELECT min({col}), max({col}), avg({col}), median({col}) FROM {q(u['name'])} WHERE {col} > 0").fetchone()
+        out[c.name] = {"unrated": int(z), "missing_pct": (c.missing + z) / u["rows"] if u["rows"] else 0,
+                       "stats": {"min": mn, "max": mx, "mean": mean, "median": med}}
+    return out
 
 
 SUMMABLE = re.compile(r"(numerator|denominator|count|total|population|sum|amount|qty|quantity|volume|cases|deaths|events|sales|revenue)")
@@ -212,6 +236,7 @@ def _col_meta(c: ColumnProfile, table: str) -> dict:
     return {
         "name": c.name, "label": c.label, "dtype": c.dtype, "role": c.role, "agg": c.agg, "unit": c.unit,
         "distinct": c.distinct, "missing_pct": c.missing_pct, "source": table, "geo": c.geo,
+        "ordinal": any("ordinal tier" in n for n in c.notes),
         "stats": {k: v for k, v in c.stats.items() if k in ("min", "max", "mean", "median", "true_share")},
     }
 
@@ -290,7 +315,7 @@ def measures(scope: dict) -> list[dict]:
         "agg": "count", "unit": {"kind": "number"}, "kind": "count",
     }]
     for c in scope["columns"]:
-        if c["role"] == "measure" and c["missing_pct"] < 0.9:
+        if c["role"] == "measure" and c["missing_pct"] < 0.9 and not COORD_NAME.search(c["name"].lower()):
             out.append({"name": c["name"], "label": c["label"], "agg": c["agg"], "unit": c["unit"],
                         "kind": "sum" if c["agg"] == "sum" else "avg", "derived": c.get("derived"),
                         "lookup": bool(c.get("lookup_attr"))})
@@ -327,7 +352,7 @@ def dimensions(scope: dict) -> list[dict]:
     for c in scope["columns"]:
         if c["role"] in ("dimension", "flag") and 2 <= c["distinct"] <= 200 and c["missing_pct"] < 0.8:
             out.append({"name": c["name"], "label": c["label"], "distinct": c["distinct"], "dtype": c["dtype"],
-                        "geo": c.get("geo", False)})
+                        "geo": c.get("geo", False), "ordinal": c.get("ordinal", False)})
     out.sort(key=lambda d: (0 if 3 <= d["distinct"] <= 25 else 1 if d["distinct"] <= 60 else 2, d["distinct"]))
     return out
 

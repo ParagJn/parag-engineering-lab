@@ -2,8 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../lib/api";
 import { download, fmtPeriod, fmtValue, nextPeriod } from "../lib/format";
 import { useMotion } from "../lib/motion";
-import type { Dashboard, DatasetSummary, Filter, Panel } from "../lib/types";
+import type { Dashboard, DatasetSummary, DeckChoice, Filter, Panel } from "../lib/types";
 import { AskPanel } from "./AskPanel";
+import { DeckThemePicker } from "./DeckThemePicker";
 import { ExecSummaryPanel } from "./ExecSummary";
 import type { PanelActions } from "./PanelCard";
 import { Guide } from "../setup/Guide";
@@ -28,6 +29,7 @@ export function DashboardPage({ ds, onSetup, onHome, llm }: { ds: DatasetSummary
   const [err, setErr] = useState<string | null>(null);
   const [askOpen, setAskOpen] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
+  const [deckOpen, setDeckOpen] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
   const { replay } = useMotion();
 
@@ -150,14 +152,16 @@ export function DashboardPage({ ds, onSetup, onHome, llm }: { ds: DatasetSummary
     setPanels((cur) => ({ ...d.panels, ...Object.fromEntries(Object.entries(cur).filter(([k]) => k in d.panels && filters.length)) }));
   };
 
-  const doExport = async (kind: "html" | "pdf") => {
+  const doExport = async (kind: "html" | "pdf" | "pptx", deck?: DeckChoice) => {
     setExporting(kind);
     setErr(null);
     try {
-      const { blob, name } = await api.exportFile(ds.id, scope!, kind, filters);
+      const { blob, name } = await api.exportFile(ds.id, scope!, kind, filters, deck);
       download(name, blob);
+      if (kind === "pptx") setDeckOpen(false);
     } catch (e: any) {
       setErr(`Export failed: ${e.message}`);
+      if (kind === "pptx") setDeckOpen(false);
     } finally {
       setExporting(null);
     }
@@ -171,6 +175,9 @@ export function DashboardPage({ ds, onSetup, onHome, llm }: { ds: DatasetSummary
         </button>
         <button onClick={() => doExport("pdf")} disabled={!!exporting} className="px-2.5 py-1.5 rounded-lg text-[12.5px] text-ink-2 hover:bg-sunken inline-flex items-center gap-1.5" title="Download a PDF report">
           {exporting === "pdf" ? <Spinner className="w-3.5 h-3.5" /> : <IconDownload className="w-3.5 h-3.5" />} PDF
+        </button>
+        <button onClick={() => setDeckOpen(true)} disabled={!!exporting} className="px-2.5 py-1.5 rounded-lg text-[12.5px] text-ink-2 hover:bg-sunken inline-flex items-center gap-1.5" title="Download a 5-7 slide executive presentation (takeaway, key charts, decisions, missing evidence)">
+          {exporting === "pptx" ? <Spinner className="w-3.5 h-3.5" /> : <IconDownload className="w-3.5 h-3.5" />} PPTX
         </button>
       </>
     ),
@@ -265,6 +272,7 @@ export function DashboardPage({ ds, onSetup, onHome, llm }: { ds: DatasetSummary
       )}
      </div>
       <AskPanel dsId={ds.id} scope={scope!} filters={filters} open={askOpen} onClose={() => setAskOpen(false)} onPin={pin} llm={llm} />
+      {deckOpen && dash && <DeckThemePicker dsId={ds.id} scope={scope!} busy={exporting === "pptx"} onChoose={(c) => doExport("pptx", c)} onClose={() => setDeckOpen(false)} />}
       {summaryOpen && dash && <ExecSummaryPanel key={`${scope}-${dash.generated}`} dsId={ds.id} scope={scope!} onClose={() => setSummaryOpen(false)} />}
     </div>
   );

@@ -150,6 +150,25 @@ function Hero({ dash, period, toolbar }: { dash: Dashboard; period: string | nul
       <div className="mt-5 h-[3px] w-24 rounded-full bg-accent sweep" />
       {story.headline.finding && <p className="mt-5 text-[19px] sm:text-[24px] leading-snug font-medium text-ink max-w-[36ch] sm:max-w-[44ch] text-balance">{story.headline.finding}</p>}
       {story.headline.summary && <p className="mt-4 text-[15.5px] sm:text-[17px] leading-relaxed text-ink-2 max-w-[68ch]">{story.headline.summary}</p>}
+      {!!story.headline.highlights?.length && (
+        <ul className="mt-4 space-y-2.5 max-w-[68ch]">
+          {story.headline.highlights.map((h, i) => (
+            <li key={i} className="flex gap-3 text-[15px] sm:text-[16px] leading-relaxed text-ink-2">
+              <span className="mt-[0.62em] h-1.5 w-1.5 shrink-0 rounded-full bg-accent" aria-hidden />
+              <span>
+                {h.lead && <span className="font-semibold text-ink">{h.lead}. </span>}
+                {h.text}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {story.headline.reading && (
+        <p className="mt-4 pl-4 border-l-2 border-accent/50 text-[14.5px] sm:text-[15.5px] leading-relaxed text-ink-2 max-w-[66ch]">
+          <span className="font-semibold text-ink">What it may mean. </span>
+          {story.headline.reading}
+        </p>
+      )}
       {!!story.anomaly_notes?.length && (
         <p className="mt-2 text-[11.5px] leading-snug text-muted max-w-[80ch]">
           <span className="font-medium">Note:</span> {story.anomaly_notes.join(" ")}
@@ -266,7 +285,7 @@ function Provenance({ dash }: { dash: Dashboard }) {
       <button className="mt-3 text-[12px] text-muted hover:text-ink no-print" onClick={() => setOpen((o) => !o)}>
         {open ? "Hide" : "Show"} column definitions
       </button>
-      {(open || dash.print) && (
+      {open && (
         <div className="mt-3 overflow-auto">
           <table className="text-[12px] w-full">
             <thead>

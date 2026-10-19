@@ -65,6 +65,7 @@ Without IBM ICA configured, everything still works except Q&A and free-form redr
 7. **Export**:
    - **HTML**: one self-contained file with the viewer bundle and data embedded, plus the map boundaries the dashboard uses. It works offline with animation, tooltips, data tables and SQL.
    - **PDF**: the same report printed through headless Chromium with motion off, one section per page.
+7. **Executive deck (PPTX)**: the toolbar's *PPTX* button builds a 5-7 slide briefing in the dashboard's theme: title with the one-sentence central takeaway, the numbers at a glance, 2-3 evidence slides (headline that states the point, a native editable chart, supporting points, *so what*), the decisions to take, and a closing slide of missing evidence and next steps. The plan is number-guarded like the summary and cached on the dashboard; without ICA it is assembled from the computed story. Clicking *PPTX* opens a picker with two independent choices: a **design** (slide layout and fonts: Classic, Editorial, Split, Focus) and a **colour palette** (Studio, Boardroom, Midnight, Evergreen), 16 combinations in all; the design previews recolour live as you pick a palette, and the last choice is remembered. Designs and palettes live in `DESIGNS` / `PALETTES` in `backend/deck.py`; a design is one function per slide kind in `SLIDES`. Active filters apply to the charts. Speaker notes are included.
 
 ## Architecture
 
@@ -82,6 +83,7 @@ backend/
   brief.py       executive summary (Markdown + PDF), number-guarded
   workspace.py   dataset storage (data/<id>/), sandboxed read-only queries with timeout
   export.py      self-contained HTML + Playwright PDF
+  deck.py        executive PowerPoint (5-7 slides, native charts, number-guarded plan)
   main.py        FastAPI routes
 frontend/src/
   charts/        ECharts option builders (validated palette, thin marks, purposeful motion)

@@ -117,7 +117,8 @@ def _ordered_panels(dash: dict) -> list[dict]:
 
 
 def _story_text(story: dict) -> str:
-    lines = [story["headline"].get(k, "") for k in ("title", "finding", "summary")]
+    hl = story["headline"]
+    lines = [hl.get(k, "") for k in ("title", "finding", "summary", "reading")] + [h.get("text", "") for h in hl.get("highlights") or []]
     for s in story["sections"]:
         lines += [s.get("heading", ""), s.get("note", "")]
     for ins in story.get("insights") or []:

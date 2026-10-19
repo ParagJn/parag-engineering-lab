@@ -19,6 +19,7 @@ RATE_NAME = re.compile(r"(rate|ratio|pct|percent|percentage|share|margin|score|a
 CURRENCY_NAME = re.compile(r"(revenue|sales|cost|price|amount|profit|spend|budget|income|expense|fee|(order|sale|deal|contract|invoice|gross|net|total|trade)_value|usd|aud|eur|gbp|inr|payment|salary|bill)")
 DURATION_NAME = re.compile(r"(hours?|hrs|minutes?|mins|seconds?|secs|days|duration|time_to|tat|lead_time|resolution_time|handle_time)")
 YEAR_NAME = re.compile(r"(^year$|_year$|^yr$|fiscal_year|^fy$)")
+ORDINAL_NAME = re.compile(r"(range|tier|level|band|bucket|class|grade|segment|stage)")
 GEO_NAME = re.compile(r"(country|state|region|city|suburb|postcode|zip|province|territory|county|location)")
 
 
@@ -57,7 +58,31 @@ def profile_table(con, table: str, columns: list[ColumnInfo]) -> tuple[int, list
     for c in columns:
         out.append(_profile_column(con, table, c, rows))
     _code_twins(con, table, out)
+    _apply_currency(out)
     return rows, out
+
+
+def _currency_symbol(value: str) -> str:
+    v = str(value).lower()
+    for word, sym in (("rupee", "₹"), ("dollar", "$"), ("pound", "£"), ("euro", "€"), ("yen", "¥")):
+        if word in v:
+            return sym
+    m = re.search(r"\(([^)]+)\)", str(value))
+    return m.group(1) if m else ""
+
+
+def _apply_currency(cols: list[ColumnProfile]) -> None:
+    """Money columns with no symbol in the file: use the file's own currency column (one dominant currency),
+    or no symbol at all when currencies are mixed, instead of guessing dollars."""
+    cur = next((c for c in cols if c.dtype == "text" and re.search(r"currency", c.name.lower()) and c.top_values), None)
+    if not cur or not cur.count:
+        return
+    top, n = cur.top_values[0]
+    sym = _currency_symbol(top) if n / cur.count >= 0.8 else ""
+    for c in cols:
+        if c.unit.get("kind") == "currency" and c.unit.get("assumed"):
+            c.unit = {"kind": "currency", "symbol": sym}
+            c.notes.append("currency taken from the file's currency column" if sym else "mixed currencies: no symbol shown")
 
 
 def _code_twins(con, table: str, cols: list[ColumnProfile]) -> None:
@@ -105,6 +130,9 @@ def _profile_column(con, table: str, c: ColumnInfo, rows: int) -> ColumnProfile:
         if YEAR_NAME.search(lname) and all_int and mn is not None and 1900 <= mn and mx <= 2100:
             p.role = "dimension"
             p.notes.append("year number treated as a period, not summed")
+        elif ORDINAL_NAME.search(lname) and all_int and 2 <= distinct <= 12 and mn is not None and mn >= 0:
+            p.role = "dimension"
+            p.notes.append("ordinal tier treated as a category (compare groups, don't average it)")
         elif ID_NAME.search(lname) and all_int:
             # a numeric code is a label, never a quantity: small sets group like categories
             # (unless a text twin carries the names, see _code_twins), large ones identify
@@ -129,7 +157,7 @@ def _profile_column(con, table: str, c: ColumnInfo, rows: int) -> ColumnProfile:
             elif c.currency:
                 p.unit = {"kind": "currency", "symbol": c.currency}
             elif CURRENCY_NAME.search(lname) and not RATE_NAME.search(lname.replace("price", "")):
-                p.unit = {"kind": "currency", "symbol": "$"}
+                p.unit = {"kind": "currency", "symbol": "$", "assumed": True}
             elif mn is not None and mn >= 0 and mx <= 1 and not all_int:
                 p.unit = {"kind": "ratio"}
                 p.agg = "avg"

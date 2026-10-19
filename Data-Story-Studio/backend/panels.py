@@ -88,8 +88,15 @@ def plural(label: str) -> str:
     return label + "s"
 
 
-def dim_expr(col: str) -> str:
-    return f"coalesce(CAST({q(col)} AS VARCHAR), '{BLANK}')"
+def dim_expr(col: str, integral: bool = False) -> str:
+    """The grouping expression for a dimension; whole-number codes read '216', not '216.0'."""
+    inner = f"CAST(CAST({q(col)} AS BIGINT) AS VARCHAR)" if integral else f"CAST({q(col)} AS VARCHAR)"
+    return f"coalesce({inner}, '{BLANK}')"
+
+
+def _code_like(c: dict) -> bool:
+    st = c.get("stats") or {}
+    return c.get("dtype") == "number" and is_num(st.get("min")) and is_num(st.get("max")) and float(st["min"]).is_integer() and float(st["max"]).is_integer()
 
 
 def add_period(d: date, grain: str, n: int = 1) -> date:
@@ -158,7 +165,7 @@ class Ctx:
             if not items:
                 raise RecipeError("Filter needs at least one value")
             neg = "NOT " if op in ("not_in", "neq") else ""
-            return f"{dim_expr(c['name'])} {neg}IN ({items})"
+            return f"{dim_expr(c['name'], _code_like(c))} {neg}IN ({items})"
         raise RecipeError(f"Unsupported filter op {op}")
 
     def base(self, extra: list | None = None) -> str:
@@ -224,6 +231,12 @@ def compile_panel(ctx: Ctx, recipe: dict, title_override: str = "") -> dict:
     panel["recipe"] = {**recipe, "chart": panel["chart"]}
     panel.setdefault("annotations", [])
     panel.setdefault("caveats", [])
+    for key in ("measure", "x", "y"):
+        c = ctx.cols.get(recipe.get(key)) if isinstance(recipe.get(key), str) else None
+        if c and c.get("unrated"):
+            note = f"{compact(c['unrated'])} records with no {lc(c['label'])} (recorded as 0) are left out of the {lc(c['label'])} figures."
+            if note not in panel["caveats"]:
+                panel["caveats"].append(note)
     if ctx.filters:
         panel["filtered"] = True
     if title_override:
@@ -504,8 +517,10 @@ def _breakdown(ctx: Ctx, r: dict) -> dict:
     dim = r["dim"]
     dc = ctx.col(dim)
     top_n = int(r.get("top_n") or 12)
-    d = dim_expr(dim)
+    d = dim_expr(dim, _code_like(dc))
     additive = m["agg"] in ("sum", "count")
+    if r.get("min_n") or r.get("rank"):
+        return _ranking(ctx, r, m, dc, d, additive)
     order = agg_sql(m) if additive else "count(*)"
     sql = (f"WITH {ctx.base()},\ng AS (SELECT {d} AS label, {agg_sql(m)} AS value, count(*) AS n FROM base GROUP BY 1),\n"
            f"ranked AS (SELECT *, row_number() OVER (ORDER BY {'value' if additive else 'n'} DESC NULLS LAST, label) AS rk FROM g)\n"
@@ -520,8 +535,8 @@ def _breakdown(ctx: Ctx, r: dict) -> dict:
     data = run(ctx, sql)
     family = "breakdown" if additive else "breakdown_avg"
     chart = _pick_chart(r, family)
-    if r.get("sort") == "label":
-        data["rows"].sort(key=lambda row: (row[0] == OTHER, str(row[0])))
+    if r.get("sort") == "label" or dc.get("ordinal"):
+        data["rows"].sort(key=lambda row: (row[0] == OTHER, float(row[0]) if re.fullmatch(r"-?\d+(\.\d+)?", str(row[0])) else 0, str(row[0])))
     allowed = list(CHARTS[family])
     if maps.fit_dimension(ctx.ds, ctx.scope, dim):
         allowed.append("map")  # switching to it turns the recipe into a map (compile_panel)
@@ -529,6 +544,45 @@ def _breakdown(ctx: Ctx, r: dict) -> dict:
              "dim": dim, "dim_label": dc["label"], "enc": {"cat": "label", "value": "value", "n": "n", "share": "share"},
              "allowed_charts": allowed}
     panel.update(_breakdown_story(ctx, m, dc, data, additive))
+    return panel
+
+
+def _ranking(ctx: Ctx, r: dict, m: dict, dc: dict, d: str, additive: bool) -> dict:
+    """The leaders on a measure among groups big enough to trust (min_n records with a value)."""
+    top_n = int(r.get("top_n") or 10)
+    min_n = int(r.get("min_n") or 1)
+    mcol = "1" if m["agg"] == "count" else q(m["name"])
+    sql = (f"WITH {ctx.base()},\ng AS (SELECT {d} AS label, {agg_sql(m)} AS value, count({mcol}) AS n FROM base GROUP BY 1)\n"
+           f"SELECT label, value, n, n * 1.0 / (SELECT sum(n) FROM g) AS share FROM g\n"
+           f"WHERE label <> '{BLANK}' AND n >= {min_n} AND value IS NOT NULL ORDER BY value DESC, label LIMIT {top_n}")
+    data = run(ctx, sql)
+    total_sql = f"WITH {ctx.base()}\nSELECT count(DISTINCT {d}), {agg_sql(m)} FROM base"
+    groups, overall = run(ctx, total_sql)["rows"][0]
+    rows = data["rows"]
+    unit = m["unit"]
+    panel = {"chart": "bar", "sql": sql, "data": data, "unit": unit, "measure": m["name"], "measure_label": m["label"],
+             "dim": dc["name"], "dim_label": dc["label"], "enc": {"cat": "label", "value": "value", "n": "n", "share": "share"},
+             "allowed_charts": ["bar", "lollipop"], "stats": {"groups": groups, "min_n": min_n, "overall": overall}}
+    if not rows:
+        panel.update({"title": f"{m['label']} by {lc(dc['label'])}", "subtitle": f"No {lc(dc['label'])} has {min_n}+ records"})
+        return panel
+    lead = rows[0]
+    plural_dim = lc(plural(dc["label"]))
+    if additive:
+        total = overall or 0
+        top_share = lead[1] / total if total else 0
+        top3 = sum(row[1] for row in rows[:3]) / total if total else 0
+        panel["stats"].update({"top": lead[0], "top_share": top_share, "top3_share": top3, "total": total, "distinct": groups})
+        title = f"{name_of(lead[0], dc['label'])} leads on {lc(m['label'])} with {fmt_pct(top_share)} of the total"
+        if len(rows) >= 3:
+            title += f"; the top 3 {plural_dim} hold {fmt_pct(top3)}"
+        sub = f"Top {len(rows)} of {compact(groups)} {plural_dim}"
+    else:
+        panel["stats"].update({"high": lead, "low": rows[-1], "spread": (lead[1] / rows[-1][1]) if rows[-1][1] else None})
+        title = (f"{name_of(lead[0], dc['label'])} ranks highest on {lc(m['label'])} at {fmt_value(lead[1], unit)}, "
+                 f"against {fmt_value(overall, unit)} overall")
+        sub = f"Top {len(rows)} {plural_dim} with at least {min_n} records · smaller groups are not ranked"
+    panel.update({"title": title, "subtitle": sub, "highlight": lead[0]})
     return panel
 
 
@@ -562,6 +616,17 @@ def _breakdown_story(ctx: Ctx, m: dict, dc: dict, data: dict, additive: bool) ->
         sub = (f"{k80} of {n_groups} {lc(plural(dc['label']))} make up 80% of the total" if n_groups > 4 else
                f"Total {fmt_value(total, unit)}")
         return {"title": title, "subtitle": sub, "highlight": top[0], "stats": stats}
+    if dc.get("ordinal") and len(named) >= 3:
+        first, last = named[0], named[-1]
+        overall = sum(row[1] * row[2] for row in rows) / max(sum(row[2] for row in rows), 1)
+        tier = lambda row: f"{lc(dc['label'])} {row[0]}"
+        direction = "rises" if last[1] > first[1] else "falls" if last[1] < first[1] else "stays flat"
+        stats.update({"overall": overall, "high": max(named, key=lambda r_: r_[1]), "low": min(named, key=lambda r_: r_[1]),
+                      "spread": (max(r_[1] for r_ in named) / min(r_[1] for r_ in named)) if min(r_[1] for r_ in named) else None})
+        title = (f"{m['label']} {direction} with {lc(dc['label'])}: {fmt_value(first[1], unit)} at {tier(first)} to "
+                 f"{fmt_value(last[1], unit)} at {tier(last)}")
+        return {"title": title, "subtitle": f"Average by {lc(dc['label'])} · a pattern across groups, not proof that one causes the other",
+                "highlight": last[0], "stats": stats}
     # averages / rates: compare groups with enough records against the overall
     overall = sum(row[1] * row[2] for row in rows) / max(sum(row[2] for row in rows), 1)
     solid = [row for row in named if row[2] >= 20] or named
@@ -798,6 +863,7 @@ def _distribution(ctx: Ctx, r: dict) -> dict:
     q_sql = (f"WITH {ctx.base()}\nSELECT quantile_cont({col}, 0.01), quantile_cont({col}, 0.99), median({col}),"
              f" quantile_cont({col}, 0.9), quantile_cont({col}, 0.25), quantile_cont({col}, 0.75), count({col}), min({col}), max({col}) FROM base")
     lo, hi, med, p90, q1, q3, n, mn, mx = run(ctx, q_sql)["rows"][0]
+    quantile99 = hi
     if lo is None or hi is None or n == 0:
         raise RecipeError("No values to plot")
     if hi <= lo:
@@ -818,6 +884,11 @@ def _distribution(ctx: Ctx, r: dict) -> dict:
         if b == bins - 1 and mx > hi:
             label = f"≥{fmt_value(a0, unit)}"
         rows.append([label, counts.get(b, 0), a0, a1])
+    top10 = top1 = None
+    if m["agg"] == "sum" and mn is not None and mn >= 0:
+        t_sql = (f"WITH {ctx.base()}\nSELECT sum({col}) FILTER (WHERE {col} >= {p90!r}) / nullif(sum({col}), 0),"
+                 f" sum({col}) FILTER (WHERE {col} >= {quantile99!r}) / nullif(sum({col}), 0) FROM base")
+        top10, top1 = run(ctx, t_sql)["rows"][0]
     iqr = (q3 - q1) if q1 is not None and q3 is not None else 0
     out_sql = f"WITH {ctx.base()}\nSELECT count(*) FROM base WHERE {col} > {q3 + 3 * iqr!r} OR {col} < {q1 - 3 * iqr!r}"
     outliers = run(ctx, out_sql)["rows"][0][0] if iqr else 0
@@ -827,13 +898,18 @@ def _distribution(ctx: Ctx, r: dict) -> dict:
              "unit": unit, "measure": m["name"], "measure_label": m["label"], "enc": {"cat": "bin", "value": "n"},
              "allowed_charts": CHARTS["distribution"],
              "markers": [{"value": med, "label": f"Median {fmt_value(med, unit)}{suffix}"}, {"value": p90, "label": f"90th pct {fmt_value(p90, unit)}{suffix}"}],
-             "stats": {"median": med, "p90": p90, "q1": q1, "q3": q3, "n": n, "outliers": outliers, "max": mx}}
+             "stats": {"median": med, "p90": p90, "q1": q1, "q3": q3, "n": n, "outliers": outliers, "max": mx,
+                       **({"top10_share": top10, "top1_share": top1} if top10 is not None else {})}}
     skewed = med and p90 and p90 > 2.5 * med
-    if skewed:
+    if skewed and top10 and top10 >= 0.4:
+        title = f"The top 10% of records hold {fmt_pct(top10)} of all {lc(m['label'])}; half have under {fmt_value(med, unit)}"
+    elif skewed:
         title = f"{m['label']} has a long tail: half are under {fmt_value(med, unit)}{suffix}, but 1 in 10 exceed {fmt_value(p90, unit)}{suffix}"
     else:
         title = f"Most {lc(m['label'])} values fall between {fmt_value(q1, unit)}{suffix} and {fmt_value(q3, unit)}{suffix}"
     sub = f"{compact(n)} values · " + (f"{compact(outliers)} extreme outliers (max {fmt_value(mx, unit)}{suffix})" if outliers else "no extreme outliers")
+    if top1 and top10 and top10 >= 0.4:
+        sub += f" · the top 1% hold {fmt_pct(top1)}"
     panel.update({"title": title, "subtitle": sub})
     return panel
 
@@ -988,7 +1064,7 @@ def describe_columns(scope: dict) -> str:
         extra = ""
         st = c.get("stats") or {}
         if c["role"] == "measure":
-            extra = f" range {compact(st.get('min')) if is_num(st.get('min')) else '?'}..{compact(st.get('max')) if is_num(st.get('max')) else '?'}, agg={c['agg']}"
+            extra = (f" ({compact(c['unrated'])} unrated rows read as missing)" if c.get("unrated") else "") + f" range {compact(st.get('min')) if is_num(st.get('min')) else '?'}..{compact(st.get('max')) if is_num(st.get('max')) else '?'}, agg={c['agg']}"
         elif c["role"] == "time":
             extra = f" {st.get('min', '')[:10]}..{st.get('max', '')[:10]}"
         elif c["role"] in ("dimension", "flag"):

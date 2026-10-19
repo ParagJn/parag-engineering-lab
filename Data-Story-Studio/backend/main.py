@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 
 from config import get_settings
 import brief
+import deck
 import maps
 from export import ExportError, build_html, build_pdf, print_pdf, safe_filename
 from panels import Ctx, RecipeError, compile_panel
@@ -527,6 +528,35 @@ async def export_pdf(ds_id: str, scope_id: str, req: ExportReq):
         _fail(err, 500)
     return Response(pdf, media_type="application/pdf",
                     headers={"Content-Disposition": f'attachment; filename="{safe_filename(title, "pdf")}"'})
+
+
+@app.get("/api/deck/themes")
+def deck_themes():
+    return deck.deck_options()
+
+
+@app.post("/api/datasets/{ds_id}/dashboards/{scope_id}/export/pptx")
+async def export_pptx(ds_id: str, scope_id: str, req: ExportReq, regenerate: bool = False,
+                      design: str = deck.DEFAULT_DESIGN, palette: str = deck.DEFAULT_PALETTE):
+    """Executive deck (5-7 slides) in the dashboard's theme; the slide plan is cached on the dashboard."""
+    if design not in deck.DESIGNS:
+        raise HTTPException(400, f"Unknown design '{design}'")
+    if palette not in deck.PALETTES:
+        raise HTTPException(400, f"Unknown palette '{palette}'")
+    ds = _ds(ds_id)
+    payload, title = _export_payload(ds, scope_id, req)
+    dash = _dash(ds, scope_id)
+    cached = bool(dash.get("deck_plan")) and not regenerate
+    plan = await deck.deck_plan(dash, regenerate)
+    if plan is not dash.get("deck_plan") or not cached:
+        ds.save()
+    try:
+        data = deck.build_pptx(payload, plan, req.filters, design, palette)
+    except Exception as err:
+        print(f"[deck] build failed: {err!r}", flush=True)
+        _fail(RuntimeError(f"Couldn't build the presentation ({err})"), 500)
+    return Response(data, media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    headers={"Content-Disposition": f'attachment; filename="{safe_filename(title, "pptx")}"'})
 
 
 def _dash(ds, scope_id: str) -> dict:

@@ -57,7 +57,7 @@ export type Insight = {
 };
 
 export type Story = {
-  headline: { title: string; finding?: string; summary: string; panel: string | null };
+  headline: { title: string; finding?: string; summary: string; highlights?: { lead: string; text: string }[]; reading?: string; panel: string | null };
   kpis: string[];
   sections: Section[];
   insights: Insight[];
@@ -211,3 +211,13 @@ export type ExecSummary = {
   notice?: string;
   guarded?: string[];
 };
+
+export type DeckDesign = { id: string; name: string; blurb: string; font: string };
+export type DeckPalette = {
+  id: string;
+  name: string;
+  blurb: string;
+  colors: Record<"dark" | "dark_ink" | "dark_text" | "accent_light" | "deco1" | "deco2" | "page" | "surface" | "hair" | "ink" | "muted" | "accent" | "accent_soft" | "bar_soft", string>;
+};
+export type DeckOptions = { default_design: string; default_palette: string; designs: DeckDesign[]; palettes: DeckPalette[] };
+export type DeckChoice = { design: string; palette: string; regenerate?: boolean };

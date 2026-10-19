@@ -7,14 +7,37 @@ numbers that weren't computed here.
 
 import itertools
 import json
+import re
 
 import maps
 from fmt import compact, fmt_change, fmt_pct, fmt_value
-from model import BOUND_NAME, dimensions, measures
-from panels import Ctx, RecipeError, compile_panel
+from model import BOUND_NAME, COORD_NAME, dimensions, measures
+from panels import Ctx, RecipeError, compile_panel, plural
 from profile import q
 
 MAX_CANDIDATES = 26
+NAME_COL = re.compile(r"(^|_)(name|title)($|_)")
+ID_LIKE = re.compile(r"(^id$|_id$|^id_|code$|_key$|uuid)")
+
+
+def _goal_dims(goal: str, ds_: list[dict]) -> list[dict]:
+    """Dimensions the user's goal asks about ("which cities and localities ..."), in the order they are named."""
+    g = (goal or "").lower()
+    hits = []
+    for d in ds_:
+        label = d["label"].lower()
+        words = {label, plural(label), label.rstrip("s")}
+        pos = [m.start() for w in words for m in [re.search(r"\b" + re.escape(w) + r"\b", g)] if m]
+        if pos:
+            hits.append((min(pos), d))
+    return [d for _, d in sorted(hits, key=lambda h: h[0])][:2]
+
+
+def _goal_measures(goal: str, avg_ms: list[dict]) -> list[dict]:
+    """Average measures the goal mentions ("highest-rated" -> Aggregate rating); the first average measure otherwise."""
+    g = (goal or "").lower()
+    named = [m for m in avg_ms if len(m["label"].split()[-1]) >= 4 and m["label"].split()[-1][:3].lower() in g]
+    return named or avg_ms[:1]
 
 
 def discover(ds, scope: dict, goal: str = "") -> dict:
@@ -41,9 +64,10 @@ def discover(ds, scope: dict, goal: str = "") -> dict:
     # KPI row: the headline measure, the record count, then quality-style averages/rates for contrast
     rest = [m for m in ms if m is not primary and not m.get("lookup")]
     records = next((m for m in rest if m["agg"] == "count"), None)
-    contrast = [m for m in rest if m["kind"] == "avg" and not BOUND_NAME.search(m["name"])]
-    others = [m for m in rest if m is not records and m not in contrast and not BOUND_NAME.search(m["name"])]
-    kpi_ms = [primary] + ([records] if records else []) + (contrast + others)[: 3 - (1 if records else 0)]
+    contrast = [m for m in rest if m["kind"] == "avg" and m["agg"] != "rate" and not BOUND_NAME.search(m["name"])]
+    others = [m for m in rest if m is not records and m not in contrast and m["agg"] != "rate" and not BOUND_NAME.search(m["name"])]
+    rates = [m for m in rest if m["agg"] == "rate"]  # yes/no flag shares: only when nothing more telling is left
+    kpi_ms = [primary] + ([records] if records else []) + (contrast + others + rates)[: 3 - (1 if records else 0)]
     for m in kpi_ms:
         add({"kind": "kpi", "measure": m["name"]}, 1.0)
 
@@ -66,12 +90,24 @@ def discover(ds, scope: dict, goal: str = "") -> dict:
                 add({"kind": "heatmap", "measure": primary["name"], "x": {"part": "dow"},
                      "y": {"dim": ds_[0]["name"]} if ds_ else {"part": "month"}}, 0.6)
 
+    # the user asked "which <places> ..." : answer it with ranked comparisons, ignoring groups too small to trust
+    avg_ms = [m for m in ms if m["kind"] == "avg" and m["agg"] != "rate" and not BOUND_NAME.search(m["name"])][:2]
+    min_n = max(5, min(30, round(scope["rows"] * 0.002)))
+    ranked = _goal_dims(goal, ds_)
+    for d in ranked:
+        add({"kind": "breakdown", "measure": primary["name"], "dim": d["name"], "top_n": 8, "min_n": min_n}, 1.5)
+        for m in _goal_measures(goal, avg_ms):
+            add({"kind": "breakdown", "measure": m["name"], "dim": d["name"], "top_n": 8, "min_n": min_n}, 1.5)
+    # an ordinal tier (price range, grade ...) is compared as groups, not correlated as if it were a quantity
+    for d in [d for d in ds_ if d.get("ordinal")][:1]:
+        for m in avg_ms[:1]:
+            add({"kind": "breakdown", "measure": m["name"], "dim": d["name"]}, 1.2)
+
     for d in ds_[:4]:
         add({"kind": "breakdown", "measure": primary["name"], "dim": d["name"],
              "chart": "treemap" if d["distinct"] > 15 and primary["agg"] in ("sum", "count") else "bar"}, 0.85)
-    avg_ms = [m for m in ms if m["kind"] == "avg" and not BOUND_NAME.search(m["name"])][:2]
     for m in avg_ms:
-        for d in ds_[:2]:
+        for d in [d for d in ds_ if not d.get("ordinal")][:2]:
             add({"kind": "breakdown", "measure": m["name"], "dim": d["name"]}, 0.75)
     # maps only where the values are places (countries, or states for the covered countries)
     for g in maps.detect(ds, scope)[:2]:
@@ -97,11 +133,29 @@ def discover(ds, scope: dict, goal: str = "") -> dict:
         add({"kind": "distribution", "measure": m["name"]}, 0.5)
 
     sort_col = next((m["name"] for m in ms if m["agg"] != "count"), None)
-    cols = [c["name"] for c in scope["columns"] if c["role"] in ("id", "time", "dimension", "measure", "flag")][:9]
-    add({"kind": "table", "columns": cols, "sort": sort_col, "limit": 100}, 0.2)
+    add({"kind": "table", "columns": _table_columns(scope, sort_col, ranked), "sort": sort_col, "limit": 25}, 0.2)
 
-    cands = cands[: MAX_CANDIDATES + 8]
+    cands = cands[: MAX_CANDIDATES + 14]
     return {"candidates": cands, "default": default_story(scope, cands, primary)}
+
+
+def _table_columns(scope: dict, sort_col: str | None, ranked: list[dict]) -> list[str]:
+    """What a reader wants in a list of records: the name, where, and the measures; never ids, codes or coordinates."""
+    cols = scope["columns"]
+    name = next((c["name"] for c in cols if NAME_COL.search(c["name"].lower()) and c["role"] in ("id", "text", "dimension")), None)
+    out = [name] if name else []
+    for d in ranked:
+        if d["name"] not in out:
+            out.append(d["name"])
+    for c in cols:
+        n = c["name"].lower()
+        if c["name"] in out or c["role"] in ("id", "text") or COORD_NAME.search(n) or ID_LIKE.search(n) or "verbose" in n:
+            continue
+        if c["role"] in ("time", "dimension", "measure", "flag") and c.get("distinct", 2) != 1:
+            out.append(c["name"])
+    if sort_col and sort_col not in out:
+        out.append(sort_col)
+    return out[:7]
 
 
 def _significance(p: dict) -> float:
@@ -158,20 +212,22 @@ def default_story(scope: dict, cands: list[dict], primary: dict) -> dict:
             key = ("trend",)
         elif r["kind"] == "map":
             key = ("breakdown", r["dim"])  # a map and bars of the same places say the same thing: keep the stronger
+        elif r.get("min_n"):
+            key = ("ranking", r["dim"], r["measure"])
         else:
             key = (r["kind"], r.get("dim") or r.get("split") or json.dumps(r.get("x")) or r.get("measure"))
-        fam = r["kind"] + ("_split" if r.get("split") else "")
-        if key in seen or families.get(fam, 0) >= 2:
+        fam = "ranking" if r.get("min_n") else r["kind"] + ("_split" if r.get("split") else "")
+        if key in seen or families.get(fam, 0) >= (4 if fam == "ranking" else 2):
             continue
         seen.add(key)
         families[fam] = families.get(fam, 0) + 1
         picked.append(c)
-        if len(picked) >= 6:
+        if len(picked) >= 7:
             break
     # a map is a different view from the bars and lines: when the data has places, the best map always gets a slot
     best_map = next((c for c in rest if c["recipe"]["kind"] == "map"), None)
     if best_map and best_map not in picked and ("breakdown", best_map["recipe"]["dim"]) not in seen:
-        if len(picked) >= 6:
+        if len(picked) >= 7:
             picked[-1] = best_map
         else:
             picked.append(best_map)
@@ -214,8 +270,12 @@ def fact_sheet(cands: list[dict]) -> str:
             if a["type"] == "anomaly":
                 line += f"\n  anomaly: {a['label']}"
         s = c.get("stats") or {}
+        if c["recipe"].get("min_n"):
+            line += f"\n  RANKING: answers the user's goal; only groups with {c['recipe']['min_n']}+ records are ranked"
+        if c["chart"] == "histogram" and s.get("top10_share") is not None:
+            line += f"\n  top 10% of records hold {fmt_pct(s['top10_share'])} of the total; top 1% hold {fmt_pct(s['top1_share'])}"
         if c["recipe"]["kind"] == "breakdown" and "top_share" in s:
-            line += f"\n  top 3 share {fmt_pct(s['top3_share'])}; {s['k80']} groups make 80%"
+            line += f"\n  top 3 share {fmt_pct(s['top3_share'])}" + (f"; {s['k80']} groups make 80%" if "k80" in s else "")
         if c["recipe"]["kind"] == "map":
             line += f"\n  {s['regions']} regions on the map ({fmt_pct(s['coverage'])} of records)"
         if c["recipe"]["kind"] == "change" and s.get("rel") is not None:

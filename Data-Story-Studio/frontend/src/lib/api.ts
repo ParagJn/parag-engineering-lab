@@ -1,4 +1,4 @@
-import type { AskResult, AskSession, Dashboard, DatasetListItem, DatasetSummary, ExecSummary, Filter, Panel, QueryData, Story } from "./types";
+import type { AskResult, AskSession, Dashboard, DatasetListItem, DatasetSummary, DeckOptions, ExecSummary, Filter, Panel, QueryData, Story } from "./types";
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api${path}`, init);
@@ -61,6 +61,7 @@ export const api = {
   layout: (id: string, scope: string, story: Partial<Story>) =>
     req<Dashboard>(`${base(id, scope)}/layout`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ story }) }),
   sql: (id: string, scope: string, sql: string) => req<QueryData>(`${base(id, scope)}/sql`, json({ sql })),
+  deckOptions: () => req<DeckOptions>("/deck/themes"),
   summary: (id: string, scope: string, regenerate = false) => req<ExecSummary>(`${base(id, scope)}/summary?regenerate=${regenerate}`, { method: "POST" }),
   async summaryFile(id: string, scope: string, kind: "md" | "pdf"): Promise<{ blob: Blob; name: string }> {
     const res = await fetch(`/api${base(id, scope)}/summary/${kind}`);
@@ -76,8 +77,8 @@ export const api = {
     const name = (res.headers.get("Content-Disposition") ?? "").match(/filename="([^"]+)"/)?.[1] ?? `executive-summary.${kind}`;
     return { blob: await res.blob(), name };
   },
-  async exportFile(id: string, scope: string, kind: "html" | "pdf", filters: Filter[]): Promise<{ blob: Blob; name: string }> {
-    const res = await fetch(`/api${base(id, scope)}/export/${kind}`, json({ filters }));
+  async exportFile(id: string, scope: string, kind: "html" | "pdf" | "pptx", filters: Filter[], deck?: { design: string; palette: string; regenerate?: boolean }): Promise<{ blob: Blob; name: string }> {
+    const res = await fetch(`/api${base(id, scope)}/export/${kind}${deck ? `?design=${encodeURIComponent(deck.design)}&palette=${encodeURIComponent(deck.palette)}${deck.regenerate ? "&regenerate=true" : ""}` : ""}`, json({ filters }));
     if (!res.ok) {
       let msg = `${res.status} ${res.statusText}`;
       try {

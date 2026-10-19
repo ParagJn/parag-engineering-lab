@@ -108,6 +108,7 @@ async def compose(scope: dict, cands: list[dict], default: dict, goal: str, audi
     story["source"] = "default"
     if not llm_ready():
         story["headline"]["summary"] = _fallback_summary(cands, default)
+        story["headline"]["highlights"] = _fallback_highlights(cands, default)
         story["notice"] = "AI narrative is off (IBM ICA not configured) — titles and figures are computed directly from the data."
         return story
     ids = {c["id"] for c in cands}
@@ -132,7 +133,10 @@ Design the dashboard as a story. Return ONLY JSON:
 {{
   "headline": {{"title": "the dashboard's hero title: a short editorial name, 2-6 words, like a magazine cover line. Name the business or subject and give it an angle, e.g. 'Brightleaf Coffee: Growth, Delivered' or 'The Rush Hour Ledger'. NO digits, no full sentence, no trailing full stop",
                 "finding": "the single most important finding as one sentence, 8-18 words, with its key number copied from FACTS",
-                "summary": "3-4 sentences for a busy reader: what happened and over what period, how big it is compared with a baseline, which segment or place drives it, and what it may mean (a hypothesis, not a cause)", "panel": "<hero panel id>"}},
+                "summary": "the opening paragraph, 2-3 sentences, plain prose: scope (record count and period), the headline measure against its baseline or overall figure, and the most recent movement versus the same period a year earlier (or the prior period) when FACTS has it. Name segments and figures; no hedging here",
+                "highlights": [{{"lead": "2-5 word label naming the pattern, e.g. 'Concentration' or 'Where it leads'", "text": "ONE sentence, max 26 words, one finding with its figures copied from FACTS: a concentration, a leader, a gap between groups, or an exception"}}],
+                "reading": "ONE hedged sentence on what it may mean or what to check (may / could / one reading is). A hypothesis, never a cause, never a recommendation",
+                "panel": "<hero panel id>"}},
   "kpis": ["2-4 kpi panel ids"],
   "sections": [{{"role": "evidence|change|drivers|patterns|detail", "heading": "insight-driven heading",
                  "panels": ["panel ids"], "note": "optional one-sentence takeaway"}}],
@@ -145,13 +149,18 @@ Design the dashboard as a story. Return ONLY JSON:
 }}
 Use 4-7 non-KPI panels in total, the most significant first, no two panels telling the same story.
 {map_rule}
+Opening commentary: "summary" is the paragraph, "highlights" are 3-4 bullets that each add a NEW fact (never repeat the paragraph or the finding), ordered by importance and covering different panels: concentration or share, leaders and laggards, a comparison between groups, and one exception or recent turn. Every figure is copied exactly from FACTS.
 Prefer the user's goal when choosing. Skip weak findings rather than forcing them.
+If the USER GOAL asks "which <places/groups> ...", the hero finding and summary must NAME the leading groups with their figures from the RANKING panels; never defer that comparison to next steps.
+When a panel reports that a small share of records holds most of a total ("top 10% hold ..."), lead with that share, not the median.
+Treat ordinal tiers (price range, grade) as groups to compare; report the gap between tiers, not a correlation coefficient. Mention unrated or missing records once, as a data note, never as a finding.
 Insights: 3-5 items, each specific to a panel's figures; the "why" and "next" fields must be concrete, not generic."""
     try:
         out = await _agent().complete_json(PRINCIPLES, prompt, 10000)
     except (ProviderError, ValueError) as err:
         print(f"[story] compose failed, using default: {err}", flush=True)
         story["headline"]["summary"] = _fallback_summary(cands, default)
+        story["headline"]["highlights"] = _fallback_highlights(cands, default)
         story["notice"] = f"AI narrative unavailable ({err}); showing the computed story."
         return story
 
@@ -172,7 +181,8 @@ Insights: 3-5 items, each specific to a panel's figures; the "why" and "next" fi
         finding = finding or title
         title = ""
     story["headline"] = {"title": title or default["headline"]["title"], "finding": finding,
-                         "summary": g(hl.get("summary", "")), "panel": hero}
+                         "summary": g(hl.get("summary", "")), "panel": hero,
+                         "highlights": _highlights(hl.get("highlights"), g), "reading": g(hl.get("reading", ""))}
     kpis = [k for k in out.get("kpis") or [] if k in ids and _by_id(cands, k)["chart"] == "kpi"][:4]
     story["kpis"] = kpis or default["kpis"]
     sections, used = [], set(story["kpis"])
@@ -231,11 +241,36 @@ def _by_id(cands: list[dict], pid: str) -> dict:
     return next(c for c in cands if c["id"] == pid)
 
 
+def _highlights(raw, g) -> list[dict]:
+    """Bullets for the opening commentary: a short lead and one guarded sentence each."""
+    out = []
+    for h in raw or []:
+        if isinstance(h, str):
+            h = {"lead": "", "text": h}
+        if not isinstance(h, dict):
+            continue
+        text = g(str(h.get("text", ""))).strip()
+        if text:
+            out.append({"lead": " ".join(str(h.get("lead", "")).split()[:6]).strip(" :.-"), "text": text})
+    return out[:4]
+
+
 def _fallback_summary(cands: list[dict], default: dict) -> str:
     hero = default["headline"].get("panel")
     titles = [_by_id(cands, pid)["title"] for sec in default["sections"] for pid in sec["panels"]
               if pid != hero and _by_id(cands, pid)["chart"] != "table"]
     return " ".join(f"{t}." for t in titles[:2])
+
+
+def _fallback_highlights(cands: list[dict], default: dict) -> list[dict]:
+    hero = default["headline"].get("panel")
+    out = []
+    for sec in default["sections"]:
+        for pid in sec["panels"]:
+            c = _by_id(cands, pid)
+            if pid != hero and c["chart"] != "table":
+                out.append({"lead": "", "text": c["title"].rstrip(".") + "."})
+    return out[2:6]
 
 
 # ------------------------------------------------------------------ Q&A

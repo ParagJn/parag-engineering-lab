@@ -8,3 +8,4 @@ duckdb
 openpyxl
 certifi
 playwright
+python-pptx
