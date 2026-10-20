@@ -383,7 +383,7 @@ function App() {
       const resp = await fetch(`/api/linkedin-posts/${currentArchiveEntry.filename}?provider=${provider}`)
       if (!resp.ok) {
         const err = await resp.json()
-        throw new Error(err.detail || 'Failed to generate LinkedIn posts')
+        throw new Error(err.detail || 'Failed to generate LinkedIn post')
       }
       const data = await resp.json()
       setLinkedinPosts(data.posts || [])
@@ -768,7 +768,7 @@ function App() {
                       className="flex items-center gap-2 bg-white border border-sky-200 hover:border-sky-300 text-sky-600 hover:text-sky-700 font-medium px-5 py-2.5 rounded-xl transition-all text-sm shadow-sm"
                     >
                       {Icons.linkedin}
-                      LinkedIn Posts
+                      LinkedIn Post
                     </button>
                     <div className="w-px h-6 bg-stone-200" />
                     <button
@@ -868,8 +868,8 @@ function App() {
             <div className="px-6 py-5 border-b border-stone-100 flex items-center gap-3 shrink-0">
               <span className="text-sky-500">{Icons.linkedin}</span>
               <div>
-                <h3 className="font-semibold text-stone-800 text-lg">LinkedIn Posts</h3>
-                <p className="text-stone-400 text-xs mt-0.5">One post per story — pick a style, copy or export</p>
+                <h3 className="font-semibold text-stone-800 text-lg">LinkedIn Post</h3>
+                <p className="text-stone-400 text-xs mt-0.5">One teaser post for the whole edition — paste your page link where shown, then copy</p>
               </div>
               <button onClick={() => setLinkedinModalOpen(false)} className="ml-auto text-stone-400 hover:text-stone-600 p-1 rounded-lg hover:bg-stone-100 transition-colors">
                 {Icons.x}
@@ -933,8 +933,8 @@ function App() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
-                  <p className="text-stone-500 text-sm font-medium">Claude is writing 10 LinkedIn posts…</p>
-                  <p className="text-stone-400 text-xs mt-1">This takes about 20–30 seconds</p>
+                  <p className="text-stone-500 text-sm font-medium">Claude is writing your LinkedIn teaser post…</p>
+                  <p className="text-stone-400 text-xs mt-1">This takes about 10–20 seconds</p>
                 </div>
               )}
 

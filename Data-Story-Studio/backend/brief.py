@@ -153,7 +153,7 @@ def _metrics(dash: dict) -> list[dict]:
         for c in (p.get("compare_yoy"), p.get("compare")):
             if c and c.get("display"):
                 changes.append(f"{c['display']} {c.get('label', '')}".strip())
-        out.append({"label": p.get("measure_label") or p.get("title"), "value": p.get("display", "—"),
+        out.append({"label": p.get("measure_label") or p.get("title"), "tag": p.get("agg_tag", ""), "value": p.get("display", "—"),
                     "basis": p.get("basis", ""), "change": "; ".join(changes)})
     return out
 

@@ -1,6 +1,6 @@
 import { useRef, useState, type MutableRefObject } from "react";
 import { sceneOn, timeline } from "../engine/film";
-import { KEY_MOMENTS, type MotionConfig } from "../engine/types";
+import { momentsFor, type MotionConfig } from "../engine/types";
 import { exportGif, exportMp4, exportPng, exportPptx, saveBlob, type ExportJob } from "../export/exporters";
 
 interface Props {
@@ -33,7 +33,7 @@ export default function ExportPanel({ cfg, w, h, sizeId, timeRef }: Props) {
   const [message, setMessage] = useState("");
   const abortRef = useRef<AbortController | null>(null);
 
-  const moments = KEY_MOMENTS.filter((k) => !k.scene || sceneOn(cfg, k.scene));
+  const moments = momentsFor(cfg).filter((k) => !k.scene || sceneOn(cfg, k.scene));
   const frameSeconds = () => (frame === "current" ? timeRef.current : timeline(cfg).toSeconds((moments.find((k) => k.id === frame) ?? moments[moments.length - 1]).t));
   const base = `${slug(cfg.text.hero)}-${sizeId}-${w}x${h}`;
 

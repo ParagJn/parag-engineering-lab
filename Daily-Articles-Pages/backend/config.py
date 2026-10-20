@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     ibm_ica_api_key: str = ""
     ibm_ica_model_id: str = "claude-opus-5-5"
     ibm_ica_gemini_model_id: str = ""
+    # Retried once when the primary Claude model's reply is blocked by the content filter
+    ibm_ica_fallback_model_id: str = "claude-sonnet-5"
+
+    # Where published editions live, e.g. https://paragjn.github.io/parag-engineering-lab/articles
+    public_base_url: str = ""
 
     model_config = SettingsConfigDict(
         env_file=str(_ENV_FILE),

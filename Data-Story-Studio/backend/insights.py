@@ -40,6 +40,26 @@ def _goal_measures(goal: str, avg_ms: list[dict]) -> list[dict]:
     return named or avg_ms[:1]
 
 
+_KPI_GENERIC = {"total", "average", "avg", "sum", "mean", "annual", "monthly", "daily", "amount", "number", "count"}
+
+
+def _goal_kpis(goal: str, ms: list[dict]) -> list[dict]:
+    """Measures the goal is about ("spend ... credit utilization"), best match first, at most 3. A column the goal only
+    uses to slice ("by card type, income or occupation") is a segment, not a number to headline."""
+    g = re.sub(r"\bby\s+[^)]*?(?=\)|\band\b|[?.]|$)", " ", (goal or "").lower())
+    if not g.strip():
+        return []
+    hits = []
+    for m in ms:
+        if m["agg"] == "count" or m.get("lookup") or BOUND_NAME.search(m["name"]):
+            continue
+        sig = [w for w in re.findall(r"[a-z]+", m["label"].lower()) if len(w) >= 4 and w not in _KPI_GENERIC]
+        found = [g.find(w[:5]) for w in sig if w[:5] in g]
+        if sig and len(found) / len(sig) > 0.5:
+            hits.append((-len(found) / len(sig), min(found), m))
+    return [m for *_, m in sorted(hits, key=lambda h: h[:2])][:3]
+
+
 def discover(ds, scope: dict, goal: str = "") -> dict:
     ctx = Ctx(ds, scope)
     ms = list(ctx.measures.values())
@@ -67,7 +87,13 @@ def discover(ds, scope: dict, goal: str = "") -> dict:
     contrast = [m for m in rest if m["kind"] == "avg" and m["agg"] != "rate" and not BOUND_NAME.search(m["name"])]
     others = [m for m in rest if m is not records and m not in contrast and m["agg"] != "rate" and not BOUND_NAME.search(m["name"])]
     rates = [m for m in rest if m["agg"] == "rate"]  # yes/no flag shares: only when nothing more telling is left
-    kpi_ms = [primary] + ([records] if records else []) + (contrast + others + rates)[: 3 - (1 if records else 0)]
+    wanted = _goal_kpis(goal, ms)
+    kpi_ms, seen_k = [], set()
+    # the goal's own measures lead, then the headline measure and the record count, then the usual contrast cards
+    for m in wanted + [primary] + ([records] if records else []) + contrast + others + rates:
+        if m["name"] not in seen_k and len(kpi_ms) < 4:
+            seen_k.add(m["name"])
+            kpi_ms.append(m)
     for m in kpi_ms:
         add({"kind": "kpi", "measure": m["name"]}, 1.0)
 

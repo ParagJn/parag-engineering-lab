@@ -178,7 +178,7 @@ My-Own-AI-Assistant/
 - The user can cancel the wait, which restores their message to the composer instead of losing it
 
 ### AI Capabilities
-- Powered by Claude Opus 5.5 (or Gemini) via IBM ICA
+- Powered by Claude Sonnet 5.5 (or Gemini) via IBM ICA
 - Context-aware conversations
 - Document analysis and summarization
 - Optional web search grounding

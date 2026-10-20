@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
 import type { DeckChoice, DeckDesign, DeckOptions, DeckPalette } from "../lib/types";
 import { IconCheck, IconDownload, IconX, Spinner } from "./icons";
@@ -168,6 +168,40 @@ export function DeckThemePicker({
   const [design, setDesign] = useState("");
   const [palette, setPalette] = useState("");
   const [err, setErr] = useState<string | null>(null);
+  const [logo, setLogo] = useState<number | null>(null); // cache-buster while a logo exists, null when none
+  const [logoErr, setLogoErr] = useState<string | null>(null);
+  const [logoBusy, setLogoBusy] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let live = true;
+    fetch(api.logoUrl(dsId, 0)).then((r) => live && setLogo(r.ok ? Date.now() : null)).catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [dsId]);
+
+  const pickLogo = async (f: File | undefined) => {
+    if (!f) return;
+    setLogoBusy(true);
+    setLogoErr(null);
+    try {
+      await api.uploadLogo(dsId, f);
+      setLogo(Date.now());
+    } catch (e: any) {
+      setLogoErr(e.message);
+    } finally {
+      setLogoBusy(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  const dropLogo = async () => {
+    setLogoBusy(true);
+    await api.removeLogo(dsId);
+    setLogo(null);
+    setLogoBusy(false);
+  };
 
   useEffect(() => {
     let live = true;
@@ -256,6 +290,31 @@ export function DeckThemePicker({
                   </div>
                 </button>
               ))}
+            </div>
+
+            <div className="mt-5 text-[11px] font-semibold tracking-wider text-muted">3 · COMPANY LOGO (OPTIONAL)</div>
+            <div className="mt-2 flex items-center gap-4 rounded-xl border border-hair bg-surface p-3">
+              <div className="h-14 w-32 shrink-0 rounded-lg border border-hair bg-white flex items-center justify-center overflow-hidden">
+                {logo !== null ? (
+                  <img src={api.logoUrl(dsId, logo)} alt="Company logo" className="max-h-12 max-w-[7.5rem] object-contain" />
+                ) : (
+                  <span className="text-[11.5px] text-muted">No logo</span>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[12.5px] text-ink-2">Appears on the title slide and in the footer of every slide. PNG with a transparent background works best.</div>
+                {logoErr && <div className="mt-1 text-[12px] text-bad">{logoErr}</div>}
+              </div>
+              <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/gif,image/webp" className="hidden" onChange={(e) => pickLogo(e.target.files?.[0])} />
+              <button onClick={() => fileRef.current?.click()} disabled={busy || logoBusy} className="px-3 py-2 rounded-lg text-[13px] text-ink-2 border border-hair hover:bg-sunken disabled:opacity-60 inline-flex items-center gap-2">
+                {logoBusy && <Spinner className="w-3.5 h-3.5" />}
+                {logo !== null ? "Replace" : "Upload logo"}
+              </button>
+              {logo !== null && (
+                <button onClick={dropLogo} disabled={busy || logoBusy} className="px-2 py-2 rounded-lg text-[13px] text-ink-2 hover:bg-sunken disabled:opacity-60">
+                  Remove
+                </button>
+              )}
             </div>
           </>
         )}

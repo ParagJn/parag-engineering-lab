@@ -63,6 +63,7 @@ Keyboard: `Space` play/pause · `←` / `→` step one frame.
 
 | Area | Options |
 |---|---|
+| **Film** | *Showcase*: the motion reel (hero → stat → shape → words → end card) · *Story*: Hook (hero word) → **Problem** (the dot types your pain line, stalls against an invisible wall, the line is struck through and crumbles) → **Reveal** (the pill becomes a badge with your solution name and lead-in) → **Proof** (your stat with a caption saying what it means) → **Close** (end card or logo sweep) |
 | **Text** | Intro word · ending word (replaces the intro on the final frame; blank keeps the loop seamless) · hero word (an `i` or `j` gets the accent dot as its tittle) · stat (the spring graph really overshoots by this %, and counters keep any prefix/suffix such as `$1.2M` or `3.5x`) · 3–6 orbit words · end-card title, subtitle and footnote |
 | **Stat style** | Spring graph · Bar chart · Counter · Progress ring |
 | **Shape style** | Square → pill · Triangle → circle · Star burst · Blob |
@@ -73,7 +74,7 @@ Keyboard: `Space` play/pause · `←` / `→` step one frame.
 | **Style** | Themes: warm paper, night, cool grey, navy · accent swatches or any colour · custom background and ink · fonts: Inter Tight, Archivo, Manrope, Sora, Plus Jakarta Sans, Outfit |
 | **Motion** | Feel: *Precise* (minimal overshoot), *Lively* (original), *Bold* (hard landings, bouncier shapes, longer holds); springs are tuned per element class (UI, text, shapes, data, dot) · *Readable holds* stretch each text moment to its reading time · *Camera glide*: a near-invisible push-in that is exactly 1× at the loop point |
 | **Timing** | *Auto* (default) follows the designed pace including reading holds, or set 6–30s manually; all scenes scale together |
-| **AI copy** | Brief + tone (confident, playful, executive, technical, bold), optional AI accent colour |
+| **AI copy** | Brief + tone (confident, playful, executive, technical, bold), optional AI accent colour. Also writes the story fields. **Never invents numbers:** the stat is only used if that number is in your brief, and any other number not in the brief is flagged |
 | **Sound** | Silent · Subtle clicks · Minimal beat · Corporate pulse, plus volume. Synthesised in the browser (no samples, no models) and timed to the film's events, so hits land on the dot's moves at any duration and with scenes switched off. Plays in the preview (with a preview-only mute), embedded as AAC in MP4/PPTX, and downloadable as WAV. |
 
 ---
@@ -198,7 +199,7 @@ Optional: `IBM_ICA_INSECURE_TLS=true`, for local connectivity testing only.
 | Method | Path | Body | Returns |
 |---|---|---|---|
 | `GET` | `/api/health` | none | `{ ok, ai_configured, model }` |
-| `POST` | `/api/suggest` | `{ brief, tone }` | `{ intro, hero, stat, words[5], card_title, card_subtitle, card_footnote, accent, model }` |
+| `POST` | `/api/suggest` | `{ brief, tone }` | `{ intro, ending, hero, stat, words[5], card_title, card_subtitle, card_footnote, problem, lead, solution, proof_label, accent, stat_from_brief, notes[], model }` |
 
 The backend trims and validates the model's JSON: length limits, a stat clamped to 5–60%, exactly five uppercase words, and a hex-only accent.
 

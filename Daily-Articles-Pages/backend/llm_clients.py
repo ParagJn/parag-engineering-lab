@@ -96,11 +96,16 @@ class SapCompletionAgent:
         return AgentResult(agent=f"{self.name} ({self.model})", content=content.strip())
 
 
+class ContentFilterError(ProviderError):
+    pass
+
+
 class IcaCompletionAgent:
-    def __init__(self, settings: Settings, name: str, model: str):
+    def __init__(self, settings: Settings, name: str, model: str, fallback_model: str = ""):
         self.settings = settings
         self.name = name
         self.model = model
+        self.fallback_model = fallback_model if fallback_model != model else ""
 
     @property
     def configured(self) -> bool:
@@ -115,22 +120,43 @@ class IcaCompletionAgent:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": user})
 
+        try:
+            result = await self._chat(self.model, messages, max_tokens)
+        except ContentFilterError:
+            if not self.fallback_model:
+                raise
+            print(
+                f"[IBM_ICA] agent={self.name!r} content_filter on {self.model!r}, "
+                f"retrying once with fallback {self.fallback_model!r}",
+                flush=True,
+            )
+            result = await self._chat(self.fallback_model, messages, max_tokens)
+        return AgentResult(agent=f"{self.name} ({result['model']})", content=result["text"].strip())
+
+    async def _chat(self, model: str, messages: list[dict[str, str]], max_tokens: int) -> dict[str, Any]:
         print(
-            f"[IBM_ICA] agent={self.name!r} model={self.model!r} "
+            f"[IBM_ICA] agent={self.name!r} model={model!r} "
             f"endpoint={self.settings.ibm_ica_endpoint!r}",
             flush=True,
         )
         client = IBMICAClient(
             endpoint=self.settings.ibm_ica_endpoint,
             api_key=self.settings.ibm_ica_api_key,
-            model_id=self.model,
+            model_id=model,
         )
         try:
             result = await asyncio.to_thread(client.chat, messages, max_tokens)
         except IBMICAError as err:
             print(f"[IBM_ICA] agent={self.name!r} FAILED: {err!r}", flush=True)
             raise ProviderError(f"IBM ICA error: {err}") from err
-        return AgentResult(agent=f"{self.name} ({self.model})", content=result["text"].strip())
+        if result.get("finish_reason") == "content_filter":
+            print(f"[IBM_ICA] agent={self.name!r} model={model!r} BLOCKED by content_filter", flush=True)
+            raise ContentFilterError(
+                f"IBM ICA response from {model} was blocked by the content filter "
+                "(likely a sensitive topic in today's stories). Try SAP Models or different sources."
+            )
+        result["model"] = model
+        return result
 
 
 def build_agent(settings: Settings, name: str, kind: str, provider: str = "ibm_ica"):
@@ -142,8 +168,11 @@ def build_agent(settings: Settings, name: str, kind: str, provider: str = "ibm_i
         model = settings.sap_anthropic_model if kind == "claude" else settings.sap_gemini_model
         return SapCompletionAgent(settings, name, model)
 
-    model = settings.ibm_ica_model_id if kind == "claude" else settings.ibm_ica_gemini_model_id
-    return IcaCompletionAgent(settings, name, model)
+    if kind == "claude":
+        return IcaCompletionAgent(
+            settings, name, settings.ibm_ica_model_id, settings.ibm_ica_fallback_model_id
+        )
+    return IcaCompletionAgent(settings, name, settings.ibm_ica_gemini_model_id)
 
 
 def _extract_content(data: Any) -> str:

@@ -1,8 +1,26 @@
-export async function uploadDocument(file) {
+async function errorMessage(response, fallback) {
+  try {
+    const body = await response.json()
+    if (typeof body.detail === 'string') return body.detail
+    if (Array.isArray(body.detail)) return body.detail.map((d) => d.msg).join('; ')
+  } catch {
+    // non-JSON error body
+  }
+  return `${fallback} (HTTP ${response.status})`
+}
+
+export async function uploadDocument(file, provider = 'ibm_ica') {
   const formData = new FormData()
   formData.append('file', file)
+  formData.append('provider', provider)
   const response = await fetch('/api/upload', { method: 'POST', body: formData })
-  if (!response.ok) throw new Error((await response.json()).detail || 'Upload failed')
+  if (!response.ok) throw new Error(await errorMessage(response, 'Upload failed'))
+  return response.json()
+}
+
+export async function fetchProviders() {
+  const response = await fetch('/api/providers')
+  if (!response.ok) return {}
   return response.json()
 }
 
@@ -12,7 +30,7 @@ export async function analyzeDocument(payload) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })
-  if (!response.ok) throw new Error((await response.json()).detail || 'Analysis failed')
+  if (!response.ok) throw new Error(await errorMessage(response, 'Analysis failed'))
   return response.json()
 }
 
@@ -22,7 +40,7 @@ export async function askFollowUp(payload) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })
-  if (!response.ok) throw new Error((await response.json()).detail || 'Chat failed')
+  if (!response.ok) throw new Error(await errorMessage(response, 'Chat failed'))
   return response.json()
 }
 
@@ -32,7 +50,7 @@ export async function createVisual(payload) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })
-  if (!response.ok) throw new Error((await response.json()).detail || 'Visual generation failed')
+  if (!response.ok) throw new Error(await errorMessage(response, 'Visual generation failed'))
   return response.json()
 }
 

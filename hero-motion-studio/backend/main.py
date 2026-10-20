@@ -25,14 +25,22 @@ The animation has fixed scenes, and you fill the text slots:
 - intro: 1-2 short words shown before the hero word on a UI toggle, then they bend away (e.g. "Meet", "Introducing", "Say hello to"). Max 14 characters.
 - ending: 1-2 short words that replace the intro on the final frame, closing the story (e.g. "Thank you", "Built for", "Welcome to"). Max 16 characters.
 - hero: the hero word or name, 1-3 words, max 18 characters. Prefer a phrase containing a lowercase "i" or "j": the animated accent dot becomes its tittle.
-- stat: one signed percentage that a spring graph overshoots to, e.g. "+22%". Between 5 and 60.
+- stat: the single headline number, written with its sign and unit (e.g. "+22%", "-40%", "3.5x", "$1.2M").
+  HARD RULE: only use a number that appears in the brief. Never invent, estimate or round up a metric.
+  If the brief contains no number, return null.
 - words: exactly 5 short UPPERCASE words or phrases (max 14 characters each) that orbit the dot. Themes or capabilities of the subject.
 - card_title: end-card title, max 22 characters (often the hero again).
 - card_subtitle: one crisp line, max 40 characters, ending with a period.
 - card_footnote: a tiny punchline or fact, max 28 characters.
+- problem: the pain point as one plain sentence, max 48 characters, ending with a period (story mode).
+- lead: 1-2 word lead-in shown above the solution badge (e.g. "Introducing", "Meet"). Max 16 characters.
+- solution: the product, team or initiative name on the badge, max 24 characters.
+- proof_label: what the stat measures, lower case, max 36 characters (e.g. "faster month-end close").
 - accent: optional single vivid hex colour that suits the subject, or null.
 
-Return ONLY a JSON object with exactly these keys: intro, ending, hero, stat, words, card_title, card_subtitle, card_footnote, accent.
+Never put numbers in any field unless that exact number is in the brief.
+
+Return ONLY a JSON object with exactly these keys: intro, ending, hero, stat, words, card_title, card_subtitle, card_footnote, problem, lead, solution, proof_label, accent.
 No markdown, no commentary."""
 
 
@@ -50,7 +58,13 @@ class SuggestResponse(BaseModel):
     card_title: str
     card_subtitle: str
     card_footnote: str
+    problem: str
+    lead: str
+    solution: str
+    proof_label: str
     accent: str | None = None
+    stat_from_brief: bool  # False: the brief had no usable number, so no stat is suggested
+    notes: list[str]  # warnings for the user, e.g. numbers that don't appear in the brief
     model: str
 
 
@@ -80,7 +94,7 @@ async def suggest(req: SuggestRequest):
     data = _parse_json(result.content)
     if data is None:
         raise HTTPException(502, f"Model did not return JSON: {result.content[:300]}")
-    return _clean(data, settings.ibm_ica_model_id)
+    return _clean(data, req.brief, settings.ibm_ica_model_id)
 
 
 def _parse_json(text: str) -> dict | None:
@@ -103,14 +117,28 @@ def _clip(value: object, limit: int, fallback: str = "") -> str:
     return text[:limit].strip() or fallback
 
 
-def _clean(data: dict, model: str) -> SuggestResponse:
-    hero = _clip(data.get("hero"), 18, "Your Idea")
+_NUM = re.compile(r"\d+(?:[.,]\d+)?")
 
-    stat = _clip(data.get("stat"), 8)
-    match = re.search(r"\d+(?:\.\d+)?", stat)
-    pct = min(60.0, max(5.0, float(match.group(0)))) if match else 22.0
-    sign = "-" if stat.startswith("-") else "+"
-    stat = f"{sign}{pct:g}%"
+
+def _numbers(text: str) -> set[str]:
+    return {n.replace(",", ".") for n in _NUM.findall(text or "")}
+
+
+def _clean(data: dict, brief: str, model: str) -> SuggestResponse:
+    hero = _clip(data.get("hero"), 18, "Your Idea")
+    notes: list[str] = []
+    brief_numbers = _numbers(brief)
+
+    # Hard line: the stat must be a number that is actually in the brief.
+    stat = _clip(data.get("stat"), 10)
+    stat_numbers = _numbers(stat)
+    stat_from_brief = bool(stat_numbers) and stat_numbers <= brief_numbers
+    if not stat_from_brief:
+        if stat_numbers:
+            notes.append(f"Ignored the suggested stat {stat!r}: that number isn't in your brief.")
+        else:
+            notes.append("Your brief has no number, so the stat was left unchanged. Add the real figure.")
+        stat = ""
 
     words = data.get("words") if isinstance(data.get("words"), list) else []
     words = [_clip(w, 14).upper() for w in words if _clip(w, 14)][:5]
@@ -119,6 +147,11 @@ def _clean(data: dict, model: str) -> SuggestResponse:
             break
         if filler not in words:
             words.append(filler)
+
+    for key in ("card_title", "card_subtitle", "card_footnote", "problem", "proof_label", "hero", "solution"):
+        extra = _numbers(str(data.get(key) or "")) - brief_numbers
+        if extra:
+            notes.append(f"Check '{key}': it mentions {', '.join(sorted(extra))}, which isn't in your brief.")
 
     accent = data.get("accent")
     accent = accent if isinstance(accent, str) and re.fullmatch(r"#[0-9a-fA-F]{6}", accent) else None
@@ -132,6 +165,12 @@ def _clean(data: dict, model: str) -> SuggestResponse:
         card_title=_clip(data.get("card_title"), 22, hero),
         card_subtitle=_clip(data.get("card_subtitle"), 40),
         card_footnote=_clip(data.get("card_footnote"), 28),
+        problem=_clip(data.get("problem"), 48),
+        lead=_clip(data.get("lead"), 16, "Introducing"),
+        solution=_clip(data.get("solution"), 24, hero),
+        proof_label=_clip(data.get("proof_label"), 36),
         accent=accent,
+        stat_from_brief=stat_from_brief,
+        notes=notes,
         model=model,
     )

@@ -3,6 +3,8 @@
 Flow: upload files -> readiness report -> setup (goal, links) -> dashboard -> explore / ask / redraw / export
 """
 
+import asyncio
+import io
 import json
 import re
 import shutil
@@ -59,6 +61,7 @@ def _summary(ds) -> dict:
         "dashboards": list((st.get("dashboards") or {}).keys()),
         "min_rows": get_settings().min_rows,
         "example": bool(st.get("example")),
+        "refresh": st.get("refresh"),
     }
 
 
@@ -144,6 +147,105 @@ async def add_files(ds_id: str, files: list[UploadFile] = File(...)):
     with ds.lock:
         ingest_all(ds)
     ds.state["brief"] = await setup_brief(ds.state)
+    ds.save()
+    return _summary(ds)
+
+
+def _kpi_snapshot(dashboards: dict) -> dict:
+    """{scope: {measure: (label, display)}} for the headline numbers of each dashboard."""
+    out = {}
+    for sid, d in (dashboards or {}).items():
+        out[sid] = {p["measure"]: (p.get("measure_label") or p.get("title"), p.get("display"))
+                    for p in d["panels"].values() if p.get("chart") == "kpi" and p.get("measure")}
+    return out
+
+
+@app.post("/api/datasets/{ds_id}/refresh")
+async def refresh_data(ds_id: str, files: list[UploadFile] = File(...)):
+    """Swap in a newer version of the data and rebuild: the goal, audience, links, logo and deck settings stay,
+    the numbers and commentary are regenerated. The new file must still have every column the old one had;
+    anything that fails puts the previous data back."""
+    ds = _ds(ds_id)
+    st = ds.state
+    if not st.get("setup") or not st.get("scopes"):
+        raise HTTPException(409, "Build a dashboard first; refresh replaces the data behind an existing one")
+    current = list(st.get("files", []))
+    if len(files) == 1 and len(current) == 1:
+        pairs = [(files[0], current[0])]
+    else:
+        pairs = []
+        for up in files:
+            key = Path(up.filename or "").name.lower()
+            hit = next((f for f in current if f["name"].lower() == key), None)
+            if not hit:
+                raise HTTPException(400, f"{up.filename}: no file with that name in this dataset. Use the same file name, "
+                                         f"one of: {', '.join(f['name'] for f in current)}")
+            pairs.append((up, hit))
+    old_state = {k: st.get(k) for k in ("files", "profiles", "rows", "sources", "ingest", "readiness", "scopes", "dashboards", "ingested", "brief")}
+    old_files = json.loads(json.dumps(current))
+    before = {"rows": sum((st.get("rows") or {}).values()),
+              "period": brief._period(next(iter(st["dashboards"].values()))["meta"]) if st.get("dashboards") else "",
+              "kpis": _kpi_snapshot(st.get("dashboards"))}
+    old_cols = {t: {c["name"] for c in cols} for t, cols in (st.get("profiles") or {}).items()}
+    scope_ids = list((st.get("dashboards") or {}).keys()) or [s["id"] for s in st["scopes"]]
+    added: list[Path] = []
+
+    def restore():
+        for p in added:
+            p.unlink(missing_ok=True)
+        st.update(old_state)
+        st["files"] = old_files
+        with ds.lock:
+            ingest_all(ds)
+        st.update({k: v for k, v in old_state.items() if k in ("scopes", "dashboards", "brief")})
+        ds.save()
+
+    try:
+        for up, old in pairs:
+            await _store(ds, [up])
+            new = st["files"].pop()  # _store appended it; we re-use the old entry so table names stay the same
+            added.append(ds.files_dir / new["stored"])
+            old.update({"stored": new["stored"], "size": new["size"], "uploaded": new["uploaded"], "refreshed_from": new["name"]})
+        st["files"] = current
+        with ds.lock:
+            ingest_all(ds)
+        new_cols = {t: {c["name"] for c in cols} for t, cols in (st.get("profiles") or {}).items()}
+        missing = sorted(f"{c}" for t, cs in old_cols.items() for c in cs - new_cols.get(t, set()))
+        if missing or set(old_cols) - set(new_cols):
+            raise ValueError("the new file is missing columns the dashboard uses: " + ", ".join(missing[:8] or sorted(set(old_cols) - set(new_cols))))
+        with ds.lock:
+            apply_setup(ds, st["setup"])
+        if not st.get("scopes"):
+            raise ValueError("the new data couldn't be set up the same way")
+        for sid in scope_ids:
+            if any(s["id"] == sid for s in st["scopes"]):
+                await generate_dashboard(ds, sid)
+    except HTTPException:
+        restore()
+        raise
+    except Exception as err:
+        print(f"[refresh] failed, restoring previous data: {err!r}", flush=True)
+        restore()
+        raise HTTPException(400, f"Couldn't refresh: {err}. Your previous data is unchanged.")
+    for _, old in pairs:
+        keep = {f["stored"] for f in st["files"]}
+        for f in old_files:
+            if f["stored"] not in keep:
+                (ds.files_dir / f["stored"]).unlink(missing_ok=True)
+    after_d = st.get("dashboards") or {}
+    after = {"rows": sum((st.get("rows") or {}).values()),
+             "period": brief._period(next(iter(after_d.values()))["meta"]) if after_d else "",
+             "kpis": _kpi_snapshot(after_d)}
+    sid = next((s for s in scope_ids if s in after_d), None)
+    kpis = []
+    if sid:
+        for m, (label, disp) in (before["kpis"].get(sid) or {}).items():
+            now = (after["kpis"].get(sid) or {}).get(m)
+            if now:
+                kpis.append({"label": label, "before": disp, "after": now[1]})
+    st["refresh"] = {"at": time.time(), "files": [up.filename for up, _ in pairs],
+                     "rows_before": before["rows"], "rows_after": after["rows"],
+                     "period_before": before["period"], "period_after": after["period"], "kpis": kpis[:4]}
     ds.save()
     return _summary(ds)
 
@@ -499,7 +601,7 @@ def _export_payload(ds, scope_id: str, req: ExportReq) -> tuple[dict, str]:
     if not dash:
         raise HTTPException(404, "Dashboard not generated yet")
     scope = get_scope(ds, scope_id)
-    panels = recompute(ds, scope_id, req.filters) if req.filters else dash["panels"]
+    panels = recompute(ds, scope_id, req.filters)  # always from the data as it is now, never the saved copy
     payload = {**dash, "panels": panels, "filters": req.filters, "meta": dashboard_meta(ds, scope),
                "exported": time.time(), "static": True, "geo": maps.used_boundaries(panels)}
     title = dash["story"]["headline"].get("title") or scope["label"]
@@ -523,11 +625,56 @@ async def export_pdf(ds_id: str, scope_id: str, req: ExportReq):
     ds = _ds(ds_id)
     payload, title = _export_payload(ds, scope_id, req)
     try:
-        pdf = await build_pdf(build_html({**payload, "print": True}, title))
+        pdf = await build_pdf(await asyncio.to_thread(build_html, {**payload, "print": True}, title))
     except ExportError as err:
         _fail(err, 500)
     return Response(pdf, media_type="application/pdf",
                     headers={"Content-Disposition": f'attachment; filename="{safe_filename(title, "pdf")}"'})
+
+
+def _logo_path(ds) -> Path:
+    return ds.root / "logo.png"
+
+
+def _logo_bytes(ds) -> bytes | None:
+    p = _logo_path(ds)
+    return p.read_bytes() if p.exists() else None
+
+
+@app.get("/api/datasets/{ds_id}/logo")
+def get_logo(ds_id: str):
+    data = _logo_bytes(_ds(ds_id))
+    if not data:
+        raise HTTPException(404, "No logo uploaded")
+    return Response(data, media_type="image/png", headers={"Cache-Control": "no-store"})
+
+
+@app.post("/api/datasets/{ds_id}/logo")
+async def put_logo(ds_id: str, file: UploadFile = File(...)):
+    """Company logo for the presentation: any PNG/JPG/GIF/WebP, normalised to a transparent PNG of at most 800x400."""
+    from PIL import Image, ImageOps
+    ds = _ds(ds_id)
+    raw = await file.read()
+    if len(raw) > 5_000_000:
+        raise HTTPException(400, "That image is over 5 MB; use a smaller logo file")
+    try:
+        img = ImageOps.exif_transpose(Image.open(io.BytesIO(raw))).convert("RGBA")
+    except Exception:
+        raise HTTPException(400, "Couldn't read that image; use a PNG, JPG, GIF or WebP file")
+    box = img.getbbox()  # trim empty transparent margins so the logo fills its slot
+    if box:
+        img = img.crop(box)
+    img.thumbnail((800, 400))
+    out = io.BytesIO()
+    img.save(out, "PNG")
+    _logo_path(ds).write_bytes(out.getvalue())
+    return {"ok": True, "width": img.width, "height": img.height}
+
+
+@app.delete("/api/datasets/{ds_id}/logo")
+def delete_logo(ds_id: str):
+    _logo_path(_ds(ds_id)).unlink(missing_ok=True)
+    return {"ok": True}
 
 
 @app.get("/api/deck/themes")
@@ -551,7 +698,7 @@ async def export_pptx(ds_id: str, scope_id: str, req: ExportReq, regenerate: boo
     if plan is not dash.get("deck_plan") or not cached:
         ds.save()
     try:
-        data = deck.build_pptx(payload, plan, req.filters, design, palette)
+        data = deck.build_pptx(payload, plan, req.filters, design, palette, _logo_bytes(ds))
     except Exception as err:
         print(f"[deck] build failed: {err!r}", flush=True)
         _fail(RuntimeError(f"Couldn't build the presentation ({err})"), 500)

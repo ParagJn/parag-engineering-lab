@@ -14,6 +14,7 @@ from pydantic import BaseModel
 # Load .env from project root
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
+from config import get_settings
 from sources import get_all_sources, get_source
 from fetcher import fetch_rss_stories, enrich_stories_with_gemini
 from curator import curate_magazine
@@ -30,7 +31,7 @@ os.makedirs(ARCHIVE_DIR, exist_ok=True)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=["http://localhost:5210", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -203,9 +204,19 @@ async def clear_archive():
 # ── PDF & Email Endpoints ──
 
 
+def _published_url(filename: str, meta: dict) -> str:
+    """Live URL of an edition once published, e.g. <base>/morning-edition-2026-10-12.html."""
+    base = get_settings().public_base_url.strip().rstrip("/")
+    if not base:
+        return ""
+    # Archive files are named "YYYY-MM-DD_HH-MM-SS_<source>.html"; created_at is the fallback
+    date = filename[:10] if re.match(r"\d{4}-\d{2}-\d{2}", filename) else (meta.get("created_at") or "")[:10]
+    return f"{base}/morning-edition-{date}.html" if date else ""
+
+
 @app.get("/api/linkedin-posts/{filename}")
 async def get_linkedin_posts(filename: str, provider: str = "ibm_ica"):
-    """Generate LinkedIn posts for all stories in an archived magazine."""
+    """Generate a LinkedIn teaser post that links to an archived magazine."""
     safe_name = os.path.basename(filename)
     if not safe_name.endswith(".html"):
         raise HTTPException(status_code=400, detail="Invalid filename")
@@ -224,7 +235,9 @@ async def get_linkedin_posts(filename: str, provider: str = "ibm_ica"):
         )
 
     try:
-        posts = await generate_linkedin_posts(stories, provider)
+        posts = await generate_linkedin_posts(
+            stories, provider, meta.get("title", "Morning Edition"), _published_url(safe_name, meta)
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

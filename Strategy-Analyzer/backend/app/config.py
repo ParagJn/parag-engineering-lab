@@ -4,6 +4,9 @@ from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+_ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
+
+
 class Settings(BaseSettings):
     azure_openai_gpt54_base: str = ""
     azure_openai_gpt54_key: str = ""
@@ -30,9 +33,22 @@ class Settings(BaseSettings):
     sap_thinking_mode: str = "adaptive"
     sap_thinking_budget_tokens: int = 12000
 
-    upload_dir: str = "./uploads"
+    # IBM ICA (default provider). Same variable names as Daily-Articles-Pages.
+    ibm_ica_endpoint: str = ""
+    ibm_ica_api_key: str = ""
+    ibm_ica_model_id: str = "claude-opus-5-5"
+    ibm_ica_gemini_model_id: str = ""
+    # Optional per-role overrides; each falls back to ibm_ica_model_id
+    ibm_ica_validator_model_id: str = ""
+    ibm_ica_synthesizer_model_id: str = ""
+    # Retried once when the primary model's reply is blocked by the content filter
+    ibm_ica_fallback_model_id: str = "claude-sonnet-5"
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    upload_dir: str = "./uploads"
+    max_upload_mb: int = 50
+    max_images_per_document: int = 20
+
+    model_config = SettingsConfigDict(env_file=str(_ENV_FILE), env_file_encoding="utf-8", extra="ignore")
 
     @property
     def upload_path(self) -> Path:

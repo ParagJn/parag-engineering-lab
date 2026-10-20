@@ -105,7 +105,7 @@ frontend/
 
 **State model**: Documents are stored in an in-memory Python dict keyed by UUID. There is no database — the application is session-scoped. Data is lost on backend restart.
 
-**API communication**: The Vite dev server proxies all `/api/*` requests to `http://localhost:8000`, so no CORS issues during development and no hardcoded backend URL in the frontend.
+**API communication**: The Vite dev server proxies all `/api/*` requests to `http://localhost:8050`, so no CORS issues during development and no hardcoded backend URL in the frontend.
 
 ---
 
@@ -212,7 +212,7 @@ Strategy-Analyzer/
 ./start.sh
 ```
 
-This installs backend dependencies, starts uvicorn on port 8000, installs frontend dependencies, and starts Vite on port 5173. Both processes are killed together on Ctrl+C.
+This installs backend dependencies, starts uvicorn on port 8050, installs frontend dependencies, and starts Vite on port 5220. Both processes are killed together on Ctrl+C.
 
 > **Note:** `start.sh` references a specific Python virtual environment path. Edit the `PYTHON_ENV` variable at the top of the file to match your local setup before running.
 
@@ -232,10 +232,10 @@ pip install -r requirements.txt
 cp .env.example .env   # then fill in your credentials
 
 # Start the API server
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --reload --port 8050
 ```
 
-The API is available at `http://localhost:8000`. Interactive API docs at `http://localhost:8000/docs`.
+The API is available at `http://localhost:8050`. Interactive API docs at `http://localhost:8050/docs`.
 
 ### Frontend only
 
@@ -245,13 +245,36 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173`. The Vite dev server proxies `/api/*` to the backend automatically.
+Open `http://localhost:5220`. The Vite dev server proxies `/api/*` to the backend automatically.
 
 ---
+
+## Model Providers
+
+A radio selector in the UI switches the whole pipeline between two providers (choice is remembered in the browser and sent with upload, analyze and chat):
+
+| Provider | Agents |
+|---|---|
+| **IBM ICA Models** (default) | Architect, Challenger, Validator, Synthesizer and the image analyst all run on ICA (`IBM_ICA_MODEL_ID`, with optional per-role overrides). A content-filter block is retried once on `IBM_ICA_FALLBACK_MODEL_ID`. |
+| **SAP Models** | Claude + Gemini on SAP AI Core, validator + synthesizer on Azure OpenAI (original setup). |
+
+`GET /api/providers` reports which providers have credentials; the UI flags unconfigured ones.
 
 ## Environment Variables
 
 Create `backend/.env` by copying `.env.example` and filling in your credentials. All variables are optional — missing providers are skipped gracefully.
+
+### IBM ICA (default)
+
+| Variable | Description |
+|---|---|
+| `IBM_ICA_ENDPOINT` | ICA base URL (`/v1/chat/completions` is appended) |
+| `IBM_ICA_API_KEY` | API key |
+| `IBM_ICA_MODEL_ID` | Default model (default: `claude-opus-5-5`) |
+| `IBM_ICA_GEMINI_MODEL_ID` | Optional model for the cost challenger |
+| `IBM_ICA_VALIDATOR_MODEL_ID` / `IBM_ICA_SYNTHESIZER_MODEL_ID` | Optional per-role overrides |
+| `IBM_ICA_FALLBACK_MODEL_ID` | Retry model on content-filter blocks (default: `claude-sonnet-5`) |
+| `IBM_ICA_INSECURE_TLS` | `true` to skip TLS verification (local testing only) |
 
 ### Azure OpenAI — GPT-5.4 Synthesizer
 
@@ -294,6 +317,8 @@ Create `backend/.env` by copying `.env.example` and filling in your credentials.
 | Variable | Description |
 |---|---|
 | `UPLOAD_DIR` | Directory for uploaded files (default: `./uploads`) |
+| `MAX_UPLOAD_MB` | Upload size cap (default: `50`) |
+| `MAX_IMAGES_PER_DOCUMENT` | Max embedded images sent to vision (default: `20`) |
 
 ---
 
@@ -303,14 +328,15 @@ All endpoints are prefixed with `/api`.
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/api/health` | Health check — returns `{"status": "ok"}` |
-| `GET` | `/api/sap/models` | Lists available foundation models from SAP AI Core |
-| `POST` | `/api/upload` | Upload a document file (multipart/form-data, field: `file`) |
-| `GET` | `/api/file/{document_id}` | Retrieve a previously uploaded file |
+| `GET` | `/api/health` | Health check — returns `{"ok": true}` |
+| `GET` | `/api/providers` | Which providers have credentials configured |
+| `GET` | `/api/models/sap` | Lists available foundation models from SAP AI Core |
+| `POST` | `/api/upload` | Upload a document (multipart: `file`, optional `provider`) |
+| `GET` | `/api/documents/{document_id}/file` | Retrieve a previously uploaded file |
 | `POST` | `/api/analyze` | Run multi-agent analysis |
 | `POST` | `/api/chat` | Ask a follow-up question about the analysis |
 | `POST` | `/api/visual` | Generate a PNG strategy action map |
-| `GET` | `/api/visuals/{filename}` | Serve a generated PNG file |
+| `GET` | `/api/visual/{filename}` | Serve a generated PNG file |
 
 ### POST /api/analyze
 
@@ -319,7 +345,8 @@ All endpoints are prefixed with `/api`.
   "document_id": "string",
   "mode": "summarize | identify_gaps | give_suggestions",
   "prompt": "optional additional instructions",
-  "thinking_mode": true
+  "thinking_mode": true,
+  "provider": "ibm_ica | sap"
 }
 ```
 
@@ -327,14 +354,15 @@ Returns:
 
 ```json
 {
-  "analysis": "Markdown string",
+  "content": "Markdown string",
   "agents": [
     { "agent": "Strategy Architect", "content": "...", "ok": true },
     { "agent": "Cost Challenger",    "content": "...", "ok": true },
-    { "agent": "Codex Validator",    "content": "...", "ok": true },
+    { "agent": "Validator",          "content": "...", "ok": true },
     { "agent": "Synthesizer",        "content": "...", "ok": true }
   ],
-  "warning": "optional string if fallback was used"
+  "provider": "ibm_ica",
+  "warning": "optional string if an agent failed or fallback was used"
 }
 ```
 
@@ -345,6 +373,7 @@ Returns:
   "document_id": "string",
   "analysis": "the full analysis Markdown",
   "question": "your follow-up question",
+  "provider": "ibm_ica | sap",
   "history": [
     { "role": "user",      "content": "..." },
     { "role": "assistant", "content": "..." }
@@ -361,7 +390,7 @@ Returns:
 }
 ```
 
-Returns: `{ "url": "/api/visuals/<filename>.png" }`
+Returns: `{ "url": "/api/visual/<filename>.png", "filename": "<filename>.png" }`
 
 ---
 
@@ -412,8 +441,8 @@ Key defaults (all overridable via `.env`):
 
 | Setting | Default |
 |---|---|
-| Backend port | `8000` |
-| Frontend port | `5173` |
+| Backend port | `8050` |
+| Frontend port | `5220` |
 | Azure API version | `2025-04-01-preview` |
 | GPT-5.4 deployment | `gpt-5.4-common` |
 | GPT-5.3 Codex deployment | `gpt-5.3-codex-common` |
@@ -431,7 +460,8 @@ Key defaults (all overridable via `.env`):
 
 ## Known Limitations
 
-- **No persistence**: Documents and analyses are held in memory and lost on backend restart. There is no database.
+- **No persistence**: Documents and analyses are held in memory (last 50 documents) and lost on backend restart. There is no database.
+- **Thinking mode** applies to SAP Models only; the ICA path uses the plain chat-completions API.
 - **No authentication**: The API has no access controls. Do not expose it on a public network.
 - **No streaming**: LLM responses are returned in full after generation. Long analyses (7K+ tokens) can take 30–60 seconds.
 - **Scanned PDFs**: Image-only PDFs will not extract usable text. OCR is not included.

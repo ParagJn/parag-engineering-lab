@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import { createFilm, sceneOn, timeline } from "../engine/film";
 import { renderSoundtrack } from "../engine/sound";
-import { KEY_MOMENTS, type MotionConfig } from "../engine/types";
+import { momentsFor, type MotionConfig } from "../engine/types";
 
 interface Props {
   cfg: MotionConfig;
@@ -58,7 +58,7 @@ export default function Preview({ cfg, w, h, fontVersion, timeRef }: Props) {
 
   // Re-render the soundtrack (debounced) whenever something that affects it changes.
   // Event times depend on scenes, motion (holds) and text (reading time), not just the duration.
-  const soundKey = JSON.stringify([cfg.sound, cfg.duration, cfg.scenes, cfg.motion, cfg.text, cfg.outro.mode, !!cfg.outro.logo]);
+  const soundKey = JSON.stringify([cfg.sound, cfg.duration, cfg.film, cfg.story, cfg.scenes, cfg.motion, cfg.text, cfg.outro.mode, !!cfg.outro.logo]);
   useEffect(() => {
     if (!soundOn) { audio.current.buf = null; stopAudio(); return; }
     let live = true;
@@ -158,7 +158,7 @@ export default function Preview({ cfg, w, h, fontVersion, timeRef }: Props) {
         </span>
       </div>
       <div className="flex flex-wrap gap-2">
-        {KEY_MOMENTS.filter((k) => !k.scene || sceneOn(cfg, k.scene)).map((k) => (
+        {momentsFor(cfg).filter((k) => !k.scene || sceneOn(cfg, k.scene)).map((k) => (
           <button key={k.id} className="chip" onClick={() => { pause(); seekTo(tl.toSeconds(k.t)); }}>
             {k.name}
           </button>

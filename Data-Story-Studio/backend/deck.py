@@ -124,6 +124,7 @@ DEFAULT_PALETTE, DEFAULT_DESIGN = "studio", "classic"
 
 _palette: ContextVar[Palette] = ContextVar("deck_palette", default=PALETTES[DEFAULT_PALETTE])
 _design: ContextVar[Design] = ContextVar("deck_design", default=DESIGNS[DEFAULT_DESIGN])
+_logo: ContextVar[bytes | None] = ContextVar("deck_logo", default=None)
 
 
 class _Active:
@@ -477,9 +478,32 @@ def _new(prs, bg: str):
     return s
 
 
+def _logo_box(slide, x: float, y: float, max_w: float, max_h: float, dark: bool, align: str = "left") -> float:
+    """Draw the company logo inside max_w x max_h, keeping its proportions; on dark slides it sits on a white chip
+    so any logo stays readable. Returns the width used (0 if there is no logo)."""
+    data = _logo.get()
+    if not data:
+        return 0.0
+    try:
+        from PIL import Image
+        iw, ih = Image.open(io.BytesIO(data)).size
+    except Exception:
+        return 0.0
+    pad = 0.08 if dark else 0.0
+    scale = min((max_w - 2 * pad) / iw, (max_h - 2 * pad) / ih)
+    w, h = iw * scale, ih * scale
+    total_w = w + 2 * pad
+    left = x if align == "left" else x + max_w - total_w if align == "right" else x + (max_w - total_w) / 2
+    if dark:
+        _box(slide, left, y, total_w, h + 2 * pad, fill="FFFFFF", radius=0.08)
+    slide.shapes.add_picture(io.BytesIO(data), Inches(left + pad), Inches(y + pad), Inches(w), Inches(h))
+    return total_w
+
+
 def _footer(slide, left: str, n: int, dark=False, x: float = MX):
     col = T.dark_text if dark else T.muted
-    _text(slide, x, H - 0.5, W - MX - 1.2 - x, 0.3, [{"t": left, "size": 10, "color": col}])
+    used = _logo_box(slide, W - MX - 1.15 - 1.5, H - 0.62, 1.5, 0.42, dark, "right")
+    _text(slide, x, H - 0.5, W - MX - 1.2 - x - (used + 0.2 if used else 0), 0.3, [{"t": left, "size": 10, "color": col}])
     _text(slide, W - MX - 1, H - 0.5, 1, 0.25, [{"t": str(n), "size": 10, "color": col, "align": PP_ALIGN.RIGHT}])
 
 
@@ -884,7 +908,7 @@ def _kpi(s, x: float, y: float, w: float, m: dict, vsize: float = 30, card: bool
         _box(s, x, y, w, h, fill=T.surface, line=T.hair, radius=T.radius)
     vh = vsize * 1.3 / 72
     parts = [p.strip() for p in (m.get("change") or "").split(";") if p.strip()][:2]
-    _text(s, x + pad, y + pad, w - 2 * pad, 0.28, [{"t": _words(m["label"], 5), "size": 12, "color": T.muted}])
+    _text(s, x + pad, y + pad, w - 2 * pad, 0.28, [{"t": _words(m["label"], 5) + (f" · {m['tag'].lower()}" if m.get("tag") and m["tag"] != "Count" else ""), "size": 12, "color": T.muted}])
     _text(s, x + pad, y + pad + 0.3, w - 2 * pad, vh, [{"t": m["value"], "size": vsize, "bold": True, "head": True, "color": vcolor or T.ink}])
     _text(s, x + pad, y + pad + 0.34 + vh, w - 2 * pad, 0.45, [{"t": "; ".join(parts) or m.get("basis", ""), "size": 11, "color": T.ink2}])
     return h
@@ -902,6 +926,7 @@ def _classic_title(prs, plan: dict, dash: dict, ctx: str):
     _box(s, 10.4, -1.9, 5.2, 5.2, fill=T.deco1, shape=MSO_SHAPE.OVAL)
     _box(s, 11.7, -0.9, 3.0, 3.0, fill=T.deco2, shape=MSO_SHAPE.OVAL)
     title = dash["story"]["headline"].get("title") or dash["meta"]["scope_label"]
+    _logo_box(s, 0.8, 0.25, 2.4, 0.55, True)
     _text(s, 0.8, 0.9, 9, 0.3, [{"t": "EXECUTIVE BRIEFING", "size": 12, "bold": True, "color": T.accent_light, "spc": 200}])
     _text(s, 0.8, 1.3, 9.2, 1.5, [{"t": _words(title, 10), "size": 44, "bold": True, "head": True, "color": T.dark_ink, "spacing": 0.95}])
     _text(s, 0.8, 3.2, 9, 0.3, [{"t": "THE CENTRAL TAKEAWAY", "size": 12, "bold": True, "color": T.dark_text, "spc": 200}])
@@ -1037,6 +1062,7 @@ CW = W - 2 * MX  # content width
 def _ed_title(prs, plan, dash, ctx):
     s = _new(prs, T.page)
     title = dash["story"]["headline"].get("title") or dash["meta"]["scope_label"]
+    _logo_box(s, 0.9, 0.3, 2.4, 0.55, False)
     _label(s, 0.9, 1.0, 9, "EXECUTIVE BRIEFING", T.accent)
     _text(s, 0.9, 1.5, 10.5, 1.7, [{"t": _words(title, 10), "size": 50, "bold": True, "head": True, "color": T.ink, "spacing": 0.92}])
     _label(s, 0.9, 3.9, 9, "THE CENTRAL TAKEAWAY", T.muted)
@@ -1136,6 +1162,7 @@ def _sp_title(prs, plan, dash, ctx):
     _box(s, 3.6, 4.6, 4.4, 4.4, fill=T.deco1, shape=MSO_SHAPE.OVAL)
     _box(s, 4.5, 5.6, 2.6, 2.6, fill=T.deco2, shape=MSO_SHAPE.OVAL)
     title = dash["story"]["headline"].get("title") or dash["meta"]["scope_label"]
+    _logo_box(s, 0.7, 0.25, 2.4, 0.55, True)
     _label(s, 0.7, 0.9, 4.4, "EXECUTIVE BRIEFING", T.accent_light)
     _text(s, 0.7, 1.4, 4.6, 3.2, [{"t": _words(title, 10), "size": 38, "bold": True, "head": True, "color": T.dark_ink, "spacing": 0.95}])
     _label(s, 6.3, 1.4, 6.4, "THE CENTRAL TAKEAWAY", T.muted)
@@ -1236,6 +1263,7 @@ def _fc_title(prs, plan, dash, ctx):
     _box(s, 10.6, -1.6, 4.0, 4.0, fill=T.deco2, shape=MSO_SHAPE.OVAL)
     title = dash["story"]["headline"].get("title") or dash["meta"]["scope_label"]
     c = PP_ALIGN.CENTER
+    _logo_box(s, (W - 2.4) / 2, 0.3, 2.4, 0.55, True, "center")
     _text(s, 1.5, 1.0, W - 3, 0.3, [{"t": "EXECUTIVE BRIEFING", "size": 12, "bold": True, "color": T.accent_light, "spc": 200, "align": c}])
     _text(s, 1.5, 1.45, W - 3, 1.7, [{"t": _words(title, 10), "size": 48, "bold": True, "head": True, "color": T.dark_ink, "spacing": 0.92, "align": c}])
     _text(s, 2.0, 3.75, W - 4, 0.3, [{"t": "THE CENTRAL TAKEAWAY", "size": 12, "bold": True, "color": T.dark_text, "spc": 200, "align": c}])
@@ -1360,14 +1388,15 @@ SLIDES = {
 
 
 def build_pptx(payload: dict, plan: dict, filters: list | None = None, design: str = DEFAULT_DESIGN,
-               palette: str = DEFAULT_PALETTE) -> bytes:
+               palette: str = DEFAULT_PALETTE, logo: bytes | None = None) -> bytes:
     """payload: the dashboard (panels possibly recomputed under filters); plan: from deck_plan();
     design / palette: ids from DESIGNS / PALETTES (unknown ids fall back to the defaults)."""
     d, p = DESIGNS.get(design) or DESIGNS[DEFAULT_DESIGN], PALETTES.get(palette) or PALETTES[DEFAULT_PALETTE]
-    t1, t2 = _design.set(d), _palette.set(p)
+    t1, t2, t3 = _design.set(d), _palette.set(p), _logo.set(logo)
     try:
         return _build(payload, plan, filters)
     finally:
+        _logo.reset(t3)
         _palette.reset(t2)
         _design.reset(t1)
 

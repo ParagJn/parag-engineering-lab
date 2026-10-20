@@ -1056,9 +1056,9 @@
     const NODES = [
       // ROW 1: AI Models
       { id: "gemini", label: "Google Gemini", type: "ai", color: "#7c5cd8", desc: "Gemini 2.0 Flash & 2.5 Pro: handles data extraction, RAG summarization, content calendar expansion, and lineage analysis.", tech: "Gemini 2.0 Flash · 2.5 Pro", dir: "https://github.com/ParagJn/parag-engineering-lab", x: 434, y: 70 },
-      { id: "claude", label: "Anthropic Claude", type: "ai", color: "#7c5cd8", desc: "Claude 3.5 Sonnet & 4.7 Opus: executes procurement negotiations, article score loops, and LangGraph DB queries.", tech: "Claude Sonnet · Opus", dir: "https://github.com/ParagJn/parag-engineering-lab", x: 626, y: 70 },
+      { id: "claude", label: "Anthropic Claude", type: "ai", color: "#7c5cd8", desc: "Claude 3.5 Sonnet & 4.7 Sonnet: executes procurement negotiations, article score loops, and LangGraph DB queries.", tech: "Claude Sonnet · Claude Sonnet", dir: "https://github.com/ParagJn/parag-engineering-lab", x: 626, y: 70 },
       { id: "openai", label: "OpenAI GPT", type: "ai", color: "#7c5cd8", desc: "GPT-4 & GPT-5.4: powers core interview question banks and multi-agent report synthesizers.", tech: "GPT-4 · GPT-5.4", dir: "https://github.com/ParagJn/parag-engineering-lab", x: 818, y: 70 },
-      { id: "ibm_ica", label: "IBM ICA", type: "ai", color: "#7c5cd8", desc: "IBM watsonx Code Assistant gateway: Claude Opus 5.5 and Gemini 3.7 Flash hosted on IBM infrastructure. Primary model provider for Project Schedule, Daily Articles, Skills Generator, My Own AI Assistant and Hero Motion Studio.", tech: "Claude Opus 5.5 · Gemini 3.7 Flash · watsonx", dir: "https://github.com/ParagJn/parag-engineering-lab", x: 1010, y: 70 },
+      { id: "ibm_ica", label: "IBM ICA", type: "ai", color: "#7c5cd8", desc: "IBM watsonx Code Assistant gateway: Claude Sonnet 5.5 and Gemini 3.7 Flash hosted on IBM infrastructure. Primary model provider for Project Schedule, Daily Articles, Skills Generator, My Own AI Assistant and Hero Motion Studio.", tech: "Claude Sonnet 5.5 · Gemini 3.7 Flash · watsonx", dir: "https://github.com/ParagJn/parag-engineering-lab", x: 1010, y: 70 },
       
       // ROW 2: Integrations
       { id: "sap_ai", label: "SAP AI Core", type: "integration", color: "#0ea5e9", desc: "Enterprise AI gateway providing isolated tenant routing, OAuth 2.0 credentials handshake, and model endpoint token caching.", tech: "OAuth 2.0 · httpx · Token Cache", dir: "https://github.com/ParagJn/parag-engineering-lab", x: 626, y: 190 },
@@ -1175,7 +1175,7 @@
         steps: [
           { node: "profile_gen_v2", text: "Candidate uploads old resume and pastes target job description text." },
           { node: "gemini", text: "Gemini 2.5 Pro reviews document metadata, extracting credentials models to structured JSON files." },
-          { node: "claude", text: "Claude Opus parses JSON data to compose a tailored CV with targeted keywords." },
+          { node: "claude", text: "Claude Sonnet parses JSON data to compose a tailored CV with targeted keywords." },
           { node: "profile_gen_v2", text: "System evaluates ATS score metrics, highlighting missing vocabulary in a sidebar dashboard drawer." }
         ]
       },
@@ -1235,7 +1235,7 @@
         steps: [
           { node: "daily_articles", text: "RSS crawler fetches stories across 5 top channels (HN, Wired, TechCrunch...)." },
           { node: "ibm_ica", text: "Gemini 3.7 Flash (via IBM ICA) enriches feeds, tags categories, and writes short summaries." },
-          { node: "ibm_ica", text: "Claude Opus 5.5 (via IBM ICA) curates a magazine grid choosing visual styling layouts." },
+          { node: "ibm_ica", text: "Claude Sonnet 5.5 (via IBM ICA) curates a magazine grid choosing visual styling layouts." },
           { node: "daily_articles", text: "System renders responsive HTML, utilizes Playwright to export PDFs, and sends emails via SMTP." }
         ]
       },
@@ -1285,7 +1285,7 @@
         steps: [
           { node: "proj_schedule", text: "Operator configures milestones, task blocks, and resource grids in UI." },
           { node: "proj_schedule", text: "Engine determines critical path, topological schedules, and weekend gaps." },
-          { node: "ibm_ica", text: "Claude Opus 5.5 (via IBM ICA) writes Statement of Work sections, milestones, and RACI metrics." },
+          { node: "ibm_ica", text: "Claude Sonnet 5.5 (via IBM ICA) writes Statement of Work sections, milestones, and RACI metrics." },
           { node: "proj_schedule", text: "System compiles Word Document (.docx) or customized color-coded Excel charts." }
         ]
       },
@@ -1301,7 +1301,7 @@
         ],
         steps: [
           { node: "skills_gen", text: "Developer describes the skill idea in plain English and picks invocation and script options." },
-          { node: "ibm_ica", text: "Claude Opus 5.5 (via IBM ICA) designs the bundle and writes SKILL.md, references, scripts, templates and evals, streamed over SSE." },
+          { node: "ibm_ica", text: "Claude Sonnet 5.5 (via IBM ICA) designs the bundle and writes SKILL.md, references, scripts, templates and evals, streamed over SSE." },
           { node: "skills_gen", text: "Static validator checks frontmatter, links and script syntax; errors go back to the model for repair." },
           { node: "skills_gen", text: "Bundle is installed to ~/.claude/skills, synced to .claude/skills/, or downloaded as a ZIP." }
         ]
@@ -1347,7 +1347,7 @@
         name: "AI Resume & LinkedIn Rendering",
         project: "Profile Generator",
         color: "#06b6d4",
-        desc: "Two-stage generation: Gemini 2.5 Pro extracts structured profile JSON, Claude Opus composes the HTML resume and LinkedIn helper, then Playwright exports a print-ready PDF.",
+        desc: "Two-stage generation: Gemini 2.5 Pro extracts structured profile JSON, Claude Sonnet composes the HTML resume and LinkedIn helper, then Playwright exports a print-ready PDF.",
         nodes: ["profile_gen", "sap_ai", "gemini", "claude"],
         edges: [
           { source: "profile_gen", target: "sap_ai" },
@@ -1357,7 +1357,7 @@
         steps: [
           { node: "profile_gen", text: "Candidate uploads a resume (PDF/DOCX/HTML) and optionally pastes GitHub/LinkedIn/portfolio links." },
           { node: "gemini", text: "Gemini 2.5 Pro (via SAP AI Core) extracts a rich structured JSON of experience, projects, skills, and certifications." },
-          { node: "claude", text: "Claude Opus (via SAP AI Core) generates a single-file animated HTML resume plus a LinkedIn copy-paste helper." },
+          { node: "claude", text: "Claude Sonnet (via SAP AI Core) generates a single-file animated HTML resume plus a LinkedIn copy-paste helper." },
           { node: "profile_gen", text: "Playwright renders the HTML resume to a pixel-perfect PDF; a Request Changes prompt iteratively refines all three outputs." }
         ]
       },

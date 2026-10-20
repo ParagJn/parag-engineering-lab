@@ -18,7 +18,60 @@ To use a project:
 
 1. Open the project folder and read its own `README.md`.
 2. Update the LLM model config (`.env`, `config.py`, or similar) with your provider credentials and model IDs.
-3. Start it with the included `start.sh` (where available), or follow the setup steps in the project README.
+3. Start it with the included `start.sh` (where available), or follow the setup steps in the project README. Or skip all of that and start everything at once with the [Lab Launcher](#-new-lab-launcher--one-dashboard-for-all-the-apps) below.
+
+---
+
+## 🚀 New: Lab Launcher, one dashboard for all the apps
+
+> [!TIP]
+> **New feature alert.** The lab now has a [Homer](https://github.com/bastienwirtz/homer)-style launcher dashboard. Run one command, open one page, and click a card to open any app. No more hunting for each `start.sh`, typing URLs, or remembering which app lives on which port.
+
+```bash
+./start.sh            # from the repo root
+```
+
+Then open **http://localhost:8999**.
+
+**What you get**
+
+- **One command starts everything.** The launcher serves the dashboard and runs each enabled app's own `start.sh` in the background. Logs go to `launcher/logs/`.
+- **Click to open.** Apps show as cards grouped by category, with a search box. Clicking a card opens that app in a new tab.
+- **Live status dots.** Green means the app is up, red means it is down. They refresh every few seconds, so you can watch each app come up while its frontend builds.
+- **Clean shutdown.** Press `Ctrl+C` and every app is stopped with a short grace period, then force-stopped if it hangs. Every port is released, and the terminal reports what happened. Then it asks whether to stop the dashboard too: `n` leaves the page running, `y` stops it. Press `Ctrl+C` a second time to force an immediate stop.
+- **Responsive page.** The banner scales with the window, and on phones it switches to a compact logo header.
+- **No new dependencies.** It uses `python3` and plain HTML/JS, with no Docker, no npm install, and no extra services.
+
+**Ports**
+
+Every app has its own backend and frontend ports, so they can all run at the same time.
+
+| App | Backend | Frontend |
+|---|---|---|
+| My Own AI Assistant | 8000 | 5173 |
+| Hero Motion Studio | 8010 | 5180 |
+| Data Story Studio | 8020 | 5190 |
+| Project Schedule Tool | 8030 | 5200 |
+| Daily Articles Pages | 8040 | 5210 |
+| Strategy Analyzer | 8050 | 5220 |
+| Launcher dashboard | | 8999 |
+
+**Adding or renaming an app.** Edit [`launcher/config.json`](launcher/config.json). Each entry is a few lines:
+
+```json
+{
+  "name": "Data Story Studio",
+  "subtitle": "Upload CSV/Excel and get an AI-built, animated dashboard",
+  "group": "Analytics",
+  "dir": "Data-Story-Studio",
+  "start": "./start.sh",
+  "url": "http://localhost:5190",
+  "ports": [8020, 5190],
+  "enabled": true
+}
+```
+
+Set `"enabled": false` to hide an app from startup. The launcher refuses to start an app whose ports another enabled app already uses, so give each new app its own pair. Each app's own prerequisites (virtual environment, `.env` / LLM configuration) still apply.
 
 ---
 

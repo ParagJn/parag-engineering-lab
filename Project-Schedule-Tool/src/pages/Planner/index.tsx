@@ -591,7 +591,7 @@ export function Planner() {
       setHolidayToggleLoading(region);
       try {
         const backendRegion = region === 'vic' ? 'vic_australia' : 'india';
-        const response = await fetch(`http://localhost:8000/holidays/${backendRegion}`);
+        const response = await fetch(`http://localhost:8030/holidays/${backendRegion}`);
         const data = await response.json();
         const holidays = data.holidays || [];
         setRegionHolidays(region, holidays);
@@ -633,8 +633,8 @@ export function Planner() {
       let indiaHolidaysForExport = indiaHolidaysList;
       try {
         const [vicRes, indiaRes] = await Promise.all([
-          fetch('http://localhost:8000/holidays/vic_australia'),
-          fetch('http://localhost:8000/holidays/india')
+          fetch('http://localhost:8030/holidays/vic_australia'),
+          fetch('http://localhost:8030/holidays/india')
         ]);
         const vicData = await vicRes.json();
         const indiaData = await indiaRes.json();

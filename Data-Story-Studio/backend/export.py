@@ -8,6 +8,7 @@ locally. Filters are frozen as they were at export time; asking new questions ne
 import html
 import json
 import re
+import subprocess
 import time
 from pathlib import Path
 
@@ -19,8 +20,24 @@ class ExportError(RuntimeError):
     pass
 
 
+def _rebuild_viewer_if_stale(dist: Path) -> None:
+    """The report is drawn by the prebuilt viewer bundle; if the frontend sources are newer, rebuild it so an
+    export never shows an older layout than the app does."""
+    frontend = dist.parent
+    built = max((f.stat().st_mtime for f in dist.glob("*.js")), default=0)
+    sources = [p for d in ("src",) for p in (frontend / d).rglob("*") if p.is_file()]
+    sources += [frontend / n for n in ("package.json", "vite.viewer.config.ts") if (frontend / n).exists()]
+    if not sources or max(p.stat().st_mtime for p in sources) <= built:
+        return
+    try:
+        subprocess.run(["npm", "run", "build:viewer"], cwd=frontend, check=True, capture_output=True, timeout=180)
+    except Exception as err:  # keep exporting with the existing bundle rather than failing the download
+        print(f"[export] viewer rebuild failed, using the existing bundle: {err}", flush=True)
+
+
 def _viewer_assets() -> tuple[str, str]:
     dist: Path = get_settings().viewer_dist
+    _rebuild_viewer_if_stale(dist)
     js = sorted(dist.glob("*.js"))
     css = sorted(dist.glob("*.css"))
     if not js:

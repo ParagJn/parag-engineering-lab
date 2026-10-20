@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="381" viewBox="0 0 1000 381">
+  <!--
+    Sample 8-bar "IBM" wordmark for testing the Logo sweep ending.
+    Hand-drawn approximation, NOT the official IBM logo artwork: proportions and letterforms differ.
+    For real presentations, use the official file from IBM's brand resources.
+  -->
+  <defs>
+    <!-- Eight equal bars (31 high, 19 gap) that cut the letters into stripes. -->
+    <mask id="bars" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="381">
+      <rect x="0" y="0" width="1000" height="31" fill="#fff"/>
+      <rect x="0" y="50" width="1000" height="31" fill="#fff"/>
+      <rect x="0" y="100" width="1000" height="31" fill="#fff"/>
+      <rect x="0" y="150" width="1000" height="31" fill="#fff"/>
+      <rect x="0" y="200" width="1000" height="31" fill="#fff"/>
+      <rect x="0" y="250" width="1000" height="31" fill="#fff"/>
+      <rect x="0" y="300" width="1000" height="31" fill="#fff"/>
+      <rect x="0" y="350" width="1000" height="31" fill="#fff"/>
+    </mask>
+  </defs>
+  <g mask="url(#bars)" fill="#0F62FE" fill-rule="evenodd">
+    <!-- I: slab serifs top and bottom, centred stem -->
+    <path d="M0 0H230V90H170V291H230V381H0V291H60V90H0Z"/>
+    <!-- B: two bowls (lower slightly wider) with counters -->
+    <path d="M262 0H462A95 95 0 0 1 462 190H482A95.5 95.5 0 0 1 482 381H262V291H312V90H262Z
+             M392 70V120H452A25 25 0 0 0 452 70Z
+             M392 260V311H470A25.5 25.5 0 0 0 470 260Z"/>
+    <!-- M: two stems meeting in a central V -->
+    <path d="M610 0H770L805 105L840 0H1000V90H960V291H1000V381H850V291H880V170L822 381H788L730 170V291H760V381H610V291H650V90H610Z"/>
+  </g>
+</svg>

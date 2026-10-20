@@ -74,5 +74,5 @@ export default function App() {
         onView={() => go({ name: "dashboard", id: ds.id })}
       />
     );
-  return <DashboardPage key={ds.id + ds.scopes.map((s) => s.id).join()} ds={ds} llm={llm} onHome={() => go({ name: "upload" })} onSetup={() => go({ name: "setup", id: ds.id })} />;
+  return <DashboardPage key={ds.id + ds.scopes.map((s) => s.id).join() + (ds.refresh?.at ?? "")} ds={ds} llm={llm} onRefreshed={setDs} onHome={() => go({ name: "upload" })} onSetup={() => go({ name: "setup", id: ds.id })} />;
 }

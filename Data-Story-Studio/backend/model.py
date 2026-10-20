@@ -308,10 +308,39 @@ def _scope_label(u: dict, joins: list) -> str:
     return base
 
 
+_GENERIC_TABLE_WORDS = {"dataset", "data", "table", "records", "record", "file", "sheet", "export", "report", "list", "sample",
+                        "synthetic", "demo", "test", "raw", "clean", "cleaned", "master", "final", "new", "old", "behavior", "behaviour"}
+_ENTITIES = {"customer", "order", "restaurant", "patient", "student", "employee", "transaction", "claim", "ticket", "user",
+             "account", "loan", "scheme", "fund", "product", "store", "vehicle", "household", "booking", "visit", "session",
+             "invoice", "case", "incident", "shipment", "subscriber", "member", "listing", "property", "flight", "trip",
+             "campaign", "lead", "client", "supplier", "school", "hospital", "district", "village", "device", "sale"}
+
+
+def _plural(w: str) -> str:
+    if w.endswith("s"):
+        return w
+    if w.endswith("y") and w[-2:-1] not in "aeiou":
+        return w[:-1] + "ies"
+    return w + "es" if w.endswith(("x", "ch", "sh")) else w + "s"
+
+
+def record_noun(label: str) -> str:
+    """'Synthetic credit card customer behavior dataset' -> 'Customers'; 'Orders' stays 'Orders'. Falls back to the
+    cleaned name so nothing is lost when no recognisable entity is in the file name."""
+    words = re.findall(r"[A-Za-z0-9]+", label)
+    if len(words) <= 2:
+        return label if label.lower().endswith("s") else f"{label} records"
+    ents = [w for w in words if w.lower().rstrip("s") in _ENTITIES]
+    if ents:
+        return _plural(ents[-1].lower()).capitalize()
+    kept = [w for w in words if w.lower() not in _GENERIC_TABLE_WORDS] or words
+    return " ".join(kept[-2:]).capitalize() + " records"
+
+
 def measures(scope: dict) -> list[dict]:
     """Analysable measures for a scope, ranked by how likely they are the headline metric."""
     out = [{
-        "name": "__records", "label": scope["record_label"] if scope["record_label"].lower().endswith("s") else f"{scope['record_label']} records",
+        "name": "__records", "label": record_noun(scope["record_label"]),
         "agg": "count", "unit": {"kind": "number"}, "kind": "count",
     }]
     for c in scope["columns"]:

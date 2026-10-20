@@ -22,9 +22,19 @@ export type ShapeStyle = "pill" | "triangle" | "star" | "blob";
 export type WordsStyle = "orbit" | "float" | "list" | "tags";
 export type SoundPreset = "off" | "subtle" | "minimal" | "pulse";
 export type MotionFeel = "precise" | "lively" | "bold";
+export type FilmKind = "showcase" | "story";
 export type RevealStyle = "halftone" | "iris" | "stripes" | "slide";
 
+export interface StoryText {
+  problem: string; // the pain point, typed by the dot
+  lead: string; // small lead-in above the badge, e.g. "Introducing"
+  solution: string; // the name on the badge
+  proofLabel: string; // caption that says what the stat means
+}
+
 export interface MotionConfig {
+  film: FilmKind; // showcase (effects reel) or story (hook → problem → reveal → proof → close)
+  story: StoryText;
   text: MotionText;
   style: MotionStyle;
   outro: { mode: "toggle" | "logo"; logo: string; logoName: string }; // final frame: toggle row, or an uploaded logo revealed by a data sweep
@@ -44,6 +54,8 @@ export interface OutputSize {
 }
 
 export const DEFAULT_CONFIG: MotionConfig = {
+  film: "showcase",
+  story: { problem: "Month-end reports take three days.", lead: "Introducing", solution: "Insight Hub", proofLabel: "faster month-end close" },
   text: {
     intro: "Meet",
     ending: "",
@@ -98,6 +110,11 @@ export const SOUND_PRESETS: { id: SoundPreset; name: string; note: string }[] = 
   { id: "pulse", name: "Corporate pulse", note: "Hits, beat, bass and a soft pad" },
 ];
 
+export const FILM_OPTIONS: { id: FilmKind; name: string; note: string }[] = [
+  { id: "showcase", name: "Showcase", note: "Motion reel: hero, stat, shape, words, end card" },
+  { id: "story", name: "Story", note: "Hook → problem → reveal → proof → close" },
+];
+
 export const FEEL_OPTIONS: { id: MotionFeel; name: string; note: string }[] = [
   { id: "precise", name: "Precise", note: "Minimal overshoot, corporate and calm" },
   { id: "lively", name: "Lively", note: "Small springy overshoots (original)" },
@@ -125,6 +142,17 @@ export const SIZES: OutputSize[] = [
   { id: "tile", name: "Tile 4:3", w: 800, h: 600, note: "Small card in a grid" },
   { id: "custom", name: "Custom", w: 1600, h: 900, note: "Your own width × height" },
 ];
+
+// Story-mode key moments (the problem lives past 15 on the internal timeline).
+export const STORY_MOMENTS: typeof KEY_MOMENTS = [
+  { id: "hook", name: "Hook", t: 2.7 },
+  { id: "problem", name: "Problem", t: 16.6 },
+  { id: "reveal", name: "Reveal", t: 8.35, scene: "shape" },
+  { id: "proof", name: "Proof", t: 5.6, scene: "stat" },
+  { id: "close", name: "Close", t: 13.2, scene: "card" },
+  { id: "ending", name: "Ending", t: 14.97 },
+];
+export const momentsFor = (cfg: MotionConfig) => (cfg.film === "story" ? STORY_MOMENTS : KEY_MOMENTS);
 
 // Key moments on the internal 15-unit timeline; `scene` hides a moment when that scene is off.
 export const KEY_MOMENTS: { id: string; name: string; t: number; scene?: "stat" | "shape" | "words" | "card" }[] = [

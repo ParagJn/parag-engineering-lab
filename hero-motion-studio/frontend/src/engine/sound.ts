@@ -1,4 +1,4 @@
-import { sceneOn, timeline } from "./film";
+import { isStory, PROBLEM_T1, sceneOn, timeline } from "./film";
 import type { MotionConfig, SoundPreset } from "./types";
 
 /**
@@ -142,7 +142,20 @@ export function soundEvents(cfg: MotionConfig) {
     push(8.5, (c, T) => sweep(c, T, at(9.0) - at(8.5), 0.12, false));
   }
 
-  if (sceneOn(cfg, "words")) {
+  if (isStory(cfg)) {
+    // Problem: the dot jumps in, types, stalls three times, the line is struck through and crumbles.
+    push(15.0, (c, T) => sweep(c, T, 0.18, 0.06));
+    if (cfg.story?.problem.trim()) {
+      for (let i = 0; i < 10; i++) push(15.45 + (0.85 * i) / 9, (c, T) => tick(c, T, 0.07, 2900 + (i % 3) * 140));
+      for (let k = 0; k < 3; k++) push(16.3 + k * 0.18 + 0.08, (c, T) => thump(c, T, 140, 0.16));
+      push(16.5, (c, T) => sweep(c, T, at(16.85) - at(16.5), 0.06));
+      push(16.9, (c, T) => sweep(c, T, at(17.3) - at(16.9), 0.08, false));
+    }
+    if (sceneOn(cfg, "shape") && (cfg.story?.solution.trim() || cfg.story?.lead.trim())) push(7.95, (c, T) => stab(c, T, [523.25, 659.25, 783.99], 0.24));
+    push(PROBLEM_T1, (c, T) => sweep(c, T, 0.3, 0.07));
+  }
+
+  if (!isStory(cfg) && sceneOn(cfg, "words")) {
     const n = Math.max(1, cfg.text.words.filter((w) => w.trim()).length), step = Math.min(0.25, 1 / n);
     for (let k = 0; k < n; k++) push(9 + k * step, (c, T) => pluck(c, T, PENTA[k % PENTA.length], 0.15));
     push(10.75, (c, T) => sweep(c, T, at(11.4) - at(10.75), 0.13));

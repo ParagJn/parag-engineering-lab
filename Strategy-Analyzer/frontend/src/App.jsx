@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { motion } from 'framer-motion'
 import {
@@ -15,8 +15,13 @@ import {
   Sparkles,
   UploadCloud,
 } from 'lucide-react'
-import { analyzeDocument, askFollowUp, downloadMarkdown, uploadDocument } from './api'
+import { analyzeDocument, askFollowUp, downloadMarkdown, fetchProviders, uploadDocument } from './api'
 import { createVisual, downloadFromUrl } from './api'
+
+const providerOptions = [
+  { id: 'ibm_ica', label: 'IBM ICA Models' },
+  { id: 'sap', label: 'SAP Models' },
+]
 
 const modes = [
   { id: 'summarize', label: 'Summarize', detail: 'Executive narrative, key decisions, risks' },
@@ -103,6 +108,39 @@ function Header() {
         <StatusPill>Anthropic review</StatusPill>
       </div>
     </header>
+  )
+}
+
+function ProviderPicker({ provider, setProvider, disabled, configured }) {
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-panel">
+      <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">Model Provider</h2>
+      <div role="radiogroup" aria-label="Model Provider" className="flex gap-2">
+        {providerOptions.map((opt) => {
+          const selected = provider === opt.id
+          return (
+            <button
+              key={opt.id}
+              role="radio"
+              aria-checked={selected}
+              onClick={() => !disabled && setProvider(opt.id)}
+              disabled={disabled}
+              title={configured[opt.id] === false ? 'Credentials for this provider are not configured in backend/.env' : undefined}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                selected ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-400'
+              }`}
+            >
+              <span className={`h-2.5 w-2.5 rounded-full border ${selected ? 'border-white bg-white' : 'border-slate-300'}`} />
+              {opt.label}
+              {configured[opt.id] === false && <span className="text-amber-500">!</span>}
+            </button>
+          )
+        })}
+      </div>
+      {configured[provider] === false && (
+        <p className="mt-2 text-xs text-amber-700">Not configured in backend/.env - analysis will fall back to a local draft.</p>
+      )}
+    </section>
   )
 }
 
@@ -248,7 +286,7 @@ function PromptPanel({ mode, setMode, prompt, setPrompt, thinkingMode, setThinki
         />
         <span>
           <span className="block text-sm font-bold text-slate-900">Thinking mode</span>
-          <span className="block text-xs leading-5 text-slate-500">Uses Anthropic extended reasoning through SAP AI Core before synthesis.</span>
+          <span className="block text-xs leading-5 text-slate-500">Extended Anthropic reasoning (SAP Models only; ignored for IBM ICA).</span>
         </span>
       </label>
       <button
@@ -265,13 +303,17 @@ function PromptPanel({ mode, setMode, prompt, setPrompt, thinkingMode, setThinki
 
 function AnalysisPanel({ analysis, warning, agents, busy, previewCollapsed, onShowPreview, onDownloadMarkdown }) {
   const [visualBusy, setVisualBusy] = useState(false)
+  const [visualError, setVisualError] = useState('')
 
   async function downloadVisual() {
     if (!analysis || visualBusy) return
     setVisualBusy(true)
+    setVisualError('')
     try {
       const visual = await createVisual({ analysis })
       await downloadFromUrl(visual.url, visual.filename || 'strategy-visual.png')
+    } catch (err) {
+      setVisualError(err.message)
     } finally {
       setVisualBusy(false)
     }
@@ -313,6 +355,7 @@ function AnalysisPanel({ analysis, warning, agents, busy, previewCollapsed, onSh
           </button>
         </div>
       </div>
+      {visualError && <p className="mx-4 mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">PNG export failed: {visualError}</p>}
       <div className="min-h-0 flex-1 overflow-auto p-5">
         {busy ? (
           <div className="grid h-full min-h-80 place-items-center text-center">
@@ -349,21 +392,23 @@ function AnalysisPanel({ analysis, warning, agents, busy, previewCollapsed, onSh
   )
 }
 
-function ChatPanel({ documentId, analysis, messages, setMessages }) {
+function ChatPanel({ documentId, analysis, messages, setMessages, provider }) {
   const [question, setQuestion] = useState('')
   const [busy, setBusy] = useState(false)
 
   async function submit() {
     if (!question.trim() || !analysis || busy) return
     const current = question.trim()
+    // Send prior successful turns so follow-ups have conversational context
+    const history = messages.filter((m) => !m.error).map(({ role, content }) => ({ role, content }))
     setQuestion('')
     setMessages((items) => [...items, { role: 'user', content: current }])
     setBusy(true)
     try {
-      const response = await askFollowUp({ document_id: documentId, analysis, question: current })
+      const response = await askFollowUp({ document_id: documentId, analysis, question: current, history, provider })
       setMessages((items) => [...items, { role: 'assistant', content: response.content }])
     } catch (error) {
-      setMessages((items) => [...items, { role: 'assistant', content: error.message }])
+      setMessages((items) => [...items, { role: 'assistant', content: error.message, error: true }])
     } finally {
       setBusy(false)
     }
@@ -426,21 +471,45 @@ export default function App() {
   const [warning, setWarning] = useState('')
   const [chatMessages, setChatMessages] = useState([])
   const [thinkingMode, setThinkingMode] = useState(true)
+  const [provider, setProvider] = useState(() => {
+    try {
+      return localStorage.getItem('modelProvider') || 'ibm_ica'
+    } catch {
+      return 'ibm_ica'
+    }
+  })
+  const [configured, setConfigured] = useState({})
   const [previewCollapsed, setPreviewCollapsed] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
   const [error, setError] = useState('')
 
   const canAnalyze = useMemo(() => Boolean(document?.document_id), [document])
+  const busyAny = uploading || analyzing
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('modelProvider', provider)
+    } catch {
+      // storage unavailable - the choice just won't persist
+    }
+  }, [provider])
+
+  useEffect(() => {
+    fetchProviders().then(setConfigured).catch(() => {})
+  }, [])
 
   async function handleUpload(file) {
     setUploading(true)
     setError('')
+    setWarning('')
     setAnalysis('')
+    setAgents([])
     setChatMessages([])
     try {
-      const response = await uploadDocument(file)
+      const response = await uploadDocument(file, provider)
       setDocument(response)
+      if (response.warning) setWarning(response.warning)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -455,7 +524,7 @@ export default function App() {
     setWarning('')
     setChatMessages([])
     try {
-      const response = await analyzeDocument({ document_id: document.document_id, mode, prompt, thinking_mode: thinkingMode })
+      const response = await analyzeDocument({ document_id: document.document_id, mode, prompt, thinking_mode: thinkingMode, provider })
       setAnalysis(response.content)
       setAgents(response.agents || [])
       setWarning(response.warning || '')
@@ -493,6 +562,7 @@ export default function App() {
         }`}
       >
         <div className="flex min-h-0 flex-col gap-4">
+          <ProviderPicker provider={provider} setProvider={setProvider} disabled={busyAny} configured={configured} />
           <UploadPanel document={document} onUpload={handleUpload} busy={uploading} error={error} />
           <PromptPanel
             mode={mode}
@@ -517,7 +587,7 @@ export default function App() {
             onShowPreview={() => setPreviewCollapsed(false)}
             onDownloadMarkdown={handleDownloadMarkdown}
           />
-          <ChatPanel documentId={document?.document_id} analysis={analysis} messages={chatMessages} setMessages={setChatMessages} />
+          <ChatPanel documentId={document?.document_id} analysis={analysis} messages={chatMessages} setMessages={setChatMessages} provider={provider} />
         </div>
       </main>
     </div>

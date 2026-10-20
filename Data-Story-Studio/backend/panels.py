@@ -302,7 +302,8 @@ def _kpi(ctx: Ctx, r: dict) -> dict:
     total = run(ctx, total_sql)["rows"][0]
     out = {"chart": "kpi", "unit": unit, "measure": m["name"], "measure_label": m["label"], "agg": m["agg"],
            "title": m["label"], "value": total[0], "display": fmt_value(total[0], unit), "n": total[1],
-           "sql": total_sql, "basis": _basis_text(m), "polarity": polarity(m)}
+           "sql": total_sql, "basis": _basis_text(m), "polarity": polarity(m),
+           "agg_tag": {"count": "Count", "rate": "Share", "avg": "Average"}.get(m["agg"], "Total")}
     if ctx.time:
         tcol, grain = ctx.time["col"], ctx.grain(r)
         sql = _ts_sql(ctx, m, tcol, grain)

@@ -251,6 +251,7 @@ class IBMICAClient:
                 - text: Extracted text response
                 - raw: Full JSON response
                 - url: Endpoint URL used
+                - finish_reason: Why generation stopped (e.g. stop, length, content_filter)
                 - prompt_tokens: Input tokens
                 - completion_tokens: Output tokens
                 - total_tokens: Sum of input + output
@@ -267,11 +268,12 @@ class IBMICAClient:
         print(f"[IBM_ICA] chat() url={self.chat_url!r}", flush=True)
 
         _, raw = self._call(self.chat_url, payload)
+        finish_reason = None
         try:
             _diag = json.loads(raw)
-            _finish = _diag.get("choices", [{}])[0].get("finish_reason")
+            finish_reason = _diag.get("choices", [{}])[0].get("finish_reason")
             print(
-                f"[IBM_ICA] chat() finish_reason={_finish!r} usage={_diag.get('usage')!r} "
+                f"[IBM_ICA] chat() finish_reason={finish_reason!r} usage={_diag.get('usage')!r} "
                 f"reply_len={len(raw)}",
                 flush=True,
             )
@@ -286,6 +288,7 @@ class IBMICAClient:
             "text": reply,
             "raw": raw,
             "url": self.chat_url,
+            "finish_reason": finish_reason,
             "prompt_tokens": prompt_tokens,
             "completion_tokens": completion_tokens,
             "total_tokens": total_tokens,

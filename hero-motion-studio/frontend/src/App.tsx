@@ -22,7 +22,7 @@ function loadSaved(): { cfg: MotionConfig; sizeId: string; custom: { w: number; 
     const motion = { ...DEFAULT_CONFIG.motion, ...s.cfg?.motion };
     if (!FEEL_OPTIONS.some((o) => o.id === motion.feel)) motion.feel = DEFAULT_CONFIG.motion.feel;
     return {
-      cfg: { ...DEFAULT_CONFIG, ...s.cfg, text: { ...DEFAULT_CONFIG.text, ...s.cfg?.text }, style: { ...DEFAULT_CONFIG.style, ...s.cfg?.style }, outro: { ...DEFAULT_CONFIG.outro, ...s.cfg?.outro }, motion, scenes: sc, sound: { ...DEFAULT_CONFIG.sound, ...(s.cfg?.sound?.preset ? s.cfg.sound : {}) } },
+      cfg: { ...DEFAULT_CONFIG, ...s.cfg, text: { ...DEFAULT_CONFIG.text, ...s.cfg?.text }, style: { ...DEFAULT_CONFIG.style, ...s.cfg?.style }, film: s.cfg?.film === "story" ? "story" : "showcase", story: { ...DEFAULT_CONFIG.story, ...s.cfg?.story }, outro: { ...DEFAULT_CONFIG.outro, ...s.cfg?.outro }, motion, scenes: sc, sound: { ...DEFAULT_CONFIG.sound, ...(s.cfg?.sound?.preset ? s.cfg.sound : {}) } },
       sizeId: SIZES.some((z) => z.id === s.sizeId) ? s.sizeId : "hero",
       custom: s.custom ?? fallback.custom,
     };

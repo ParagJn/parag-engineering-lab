@@ -2,7 +2,7 @@ import { useState } from "react";
 import { timeline, type SceneId } from "../engine/film";
 import { bufferToWav, renderSoundtrack } from "../engine/sound";
 import { saveBlob } from "../export/exporters";
-import { ACCENTS, FEEL_OPTIONS, FONTS, REVEAL_STYLES, SHAPE_STYLES, SOUND_PRESETS, STAT_STYLES, THEMES, WORDS_STYLES, type MotionConfig, type MotionText } from "../engine/types";
+import { ACCENTS, FEEL_OPTIONS, FILM_OPTIONS, FONTS, REVEAL_STYLES, SHAPE_STYLES, SOUND_PRESETS, STAT_STYLES, THEMES, WORDS_STYLES, type MotionConfig, type MotionText } from "../engine/types";
 
 interface Props {
   cfg: MotionConfig;
@@ -57,6 +57,8 @@ export default function ControlsPanel({ cfg, setCfg }: Props) {
   const setText = <K extends keyof MotionText>(k: K, v: MotionText[K]) => setCfg((c) => ({ ...c, text: { ...c.text, [k]: v } }));
   const setStyle = (patch: Partial<MotionConfig["style"]>) => setCfg((c) => ({ ...c, style: { ...c.style, ...patch } }));
   const { text, style, outro } = cfg;
+  const story = cfg.film === "story";
+  const setStory = <K extends keyof MotionConfig["story"]>(k: K, v: string) => setCfg((c) => ({ ...c, story: { ...c.story, [k]: v } }));
   const [logoError, setLogoError] = useState("");
   const [wavBusy, setWavBusy] = useState(false);
   const downloadWav = async () => {
@@ -83,6 +85,28 @@ export default function ControlsPanel({ cfg, setCfg }: Props) {
 
   return (
     <>
+      <Section title="Film">
+        <Choices options={FILM_OPTIONS} value={cfg.film} onChange={(film) => setCfg((c) => ({ ...c, film }))} />
+        {story && (
+          <div className="flex flex-col gap-2 rounded-md border border-neutral-800 p-2.5">
+            <p className="text-xs text-neutral-500">
+              <b className="text-neutral-300">Hook</b> = intro + hero word · <b className="text-neutral-300">Proof</b> = your stat ·{" "}
+              <b className="text-neutral-300">Close</b> = end card (or logo sweep)
+            </p>
+            <Field label="Problem" hint="the pain, one line">
+              <input className="input" value={cfg.story.problem} maxLength={60} placeholder="e.g. Month-end reports take three days." onChange={(e) => setStory("problem", e.target.value)} />
+            </Field>
+            <div className="grid grid-cols-[1fr_2fr] gap-2">
+              <Field label="Lead-in"><input className="input" value={cfg.story.lead} maxLength={20} placeholder="Introducing" onChange={(e) => setStory("lead", e.target.value)} /></Field>
+              <Field label="Solution" hint="on the badge"><input className="input" value={cfg.story.solution} maxLength={28} onChange={(e) => setStory("solution", e.target.value)} /></Field>
+            </div>
+            <Field label="Proof caption" hint="what the stat means">
+              <input className="input" value={cfg.story.proofLabel} maxLength={40} placeholder="e.g. faster month-end close" onChange={(e) => setStory("proofLabel", e.target.value)} />
+            </Field>
+          </div>
+        )}
+      </Section>
+
       <Section title="Text">
         <div className="grid grid-cols-[1fr_2fr] gap-2">
           <Field label="Intro"><input className="input" value={text.intro} maxLength={14} onChange={(e) => setText("intro", e.target.value)} /></Field>
@@ -139,7 +163,7 @@ export default function ControlsPanel({ cfg, setCfg }: Props) {
       <Section title="Scenes">
         <span className="text-sm text-neutral-300">In the loop <span className="text-xs text-neutral-500">· toggle and hero word are always on</span></span>
         <div className="flex flex-wrap gap-2">
-          {SCENE_SWITCHES.map((sc) => (
+          {SCENE_SWITCHES.filter((sc) => !(story && sc.id === "words")).map((sc) => (
             <button key={sc.id} className={`chip ${show[sc.id] ? "chip-on" : "line-through opacity-60"}`} onClick={() => setShow(sc.id, !show[sc.id])}>
               {show[sc.id] ? "✓ " : ""}{sc.name}
             </button>
@@ -151,13 +175,13 @@ export default function ControlsPanel({ cfg, setCfg }: Props) {
             <Choices options={STAT_STYLES} value={cfg.scenes.stat} onChange={(stat) => setCfg((c) => ({ ...c, scenes: { ...c.scenes, stat } }))} />
           </>
         )}
-        {show.shape && (
+        {show.shape && !story && (
           <>
             <span className="text-sm text-neutral-300">Shape</span>
             <Choices options={SHAPE_STYLES} value={cfg.scenes.shape} onChange={(shape) => setCfg((c) => ({ ...c, scenes: { ...c.scenes, shape } }))} />
           </>
         )}
-        {show.words && (
+        {show.words && !story && (
           <>
             <span className="text-sm text-neutral-300">How the words move</span>
             <Choices options={WORDS_STYLES} value={cfg.scenes.words} onChange={(words) => setCfg((c) => ({ ...c, scenes: { ...c.scenes, words } }))} />

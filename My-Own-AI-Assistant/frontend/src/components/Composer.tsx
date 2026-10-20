@@ -224,7 +224,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(({
                 disabled={disabled}
                 className="text-xs font-medium text-gray-600 bg-transparent border border-gray-200 rounded-full pl-3 pr-2 py-1.5 hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
               >
-                <option value="claude">Claude Opus 5.5</option>
+                <option value="claude">Claude Sonnet 5.5</option>
                 <option value="gemini">Gemini 3.7 Flash</option>
                 <option value="openai">GPT-5.6 Sol</option>
               </select>

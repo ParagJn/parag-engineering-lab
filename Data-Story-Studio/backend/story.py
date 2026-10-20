@@ -150,6 +150,7 @@ Design the dashboard as a story. Return ONLY JSON:
 Use 4-7 non-KPI panels in total, the most significant first, no two panels telling the same story.
 {map_rule}
 Opening commentary: "summary" is the paragraph, "highlights" are 3-4 bullets that each add a NEW fact (never repeat the paragraph or the finding), ordered by importance and covering different panels: concentration or share, leaders and laggards, a comparison between groups, and one exception or recent turn. Every figure is copied exactly from FACTS.
+KPIs: keep the cards that measure what the USER GOAL asks about; do not swap them for generic totals.
 Prefer the user's goal when choosing. Skip weak findings rather than forcing them.
 If the USER GOAL asks "which <places/groups> ...", the hero finding and summary must NAME the leading groups with their figures from the RANKING panels; never defer that comparison to next steps.
 When a panel reports that a small share of records holds most of a total ("top 10% hold ..."), lead with that share, not the median.

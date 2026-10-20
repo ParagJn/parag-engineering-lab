@@ -5,7 +5,7 @@ echo "Testing LLM API Endpoints"
 echo "========================="
 echo ""
 
-BASE_URL="http://localhost:8000"
+BASE_URL="http://localhost:8030"
 
 # Test 1: Health Check
 echo "1. Health Check"

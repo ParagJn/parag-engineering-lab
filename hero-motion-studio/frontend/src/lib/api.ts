@@ -13,7 +13,13 @@ export interface Suggestion {
   card_title: string;
   card_subtitle: string;
   card_footnote: string;
+  problem: string;
+  lead: string;
+  solution: string;
+  proof_label: string;
   accent: string | null;
+  stat_from_brief: boolean;
+  notes: string[];
   model: string;
 }
 

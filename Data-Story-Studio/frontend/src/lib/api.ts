@@ -37,6 +37,7 @@ export const api = {
   example: () => req<DatasetSummary>("/example", { method: "POST" }),
   upload: (list: File[]) => req<DatasetSummary>("/datasets", { method: "POST", body: files(list) }),
   addFiles: (id: string, list: File[]) => req<DatasetSummary>(`/datasets/${id}/files`, { method: "POST", body: files(list) }),
+  refreshData: (id: string, list: File[]) => req<DatasetSummary>(`/datasets/${id}/refresh`, { method: "POST", body: files(list) }),
   removeFile: (id: string, stored: string) => req<DatasetSummary>(`/datasets/${id}/files/${encodeURIComponent(stored)}`, { method: "DELETE" }),
   preview: (id: string, table: string, o: { offset: number; limit: number; sort?: string; desc?: boolean; search?: string }) =>
     req<QueryData & { total: number; offset: number }>(
@@ -62,6 +63,24 @@ export const api = {
     req<Dashboard>(`${base(id, scope)}/layout`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ story }) }),
   sql: (id: string, scope: string, sql: string) => req<QueryData>(`${base(id, scope)}/sql`, json({ sql })),
   deckOptions: () => req<DeckOptions>("/deck/themes"),
+  logoUrl: (id: string, bust: number) => `/api/datasets/${id}/logo?t=${bust}`,
+  async uploadLogo(id: string, file: File): Promise<void> {
+    const body = new FormData();
+    body.append("file", file);
+    const res = await fetch(`/api/datasets/${id}/logo`, { method: "POST", body });
+    if (!res.ok) {
+      let msg = `${res.status} ${res.statusText}`;
+      try {
+        msg = (await res.json()).detail ?? msg;
+      } catch {
+        /* ignore */
+      }
+      throw new Error(msg);
+    }
+  },
+  async removeLogo(id: string): Promise<void> {
+    await fetch(`/api/datasets/${id}/logo`, { method: "DELETE" });
+  },
   summary: (id: string, scope: string, regenerate = false) => req<ExecSummary>(`${base(id, scope)}/summary?regenerate=${regenerate}`, { method: "POST" }),
   async summaryFile(id: string, scope: string, kind: "md" | "pdf"): Promise<{ blob: Blob; name: string }> {
     const res = await fetch(`/api${base(id, scope)}/summary/${kind}`);

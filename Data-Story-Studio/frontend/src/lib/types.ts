@@ -36,6 +36,7 @@ export type Panel = {
   current_period?: string;
   current_display?: string;
   basis?: string;
+  agg_tag?: string;
   measure_label?: string;
   polarity?: "up_good" | "down_good" | "neutral";
   grain?: string;
@@ -180,6 +181,17 @@ export type DatasetSummary = {
   dashboards: string[];
   min_rows: number;
   example: boolean;
+  refresh?: DataRefresh | null;
+};
+
+export type DataRefresh = {
+  at: number;
+  files: string[];
+  rows_before: number;
+  rows_after: number;
+  period_before: string;
+  period_after: string;
+  kpis: { label: string; before: string; after: string }[];
 };
 
 export type DatasetListItem = { id: string; created: number; files: string[]; rows: number | null; title: string | null; stage: string; example?: boolean };
@@ -199,7 +211,7 @@ export type ExecSummary = {
   title: string;
   context: string;
   bottom_line: string;
-  metrics: { label: string; value: string; basis: string; change: string }[];
+  metrics: { label: string; tag?: string; value: string; basis: string; change: string }[];
   highlights: { heading: string; text: string }[];
   risks: string[];
   opportunities: string[];

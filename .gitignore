@@ -35,6 +35,8 @@ dist/
 # Interview Coach — sensitive runtime data
 **/sessions/*.json
 **/config.json
+# ...except the Lab Launcher's app registry, which holds no secrets and is the whole feature
+!launcher/config.json
 
 # My-Own-AI-Assistant — chat database and its backups (chats are private, like sessions/*.json)
 My-Own-AI-Assistant/data/assistant.db*
@@ -43,8 +45,9 @@ My-Own-AI-Assistant/data/backups/
 # Agentic-Procurement — API keys in settings
 Agentic-Procurement/data/settings.json
 
-# Logs
+# Logs and runtime process files
 *.log
+*.pid
 npm-debug.log*
 
 # OS

@@ -56,7 +56,7 @@ export function Settings() {
 
   const loadProviderSettings = async () => {
     try {
-      const response = await fetch('http://localhost:8000/settings/provider');
+      const response = await fetch('http://localhost:8030/settings/provider');
       
       if (!response.ok) {
         throw new Error('Failed to load provider settings');
@@ -82,7 +82,7 @@ export function Settings() {
     setProviderSwitchSuccess(false);
     
     try {
-      const response = await fetch('http://localhost:8000/settings/provider', {
+      const response = await fetch('http://localhost:8030/settings/provider', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -126,7 +126,7 @@ export function Settings() {
     setHolidayError(null);
 
     try {
-      const response = await fetch('http://localhost:8000/holidays/parse', {
+      const response = await fetch('http://localhost:8030/holidays/parse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -230,7 +230,7 @@ export function Settings() {
                     label={
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Typography variant="body1" sx={{ fontWeight: '600' }}>
-                          IBM ICA (Claude Opus 5.5)
+                          IBM ICA (Claude Sonnet 5.5)
                         </Typography>
                         {ibmIcaAvailable ? (
                           <Chip label="Available" size="small" color="success" />
@@ -244,7 +244,7 @@ export function Settings() {
                   />
                   <Box sx={{ ml: 4, mb: 2 }}>
                     <Typography variant="caption" color="text.secondary">
-                      IBM ICA (watsonx Code Assistant) with Claude Opus 5.5 or Gemini models.
+                      IBM ICA (watsonx Code Assistant) with Claude Sonnet 5.5 or Gemini models.
                       Requires IBM_ICA_API_KEY and IBM_ICA_ENDPOINT configured in backend .env file.
                     </Typography>
                   </Box>

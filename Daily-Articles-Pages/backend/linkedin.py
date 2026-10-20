@@ -1,15 +1,25 @@
-"""Generate LinkedIn-optimised posts from magazine stories using Claude."""
+"""Generate a LinkedIn teaser post that drives readers to the published magazine page."""
 
 import json
 
 from config import get_settings
 from llm_clients import build_agent
 
+LINK_PLACEHOLDER = "👉 Read the full edition: [paste link here]"
+# Always appended to the hashtag line, regardless of what the model returns
+REQUIRED_HASHTAG = "#AIGeneratedContent"
 
-async def generate_linkedin_posts(stories: list[dict], provider: str = "ibm_ica") -> list[dict]:
-    """Generate a LinkedIn-ready post for each story.
 
-    Returns a list of dicts with keys: index, headline, post.
+async def generate_linkedin_posts(
+    stories: list[dict],
+    provider: str = "ibm_ica",
+    magazine_title: str = "Morning Edition",
+    page_url: str = "",
+) -> list[dict]:
+    """Generate one curiosity-driven LinkedIn post promoting the whole edition.
+
+    Returns a single-item list of dicts with keys: index, headline, post
+    (kept as a list so the existing modal and HTML/PDF export work unchanged).
     """
     settings = get_settings()
     agent = build_agent(settings, "linkedin", "claude", provider)
@@ -18,66 +28,50 @@ async def generate_linkedin_posts(stories: list[dict], provider: str = "ibm_ica"
         label = "SAP AI Core" if provider == "sap" else "IBM ICA"
         raise ValueError(f"{label} is not configured — check the relevant env vars")
 
-    # Build a compact stories payload to keep token usage manageable
-    stories_input = []
-    for i, s in enumerate(stories):
-        stories_input.append({
-            "index": i,
+    # Only headline-level material — the post should tease, not summarise
+    stories_input = [
+        {
             "headline": s.get("headline", ""),
             "deck": s.get("deck", ""),
-            "body": (s.get("body") or "")[:600],  # truncate long editorial bodies
             "pull_quote": s.get("pull_quote", ""),
             "category_label": s.get("category_label", ""),
-            "original_url": s.get("original_url", ""),
-        })
+        }
+        for s in stories
+    ]
 
-    n = len(stories_input)
+    prompt = f"""You are a LinkedIn thought-leadership writer specialising in enterprise tech, AI and AI security.
 
-    prompt = f"""You are a professional LinkedIn thought-leadership writer specialising in enterprise tech.
+Today's magazine edition is titled "{magazine_title}" and contains {len(stories_input)} stories (below).
+Write ONE LinkedIn post that promotes the whole edition. The post will be published with a hyperlink to the
+magazine page, and its ONLY job is to make the reader curious enough to click that link.
 
-Transform each of the {n} tech stories below into a compelling LinkedIn post that is ready to copy-paste directly to a LinkedIn profile.
+Structure (no section labels — plain text, blank lines between sections):
 
-Each post MUST follow this exact structure (no section labels — just the text with blank lines between sections):
-
-LINE 1 — HOOK: A single scroll-stopping opening line. Use a bold claim, a surprising stat, or a provocative question. This line stands alone.
-
-BLANK LINE
-
-BODY (3-4 bullet lines): Each bullet starts with the • symbol and delivers one crisp insight, real-world implication, or actionable takeaway from the story.
-
-BLANK LINE
-
-REFLECTION (1-2 sentences): A personal professional perspective, an observation about what this means for practitioners, or a call-to-action inviting readers to share their thoughts.
-
-BLANK LINE
-
-HASHTAGS: 5-7 hashtags on a single line. Mix broad tags (#AI #Technology) with specific ones (#LLMOps #ZeroTrust #CloudNative).
-
-BLANK LINE
-
-SOURCE LINE: Exactly this format → 🔗 Source: <original_url>
+1. HOOK — one scroll-stopping line on its own. A surprising tension, a counter-intuitive claim, or a question
+   the reader can't answer yet. Never start with "I".
+2. SETUP — 1-2 short sentences on why today's edition matters to people building or securing AI and enterprise tech.
+3. TEASERS — 3-4 lines starting with "→", each teasing a different story. Open a curiosity gap: hint at the
+   surprise, the stake, or the uncomfortable question, but DO NOT reveal the answer, the key number, or the conclusion.
+4. CALL TO ACTION — one line that gives a concrete reason to click now (what they'll learn or be able to do).
 
 Writing guidelines:
-- Total post length: 900–1,400 characters (LinkedIn engagement sweet spot)
-- Conversational yet authoritative — no corporate jargon, no buzzword soup
-- Write in first person where it feels natural ("This caught my attention…", "Here's why this matters…")
-- Never start with "I"
-- Newlines in the post text should use the literal \\n character in the JSON string
+- 600–1,000 characters total, excluding hashtags
+- Conversational yet authoritative; no clickbait clichés ("You won't believe…"), no buzzword soup
+- Pick the most intriguing stories, favouring AI, AI security and enterprise impact
+- Do NOT include any URL or link — it is added separately
+- Use \\n for newlines inside JSON strings
 
 STORIES:
 {json.dumps(stories_input, indent=2)}
 
-Return ONLY valid JSON — an array of exactly {n} objects with NO additional keys or commentary:
-[
-  {{
-    "index": 0,
-    "headline": "<original story headline>",
-    "post": "<complete LinkedIn post text ready to copy-paste, with newlines as \\n>"
-  }},
-  ...
-]"""
+Return ONLY valid JSON, no commentary:
+{{
+  "headline": "<a short internal label for this post, e.g. the hook in a few words>",
+  "post": "<the post text, sections 1-4 only, newlines as \\n>",
+  "hashtags": "<5-7 hashtags on one line, mixing broad (#AI) and specific (#AISecurity #LLMOps)>"
+}}"""
 
-    max_tokens = 6000 if provider == "sap" else 12000
+    max_tokens = 4000 if provider == "sap" else 8000
     result = await agent.complete(system="", user=prompt, max_tokens=max_tokens)
     response_text = result.content
 
@@ -87,13 +81,25 @@ Return ONLY valid JSON — an array of exactly {n} objects with NO additional ke
         response_text = response_text.rsplit("```", 1)[0]
 
     try:
-        posts = json.loads(response_text, strict=False)
+        data = json.loads(response_text, strict=False)
     except json.JSONDecodeError:
-        start = response_text.find("[")
-        end = response_text.rfind("]") + 1
+        start = response_text.find("{")
+        end = response_text.rfind("}") + 1
         if start != -1 and end > start:
-            posts = json.loads(response_text[start:end], strict=False)
+            data = json.loads(response_text[start:end], strict=False)
         else:
-            raise ValueError("Failed to parse LinkedIn posts from Claude response")
+            raise ValueError("Failed to parse LinkedIn post from Claude response")
 
-    return posts
+    # The link line is added here rather than by the model so it is always present
+    link_line = f"👉 Read the full edition: {page_url}" if page_url else LINK_PLACEHOLDER
+    parts = [(data.get("post") or "").strip(), link_line]
+    hashtags = (data.get("hashtags") or "").strip()
+    if REQUIRED_HASHTAG.lower() not in hashtags.lower():
+        hashtags = f"{hashtags} {REQUIRED_HASHTAG}".strip()
+    parts.append(hashtags)
+
+    return [{
+        "index": 0,
+        "headline": data.get("headline") or magazine_title,
+        "post": "\n\n".join(parts),
+    }]

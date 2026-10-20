@@ -2,7 +2,7 @@
  * API service for Statement of Work (SoW) generation
  */
 
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = 'http://localhost:8030';
 
 export interface SoWTaskSummary {
   index: number;

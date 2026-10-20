@@ -1,0 +1,85 @@
+{
+  "title": "Parag's Lab",
+  "subtitle": "Click a card to open the app. Green dot = running.",
+  "launcherPort": 8999,
+  "apps": [
+    {
+      "name": "Data Story Studio",
+      "subtitle": "Upload CSV/Excel and get an AI-built, animated dashboard that tells the story in your data",
+      "group": "Analytics",
+      "dir": "Data-Story-Studio",
+      "start": "./start.sh",
+      "url": "http://localhost:5190",
+      "ports": [
+        8020,
+        5190
+      ],
+      "enabled": true
+    },
+    {
+      "name": "Hero Motion Studio",
+      "subtitle": "Turn a few lines of text into an animated slide hero, exported as PNG, MP4, GIF or PPTX",
+      "group": "Presentations",
+      "dir": "hero-motion-studio",
+      "start": "./start.sh",
+      "url": "http://localhost:5180",
+      "ports": [
+        8010,
+        5180
+      ],
+      "enabled": true
+    },
+    {
+      "name": "My Own AI Assistant",
+      "subtitle": "Personal chat assistant on IBM ICA for technical work and document analysis",
+      "group": "AI Tools",
+      "dir": "My-Own-AI-Assistant",
+      "start": "./start.sh",
+      "url": "http://localhost:5173",
+      "ports": [
+        8000,
+        5173
+      ],
+      "enabled": true
+    },
+    {
+      "name": "Project Schedule Tool",
+      "subtitle": "AI-assisted project schedule builder with grid, Excel import/export and document generation",
+      "group": "Project Management",
+      "dir": "Project-Schedule-Tool",
+      "start": "./start.sh",
+      "url": "http://localhost:5200",
+      "ports": [
+        8030,
+        5200
+      ],
+      "enabled": true
+    },
+    {
+      "name": "Daily Articles Pages",
+      "subtitle": "Morning Edition: generates a daily tech-news magazine as self-contained HTML",
+      "group": "AI Tools",
+      "dir": "Daily-Articles-Pages",
+      "start": "./start.sh",
+      "url": "http://localhost:5210",
+      "ports": [
+        8040,
+        5210
+      ],
+      "enabled": true
+    },
+    {
+      "name": "Strategy Analyzer",
+      "subtitle": "Analyzes business strategies and provides AI-driven insights",
+      "group": "AI Tools",
+      "dir": "Strategy-Analyzer",
+      "start": "./start.sh",
+      "url": "http://localhost:5220",
+      "ports": [
+        8050,
+        5220
+      ],
+      "enabled": true
+    }
+  ]
+}

@@ -196,13 +196,13 @@ if ! kill -0 $BACKEND_PID 2>/dev/null; then
 fi
 
 echo "✅ Backend started (PID: $BACKEND_PID)"
-echo "   📍 API: http://localhost:8000"
-echo "   📚 Docs: http://localhost:8000/docs"
+echo "   📍 API: http://localhost:8030"
+echo "   📚 Docs: http://localhost:8030/docs"
 echo ""
 
 # Start Frontend in foreground
 echo "▶️  Starting Frontend (Vite)..."
-echo "   📍 App: http://localhost:5173"
+echo "   📍 App: http://localhost:5200"
 echo ""
 echo "═══════════════════════════════════════════════════════════════"
 echo "  Both services are running!"
@@ -210,7 +210,7 @@ echo "  Press Ctrl+C to stop all services"
 echo "═══════════════════════════════════════════════════════════════"
 echo ""
 
-npm run dev
+npm run dev -- --port 5200 --strictPort
 FRONTEND_EXIT_CODE=$?
 
 # Cleanup when frontend exits

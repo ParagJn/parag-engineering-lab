@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Chart } from "../charts/Chart";
 import { useReveal } from "../lib/motion";
 import type { Panel } from "../lib/types";
@@ -44,6 +44,10 @@ export function PanelCard({ panel, wide, actions, isStatic, tag }: { panel: Pane
   const [redrawOpen, setRedrawOpen] = useState(false);
   const [instruction, setInstruction] = useState("");
   const isTable = panel.chart === "table";
+  // a redraw that changes what the panel is (a chart, or a table) shows the result, not the tab you were on
+  useEffect(() => {
+    setTab(panel.chart === "table" ? "data" : "chart");
+  }, [panel.chart]);
   const grain = panel.enc?.grain ?? panel.recipe?.grain;
 
   const run = async (fn: () => Promise<void>) => {
@@ -104,7 +108,7 @@ export function PanelCard({ panel, wide, actions, isStatic, tag }: { panel: Pane
                   key={c}
                   disabled={busy}
                   className="px-2.5 py-1 rounded-full text-xs bg-surface border border-hair hover:border-line"
-                  onClick={() => run(() => actions.onSwitch!(panel, { chart: c }))}
+                  onClick={() => run(async () => { await actions.onSwitch!(panel, { chart: c }); setTab("chart"); })}
                 >
                   {CHART_NAMES[c] ?? c}
                 </button>
@@ -119,7 +123,7 @@ export function PanelCard({ panel, wide, actions, isStatic, tag }: { panel: Pane
                   key={g}
                   disabled={busy || g === grain}
                   className={`px-2.5 py-1 rounded-full text-xs border ${g === grain ? "bg-ink text-white border-ink" : "bg-surface border-hair hover:border-line"}`}
-                  onClick={() => run(() => actions.onSwitch!(panel, { grain: g }))}
+                  onClick={() => run(async () => { await actions.onSwitch!(panel, { grain: g }); setTab("chart"); })}
                 >
                   {g}
                 </button>
@@ -130,7 +134,7 @@ export function PanelCard({ panel, wide, actions, isStatic, tag }: { panel: Pane
             className="mt-2.5 flex gap-2"
             onSubmit={(e) => {
               e.preventDefault();
-              if (instruction.trim()) run(() => actions.onRedraw!(panel, instruction.trim()).then(() => setInstruction("")));
+              if (instruction.trim()) run(() => actions.onRedraw!(panel, instruction.trim()).then(() => { setInstruction(""); setTab("chart"); }));
             }}
           >
             <input

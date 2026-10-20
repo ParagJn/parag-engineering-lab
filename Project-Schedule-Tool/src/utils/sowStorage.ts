@@ -19,7 +19,7 @@ export interface SoWDraft {
  */
 export async function saveSoWDraft(draft: SoWDraft): Promise<void> {
   try {
-    const response = await fetch('http://localhost:8000/save/sow-draft', {
+    const response = await fetch('http://localhost:8030/save/sow-draft', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -45,7 +45,7 @@ export async function saveSoWDraft(draft: SoWDraft): Promise<void> {
  */
 export async function loadSoWDraft(projectName: string): Promise<SoWDraft | null> {
   try {
-    const response = await fetch(`http://localhost:8000/load/sow-draft/${encodeURIComponent(projectName)}`);
+    const response = await fetch(`http://localhost:8030/load/sow-draft/${encodeURIComponent(projectName)}`);
 
     if (!response.ok) {
       throw new Error(`Failed to load SoW draft: ${response.statusText}`);

@@ -57,9 +57,9 @@
       "id": "ibm",
       "label": "IBM ICA",
       "type": "ai",
-      "description": "IBM watsonx Code Assistant gateway: Claude Opus 5.5 and Gemini 3.7 Flash hosted on IBM infrastructure. Primary model provider for Project Schedule Tool, Daily Articles Pages, Skills Generator, My Own AI Assistant, Hero Motion Studio and Data Story Studio.",
+      "description": "IBM watsonx Code Assistant gateway: Claude Sonnet 5.5 and Gemini 3.7 Flash hosted on IBM infrastructure. Primary model provider for Project Schedule Tool, Daily Articles Pages, Skills Generator, My Own AI Assistant, Hero Motion Studio and Data Story Studio.",
       "tech": [
-        "Claude Opus 5.5",
+        "Claude Sonnet 5.5",
         "Gemini 3.7 Flash",
         "watsonx Code Assistant"
       ]
@@ -598,7 +598,7 @@
         },
         {
           "node": "ibm",
-          "action": "Claude Opus 5.5 (via IBM ICA) curates top 10: headlines, decks, body, pull quotes, 10 spread styles"
+          "action": "Claude Sonnet 5.5 (via IBM ICA) curates top 10: headlines, decks, body, pull quotes, 10 spread styles"
         },
         {
           "node": "magazine",
@@ -674,7 +674,7 @@
         },
         {
           "node": "ibm",
-          "action": "Claude Opus 5.5 (via IBM ICA) generates SoW: Background, Scope, Deliverables, RACI Matrix"
+          "action": "Claude Sonnet 5.5 (via IBM ICA) generates SoW: Background, Scope, Deliverables, RACI Matrix"
         },
         {
           "node": "schedule",
@@ -698,7 +698,7 @@
         },
         {
           "node": "ibm",
-          "action": "Claude Opus 5.5 (via IBM ICA) designs the bundle and writes SKILL.md, reference docs, scripts, templates and evals (SSE progress)"
+          "action": "Claude Sonnet 5.5 (via IBM ICA) designs the bundle and writes SKILL.md, reference docs, scripts, templates and evals (SSE progress)"
         },
         {
           "node": "skillsgen",

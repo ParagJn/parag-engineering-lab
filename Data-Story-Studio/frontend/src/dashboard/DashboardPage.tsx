@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../lib/api";
 import { download, fmtPeriod, fmtValue, nextPeriod } from "../lib/format";
 import { useMotion } from "../lib/motion";
@@ -9,7 +9,7 @@ import { ExecSummaryPanel } from "./ExecSummary";
 import type { PanelActions } from "./PanelCard";
 import { Guide } from "../setup/Guide";
 import { Banner, StoryView } from "./Story";
-import { IconBack, IconChat, IconDownload, IconFile, IconSpark, Spinner } from "./icons";
+import { IconBack, IconChat, IconDownload, IconFile, IconSpark, IconUpload, Spinner } from "./icons";
 
 const STAGES = [
   "Profiling columns and choosing measures",
@@ -19,7 +19,7 @@ const STAGES = [
   "Designing the story and the visual sequence",
 ];
 
-export function DashboardPage({ ds, onSetup, onHome, llm }: { ds: DatasetSummary; onSetup: () => void; onHome: () => void; llm: boolean | null }) {
+export function DashboardPage({ ds, onSetup, onHome, llm, onRefreshed }: { ds: DatasetSummary; onSetup: () => void; onHome: () => void; llm: boolean | null; onRefreshed: (d: DatasetSummary) => void }) {
   const [scope, setScope] = useState(ds.scopes[0]?.id);
   const [dash, setDash] = useState<Dashboard | null>(null);
   const [panels, setPanels] = useState<Record<string, Panel>>({});
@@ -31,6 +31,22 @@ export function DashboardPage({ ds, onSetup, onHome, llm }: { ds: DatasetSummary
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [deckOpen, setDeckOpen] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshDismissed, setRefreshDismissed] = useState(false);
+  const refreshInput = useRef<HTMLInputElement>(null);
+
+  const doRefresh = async (list: File[]) => {
+    if (!list.length) return;
+    if (!confirm("Replace the data with this file and rebuild the dashboard? Your goal, audience, links and logo are kept; the numbers and commentary are regenerated. Redraws and pinned answers will be replaced.")) return;
+    setRefreshing(true);
+    setErr(null);
+    try {
+      onRefreshed(await api.refreshData(ds.id, list));
+    } catch (e: any) {
+      setErr(e.message);
+      setRefreshing(false);
+    }
+  };
   const { replay } = useMotion();
 
   const load = useCallback(
@@ -212,6 +228,18 @@ export function DashboardPage({ ds, onSetup, onHome, llm }: { ds: DatasetSummary
           )}
           <div className="ml-auto flex items-center gap-2 shrink-0">
             {filtering && <Spinner className="text-muted" />}
+            <input ref={refreshInput} type="file" multiple accept=".csv,.tsv,.txt,.xlsx,.xlsm,.xls" className="hidden"
+              onChange={(e) => { const f = [...(e.target.files ?? [])]; e.target.value = ""; doRefresh(f); }} />
+            {dash && (
+              <button
+                onClick={() => refreshInput.current?.click()}
+                disabled={refreshing || loading}
+                className="hidden sm:inline-flex px-2.5 py-1.5 rounded-lg text-[12.5px] text-ink-2 hover:bg-sunken items-center gap-1.5 disabled:opacity-40"
+                title="Upload a newer version of the same file; the dashboard is rebuilt on it and your setup is kept"
+              >
+                {refreshing ? <Spinner className="w-3.5 h-3.5" /> : <IconUpload className="w-3.5 h-3.5" />} {refreshing ? "Refreshing…" : "Refresh data"}
+              </button>
+            )}
             {dash && (
               <button
                 onClick={() => {
@@ -242,6 +270,7 @@ export function DashboardPage({ ds, onSetup, onHome, llm }: { ds: DatasetSummary
           <Banner tone="bad">{err}</Banner>
         </div>
       )}
+      {ds.refresh && !refreshDismissed && !loading && dash && <RefreshNote r={ds.refresh} onClose={() => setRefreshDismissed(true)} />}
       {ds.example && !loading && dash && (
         <div className="mx-auto max-w-[1240px] px-4 sm:px-6">
           <Guide stage="dashboard" />
@@ -342,5 +371,34 @@ export function Logo() {
       <rect x="14" y="11" width="4" height="14" rx="1.5" fill="#3987e5" />
       <rect x="21" y="7" width="4" height="18" rx="1.5" fill="#fff" />
     </svg>
+  );
+}
+
+
+function RefreshNote({ r, onClose }: { r: NonNullable<DatasetSummary["refresh"]>; onClose: () => void }) {
+  const rows = r.rows_after === r.rows_before ? `${fmtValue(r.rows_after)} records (same count)` : `${fmtValue(r.rows_before)} → ${fmtValue(r.rows_after)} records`;
+  const period = r.period_before && r.period_after && r.period_before !== r.period_after ? ` · period ${r.period_before} → ${r.period_after}` : r.period_after ? ` · ${r.period_after}` : "";
+  return (
+    <div className="mx-auto max-w-[1240px] px-4 sm:px-6 no-print">
+      <div className="mt-5 rounded-xl border border-hair bg-sunken px-4 py-3 text-[13px] text-ink-2">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <span className="font-medium text-ink">Data refreshed</span> from {r.files.join(", ")}: {rows}
+            {period}.
+          </div>
+          <button onClick={onClose} className="text-muted hover:text-ink" aria-label="Dismiss">✕</button>
+        </div>
+        {r.kpis.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 tabular">
+            {r.kpis.map((k) => (
+              <span key={k.label}>
+                <span className="text-muted">{k.label}: </span>
+                {k.before} → <span className="font-medium text-ink">{k.after}</span>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

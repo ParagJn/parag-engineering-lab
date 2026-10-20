@@ -6,8 +6,8 @@
 # - Checks and kills processes on required ports
 # - Activates virtual environment
 # - Builds frontend assets
-# - Starts backend (FastAPI) on port 8000
-# - Starts frontend (Vite) on port 5173
+# - Starts backend (FastAPI) on port 8040
+# - Starts frontend (Vite) on port 5210
 
 set -e  # Exit on error
 
@@ -21,8 +21,8 @@ NC='\033[0m' # No Color
 
 # Configuration
 VENV_PATH="/Users/paragjain/dev-works/myenv"
-BACKEND_PORT=8000
-FRONTEND_PORT=5173
+BACKEND_PORT=8040
+FRONTEND_PORT=5210
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="$PROJECT_ROOT/backend"
 FRONTEND_DIR="$PROJECT_ROOT/frontend"

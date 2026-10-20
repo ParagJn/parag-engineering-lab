@@ -27,7 +27,7 @@ export interface Film {
  * The toggle/hero opening and the return trip are always on so the loop closes.
  */
 export type SceneId = "stat" | "shape" | "words" | "card";
-type HoldId = "hero" | "stat" | "words" | "card";
+type HoldId = "hero" | "stat" | "words" | "card" | "problem" | "badge";
 const SEGMENTS: { scene?: SceneId; a: number; b: number; pace: number; hold?: HoldId; outro?: true }[] = [
   { a: 0, b: 2.4, pace: 1 },
   { a: 2.4, b: 3.0, pace: 1, hold: "hero" },
@@ -43,6 +43,33 @@ const SEGMENTS: { scene?: SceneId; a: number; b: number; pace: number; hold?: Ho
   // Toggle-row ending at base pace; the logo outro is stretched so the sweep runs ~1.2s and then holds.
   { a: 14.3, b: TIMELINE, pace: 1, outro: true },
 ];
+/**
+ * Story mode replays the same scenes in story order (Hook → Problem → Reveal → Proof → Close).
+ * The Problem scene and the paper-wipe bridge into the proof live past the showcase timeline (15+),
+ * so every scene keeps its own internal times and the dot path stays continuous.
+ */
+export const PROBLEM_T0 = 15, PROBLEM_T1 = 17.5, BRIDGE_T1 = 17.75;
+const STORY_SEGMENTS: typeof SEGMENTS = [
+  { a: 0, b: 2.4, pace: 1 },
+  { a: 2.4, b: 3.0, pace: 1, hold: "hero" },
+  { a: 15.0, b: 16.3, pace: 1 },
+  { a: 16.3, b: 16.9, pace: 1, hold: "problem" },
+  { a: 16.9, b: 17.5, pace: 1 },
+  { scene: "shape", a: 6.5, b: 8.2, pace: 1 },
+  { scene: "shape", a: 8.2, b: 8.5, pace: 1, hold: "badge" },
+  { scene: "shape", a: 8.5, b: 9.0, pace: 1 },
+  { a: 17.5, b: 17.75, pace: 1 },
+  { scene: "stat", a: 3.0, b: 5.45, pace: 1.25 },
+  { scene: "stat", a: 5.45, b: 5.95, pace: 1.25, hold: "stat" },
+  { scene: "stat", a: 5.95, b: 6.5, pace: 1.25 },
+  { scene: "card", a: 10.75, b: 12.7, pace: 1 },
+  { scene: "card", a: 12.7, b: 13.5, pace: 1, hold: "card" },
+  { scene: "card", a: 13.5, b: 13.55, pace: 1 },
+  { a: 13.55, b: 14.3, pace: 1 },
+  { a: 14.3, b: TIMELINE, pace: 1, outro: true },
+];
+export const isStory = (cfg: MotionConfig) => cfg.film === "story";
+
 const SCENE_SPAN: Record<SceneId, [number, number, number]> = { stat: [3.0, 6.5, 0.8], shape: [6.5, 9.0, 0.9], words: [9.0, 10.75, 0.25], card: [10.75, 13.55, 0.6] };
 const LOGO_OUTRO_PACE = 3.2;
 
@@ -62,10 +89,15 @@ const countWords = (s: string) => s.trim().split(/\s+/).filter(Boolean).length;
 /** How much a hold stretches so its text can be read (≈ reading time / designed hold time). */
 function holdPace(cfg: MotionConfig, id: HoldId, base: number) {
   if (cfg.motion?.readable === false) return base;
-  const mul = feelOf(cfg).hold, len = { hero: 0.6, stat: 0.5, words: 1.75, card: 0.8 }[id];
+  const mul = feelOf(cfg).hold, len = { hero: 0.6, stat: 0.5, words: 1.75, card: 0.8, problem: 0.6, badge: 0.3 }[id];
   const words = cfg.text.words.filter((w) => w.trim()).length;
   const cardWords = countWords([cfg.text.cardTitle || cfg.text.hero, cfg.text.cardSubtitle, cfg.text.cardFootnote].join(" "));
-  const need = { hero: 0.35 + 0.25 * countWords(cfg.text.hero), stat: 0.9, words: 0.8 + 0.4 * words, card: 0.5 + 0.3 * cardWords }[id];
+  const st = cfg.story ?? { problem: "", lead: "", solution: "", proofLabel: "" };
+  const need = {
+    hero: 0.35 + 0.25 * countWords(cfg.text.hero), stat: 0.9 + (isStory(cfg) ? 0.25 * countWords(st.proofLabel) : 0),
+    words: 0.8 + 0.4 * words, card: 0.5 + 0.3 * cardWords,
+    problem: 0.5 + 0.3 * countWords(st.problem), badge: 0.5 + 0.3 * countWords(`${st.lead} ${st.solution}`),
+  }[id];
   return Math.min(4, Math.max(base, need / len)) * mul;
 }
 
@@ -76,7 +108,7 @@ export function sceneOn(cfg: MotionConfig, id: SceneId) {
 /** Maps real seconds onto the internal timeline (and back), honouring pace, reading holds and switched-off scenes. */
 export function timeline(cfg: MotionConfig) {
   const logoOutro = cfg.outro?.mode === "logo" && !!cfg.outro.logo;
-  const segs = SEGMENTS.map((s) => {
+  const segs = (isStory(cfg) ? STORY_SEGMENTS : SEGMENTS).map((s) => {
     if (s.scene && !sceneOn(cfg, s.scene)) {
       const [a, b, skip] = SCENE_SPAN[s.scene];
       return { ...s, len: (skip * (s.b - s.a)) / (b - a) };
@@ -102,7 +134,8 @@ export function timeline(cfg: MotionConfig) {
     toSeconds(t: number) {
       let acc = 0;
       for (const s of segs) {
-        if (t <= s.b) return ((acc + (clamp((t - s.a) / (s.b - s.a)) * s.len)) / natural) * duration;
+        // segments play in list order (story mode reorders them), so find the one containing t
+        if (t >= s.a && t <= s.b) return ((acc + (clamp((t - s.a) / (s.b - s.a)) * s.len)) / natural) * duration;
         acc += s.len;
       }
       return duration;
@@ -150,7 +183,9 @@ function measureTittle(ch: string, fontOf: (w: number, s: number) => string): Sp
 
 export function createFilm(cfg: MotionConfig, width: number, height: number): Film {
   const { style } = cfg;
-  const showStat = sceneOn(cfg, "stat"), showShape = sceneOn(cfg, "shape"), showWords = sceneOn(cfg, "words"), showCard = sceneOn(cfg, "card");
+  const story = isStory(cfg);
+  const showStat = sceneOn(cfg, "stat"), showShape = sceneOn(cfg, "shape"), showWords = !story && sceneOn(cfg, "words"), showCard = sceneOn(cfg, "card");
+  const storyText = cfg.story ?? { problem: "", lead: "", solution: "", proofLabel: "" };
   const tl = timeline(cfg);
   const FEEL = feelOf(cfg);
   const springOf = (z: number) => (p: number) => sp(p, Math.min(0.95, z), z < 0.5 ? 16 : 15);
@@ -389,7 +424,21 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
     return { x: lerp(C.x, tags[k].cx, e), y: lerp(C.y, tags[k].cy, e) + by, e };
   };
 
-  const shapeStyle = ["pill", "triangle", "star", "blob"].includes(cfg.scenes.shape) ? cfg.scenes.shape : "pill";
+  // Story mode always uses the pill: it becomes the solution's badge.
+  const shapeStyle = story ? "pill" : ["pill", "triangle", "star", "blob"].includes(cfg.scenes.shape) ? cfg.scenes.shape : "pill";
+
+  // ---- story layouts
+  const probText = storyText.problem.trim();
+  const PS = probText ? Math.min(92, (92 * 1400) / textW(probText, 92, 800)) : 92;
+  const probW = probText ? textW(probText, PS, 800) : 0;
+  const probX0 = (DW - probW) / 2, probX1 = probX0 + probW;
+  const probL = probText ? lineLayout(probText, PS, 800, probX0, CY + 0.36 * PS) : [];
+  // each letter appears as the typing cursor (the dot) passes its right edge, so it is set just behind the dot
+  const typeAt = (x: number) => 15.45 + 0.85 * clamp((x - (probX0 - 26)) / Math.max(1, probW + 44));
+  const solution = storyText.solution.trim(), lead = storyText.lead.trim();
+  const BS = solution ? Math.min(84, (84 * 1250) / textW(solution, 84, 800)) : 84;
+  const badgeW = solution ? Math.min(1500, Math.max(700, textW(solution, BS, 800) + 200)) : 700;
+  const proofLabel = storyText.proofLabel.trim();
   const wordsStyle = ["orbit", "float", "list", "tags"].includes(cfg.scenes.words) ? cfg.scenes.words : "orbit";
 
   // List: the dot springs to each bullet as its word arrives, then back to centre for the halftone.
@@ -497,8 +546,40 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
   const cardTittle = (t: number) => tittleAt(cardXf(0, cardDot.k, t), card[0].letters[cardDot.k].u, cardDot.spec);
 
   // The accent dot: one continuous path through every scene.
+  // Story: the dot jumps in, types the problem line as a cursor, stalls against an invisible wall,
+  // then drops to the centre for the reveal. The bridge holds it at the centre during the paper wipe.
+  function storyDot(t: number): Dot {
+    const S = heroTittle(3.0), start: Pt = { x: probX0 - 26, y: CY }, rest: Pt = { x: probX1 + 18, y: CY }, r = DR * 0.8;
+    if (t >= PROBLEM_T1) return { x: C.x, y: C.y, r: DR, sx: 1, sy: 1 };
+    if (!probText) {
+      const e = eio(prog(t, 15.0, 17.45));
+      return { x: lerp(S.x, C.x, e), y: lerp(S.y, C.y, e) - Math.sin(Math.PI * e) * 220, r: DR, sx: 1, sy: 1 };
+    }
+    if (t < 15.45) {
+      const e = eio(prog(t, 15.0, 15.45));
+      return { x: lerp(S.x, start.x, e), y: lerp(S.y, start.y, e) - Math.sin(Math.PI * e) * 200, r: lerp(DR, r, e), sx: 1, sy: 1 };
+    }
+    if (t < 16.3) {
+      const s = sq(t, 15.45);
+      return { x: lerp(start.x, rest.x, prog(t, 15.45, 16.3)), y: CY, r, sx: 1 + s, sy: 1 - s };
+    }
+    if (t < 16.9) {
+      // three lunges at a wall that isn't there
+      let x = rest.x, s = 0;
+      for (let k = 0; k < 3; k++) {
+        const b0 = 16.3 + k * 0.18, l = prog(t, b0, b0 + 0.16);
+        if (l > 0 && l < 1) x = rest.x + 26 * Math.sin(Math.PI * l);
+        s += sq(t, b0 + 0.16);
+      }
+      return { x, y: CY, r, sx: 1 - s, sy: 1 + s };
+    }
+    const p = spDot(prog(t, 17.0, 17.45));
+    return { x: lerp(rest.x, C.x, p), y: lerp(rest.y, C.y, p) - Math.sin(Math.PI * clamp(p)) * 160, r: lerp(r, DR, clamp(p)), sx: 1, sy: 1 };
+  }
+
   function dotAt(t: number): Dot {
     let x: number, y: number, r: number, sx = 1, sy = 1;
+    if (t >= PROBLEM_T0) return storyDot(t);
     if (t < 1.0) { x = knobOff.x; y = knobOff.y; r = KR; }
     else if (t < 1.6) {
       const p = spUI(prog(t, 1.0, 1.6)), v = Math.sin(Math.PI * prog(t, 1.0, 1.35));
@@ -510,11 +591,11 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
       const T = heroTittle(t), s = sq(t, 2.3), a = eio(prog(t, 2.78, 3.0));
       r = DR; x = T.x; y = T.y + r * 0.3 * a; sx = (1 + s) * (1 + 0.2 * a); sy = (1 - s) * (1 - 0.3 * a);
     } else if (t < 6.45 && !showStat) {
-      // stat off: hop straight from the hero's i to the centre
-      const S = heroTittle(3.0), e = eio(prog(t, 3.0, 6.45)), v = Math.sin(Math.PI * e);
+      // stat off: hop straight from the hero's i to the centre (story: the dot is already there)
+      const S = story ? C : heroTittle(3.0), e = eio(prog(t, 3.0, 6.45)), v = Math.sin(Math.PI * e);
       x = lerp(S.x, C.x, e); y = lerp(S.y, C.y, e) - v * 220; r = DR; sx = 1 + 0.4 * v; sy = 1 - 0.2 * v;
     } else if (t < 3.5) {
-      const S = heroTittle(3.0), L = statScene.land, e = prog(t, 3.0, 3.5), v = Math.sin(Math.PI * e);
+      const S = story ? C : heroTittle(3.0), L = statScene.land, e = prog(t, 3.0, 3.5), v = Math.sin(Math.PI * e);
       x = lerp(S.x, L.x, e); y = lerp(S.y, L.y, e) - 4 * 260 * e * (1 - e); r = DR; sy = 1 + 0.25 * v; sx = 1 - 0.15 * v;
     } else if (t < 5.5) {
       return statScene.dot(t);
@@ -572,7 +653,7 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
     if (t < 1.0) return { ...cClick, s: 1 - 0.12 * eout(prog(t, 0.85, 1.0)) };
     if (t < 1.3) return { ...cClick, s: lerp(0.88, 1, eout(prog(t, 1.0, 1.15))) };
     if (t < 1.9) { const e = ein(prog(t, 1.3, 1.9)); return { x: lerp(cClick.x, cOff.x, e), y: lerp(cClick.y, cOff.y, e), s: 1 }; }
-    if (t < 14.35 || logo) return null;
+    if (t < 14.35 || t >= PROBLEM_T0 || logo) return null;
     const e = eout(prog(t, 14.35, 14.95));
     return { x: lerp(cOff.x, endRest.x, e), y: lerp(cOff.y, endRest.y, e), s: 1 };
   }
@@ -581,7 +662,7 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
   function drawTrack(g: CanvasRenderingContext2D, t: number) {
     let s: number, col = MUTE;
     if (t < 2.0) { col = mixHex(MUTE, INK, prog(t, 1.0, 1.18)); s = 1 - einBack(prog(t, 1.55, 1.95)); }
-    else if (t >= 14.5 && !logo) s = spUI(prog(t, 14.5, 14.9));
+    else if (t >= 14.5 && t < PROBLEM_T0 && !logo) s = spUI(prog(t, 14.5, 14.9));
     else return;
     const tr = t >= 14.5 ? endTrack : track;
     shapeState(g, { x: tr.cx, y: tr.cy, w: tr.w * s, h: tr.h * s, rad: Infinity }, col);
@@ -610,6 +691,16 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
     const size = 130;
     g.save(); g.translate(x, y); g.scale(c, c);
     g.font = f(800, size); g.fillStyle = INK; g.fillText(stat, 0, 0.36 * size); g.restore();
+  }
+
+  // Story: a short caption that says what the number means.
+  function drawCaption(g: CanvasRenderingContext2D, t: number, x: number, y: number, align: CanvasTextAlign, t0: number) {
+    if (!story || !proofLabel) return;
+    const a = eout(prog(t, t0, t0 + 0.4)) * (1 - prog(t, 6.0, 6.3));
+    if (a <= 0.003) return;
+    const size = Math.min(legible(40), (legible(40) * 900) / textW(proofLabel, legible(40), 500));
+    g.save(); g.globalAlpha = 0.75 * a; g.textAlign = align; g.font = f(500, size); g.fillStyle = INK;
+    g.fillText(proofLabel, x, y + (1 - a) * 16); g.restore();
   }
 
   function drawStat(g: CanvasRenderingContext2D, t: number) {
@@ -647,6 +738,7 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
       }
     }
     drawCallout(g, t, barX(4) + BW / 2 + 50, BASE - (negative ? BREF : H5) + 40);
+    drawCaption(g, t, barX(4) + BW / 2 + 54, BASE - (negative ? BREF : H5) + 40 + 105, "left", 5.1);
   }
 
   function drawCounter(g: CanvasRenderingContext2D, t: number) {
@@ -666,6 +758,7 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
     const size = Math.min(300, (300 * 1300) / textW(fmtStat(1), 300, 800));
     g.save(); g.globalAlpha = 1 - q; g.translate(CX, TY - 110 + 60 * q); g.scale(pop, pop);
     g.font = f(800, size); g.fillStyle = INK; g.textAlign = "center"; g.fillText(fmtStat(k), 0, 0); g.restore();
+    drawCaption(g, t, CX, TY + 125, "center", 3.8);
   }
 
   function drawProgressRing(g: CanvasRenderingContext2D, t: number) {
@@ -684,6 +777,7 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
       g.font = f(800, size); g.fillStyle = INK; g.textAlign = "center"; g.fillText(fmtStat(k), 0, 0.36 * size);
     }
     g.restore();
+    drawCaption(g, t, CX, RGY + RGR + 95, "center", 3.8);
   }
 
   function drawSpring(g: CanvasRenderingContext2D, t: number) {
@@ -714,6 +808,7 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
     }
     g.restore();
     drawCallout(g, t, E.x + 70, E.y);
+    drawCaption(g, t, E.x + 74, E.y + 105, "left", 5.1);
   }
 
   // Polar outlines for the shape scene: radius as a function of angle, so any two can be blended.
@@ -753,8 +848,18 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
       polarShape(g, R, t * 0.6, blend(wob(0.12, 0.06), (th) => 1.25 * wob(0.05, 0.14)(th)));
     } else {
       const cf = lerp(0.5, 0.2, k1); // circle -> rounded square -> pill
-      const w = lerp(280, 700, st) * s1 * k, h = lerp(280, 220, st) * s1 * k;
+      const w = lerp(280, story ? badgeW : 700, st) * s1 * k, h = lerp(280, 220, st) * s1 * k;
       shapeState(g, { x: C.x, y: C.y, w, h, rad: Math.min(w, h) * lerp(cf, 0.5, clamp(st)), rot: Math.PI * spin }, INK);
+      if (story && (solution || lead)) {
+        // the pill becomes the solution's badge; the lead-in sits above it on the accent field
+        const a = eout(prog(t, 7.95, 8.2)) * (1 - prog(t, 8.5, 8.6));
+        if (a > 0.003) {
+          g.save(); g.globalAlpha = a; g.textAlign = "center";
+          if (solution) { g.font = f(800, BS * k); g.fillStyle = PAPER; g.fillText(solution, C.x, C.y + 0.36 * BS * k + (1 - a) * 20); }
+          if (lead) { g.font = f(500, legible(44) * k); g.fillStyle = INK; g.fillText(lead, C.x, C.y - h / 2 - 40 * k); }
+          g.restore();
+        }
+      }
     }
   }
 
@@ -968,17 +1073,44 @@ export function createFilm(cfg: MotionConfig, width: number, height: number): Fi
     g.restore();
   }
 
+  // Story problem: typed by the dot, dimmed and struck through while it stalls, then it crumbles.
+  function drawProblem(g: CanvasRenderingContext2D, t: number) {
+    if (!probText || t < 15.4 || t >= PROBLEM_T1) return;
+    const dim = 1 - 0.45 * eio(prog(t, 16.35, 16.75));
+    probL.forEach((l, j) => {
+      const t0 = typeAt(l.x + l.u * PS), e = spText(prog(t, t0, t0 + 0.25));
+      const q = ein(prog(t, 16.9 + j * 0.012, 17.25 + j * 0.012));
+      drawGlyph(g, l.ch, { x: l.x, y: l.y + (1 - e) * 24 + 160 * q, size: PS, rot: 0.4 * q * (j % 2 ? 1 : -1), a: clamp(e * 2) * dim * (1 - q) }, l.u, 800, INK);
+    });
+    const sp1 = eio(prog(t, 16.5, 16.85)), fade = 1 - prog(t, 16.9, 17.1);
+    if (sp1 > 0 && fade > 0) {
+      g.save(); g.strokeStyle = INK; g.lineWidth = 6; g.lineCap = "round"; g.globalAlpha = fade;
+      line(g, probX0 - 10, CY, lerp(probX0 - 10, probX1 + 10, sp1), CY); g.restore();
+    }
+  }
+
+  function bgAt(t: number) {
+    if (t >= PROBLEM_T1) return INK; // bridge: the paper wipe grows over the ink from the reveal
+    if (t >= PROBLEM_T0) return PAPER;
+    if (story && !showCard && t >= 10.75 && t < 14.65) return PAPER; // no end card: stay on paper into the return
+    if (story && t >= 10.75 && t < 12.6) return PAPER; // proof was on paper; the reveal flips to ink
+    return t >= 7.0 && t < 14.65 ? INK : PAPER;
+  }
+
   // Pure function of t: no state carried between frames.
   function draw(g: CanvasRenderingContext2D, t: number) {
     g.textAlign = "left"; g.textBaseline = "alphabetic";
-    g.fillStyle = t >= 7.0 && t < 14.65 ? INK : PAPER;
+    g.fillStyle = bgAt(t);
     g.fillRect(V.x0, V.y0, V.x1 - V.x0, V.y1 - V.y0);
     if (showCard) drawReveal(g, t);
     drawEcho(g, t);
     drawWipe(g, t);
     drawTrack(g, t);
-    if (t < 3.7 || (t >= 14.4 && !logo)) drawLabel(g, t);
-    if (logo && t >= 14.45) drawLogo(g, t);
+    if (t >= PROBLEM_T1) circle(g, C.x, C.y, (halfDiag + 60) * ein(prog(t, PROBLEM_T1, PROBLEM_T1 + 0.22)), PAPER);
+    if (story && t >= PROBLEM_T0 && t < 15.6) drawLabel(g, 3.0 + (t - PROBLEM_T0)); // hero word drops out as the problem begins
+    else if ((story ? t < 3.0 : t < 3.7) || (t >= 14.4 && t < PROBLEM_T0 && !logo)) drawLabel(g, t);
+    drawProblem(g, t);
+    if (logo && t >= 14.45 && t < PROBLEM_T0) drawLogo(g, t);
     if (showStat && t >= 3.0 && t < 6.5) drawStat(g, t);
     if (showWords) drawWords(g, t);
     if (showCard) drawCard(g, t);
