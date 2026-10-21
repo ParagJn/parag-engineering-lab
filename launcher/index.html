@@ -51,7 +51,13 @@
            transition: transform .12s, border-color .12s; }
   a.card:hover { transform: translateY(-2px); border-color: var(--accent); }
   a.card.disabled { opacity: .55; }
-  .top { display: flex; align-items: center; gap: 10px; }
+  .top { display: flex; align-items: center; gap: 12px; }
+  /* Icons sit on a white tile so dark logos stay visible in dark mode. */
+  .icon { width: 40px; height: 40px; flex: none; border-radius: 10px; background: #fff;
+          border: 1px solid var(--border); display: grid; place-items: center; overflow: hidden; }
+  .icon img { width: 26px; height: 26px; object-fit: contain; display: block; }
+  .icon.fallback { background: var(--accent); border-color: transparent; color: #fff; font-weight: 700; font-size: 17px; }
+  .top .dot { margin-left: auto; }
   .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--off); flex: none; }
   .dot.up { background: var(--up); box-shadow: 0 0 0 3px color-mix(in srgb, var(--up) 25%, transparent); }
   .dot.down { background: var(--down); }
@@ -108,6 +114,19 @@ function el(tag, cls, text) {
   return e;
 }
 
+// Card icon from config.json's "icon" path. Falls back to the app's first letter if it is
+// missing or fails to load, so a bad path never leaves a broken-image box.
+function makeIcon(a) {
+  const tile = el("span", "icon");
+  const letter = () => { tile.classList.add("fallback"); tile.replaceChildren(document.createTextNode((a.name || "?")[0].toUpperCase())); };
+  if (!a.icon) { letter(); return tile; }
+  const img = document.createElement("img");
+  img.src = a.icon; img.alt = ""; img.loading = "lazy";
+  img.addEventListener("error", letter);
+  tile.append(img);
+  return tile;
+}
+
 function render(filter = "") {
   const content = document.getElementById("content");
   content.replaceChildren();
@@ -130,7 +149,7 @@ function render(filter = "") {
       card.href = a.url; card.target = "_blank"; card.rel = "noopener";
       card.dataset.url = a.url;
       const top = el("div", "top");
-      top.append(el("span", "dot"), el("span", "name", a.name));
+      top.append(makeIcon(a), el("span", "name", a.name), el("span", "dot"));
       const meta = el("div", "meta");
       meta.append(el("span", null, a.url.replace(/^https?:\/\//, "")),
                   el("span", null, a.enabled === false ? "not started by start.sh" : ""));

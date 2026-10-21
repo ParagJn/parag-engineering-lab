@@ -18,12 +18,14 @@ Convert Markdown (`.md`) files into professionally formatted Word (`.docx`) docu
 ## Getting started
 
 ```bash
-./start.sh              # installs/updates dependencies, then opens http://localhost:5173
+./start.sh              # installs/updates dependencies, then opens http://localhost:5230
 ./start.sh --latest     # also upgrades dependencies to new major versions
 ./start.sh --no-update  # skip updating (offline)
 ```
 
 Requires Node.js 20+.
+
+The app runs on port **5230**, so it can run alongside the other lab apps. When started from the Lab Launcher (root `./start.sh`), it skips the browser auto-open and the dependency update.
 
 ## Development
 

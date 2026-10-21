@@ -7,6 +7,7 @@
       "name": "Data Story Studio",
       "subtitle": "Upload CSV/Excel and get an AI-built, animated dashboard that tells the story in your data",
       "group": "Analytics",
+      "icon": "public/icons/chart-no-axes-combined.svg",
       "dir": "Data-Story-Studio",
       "start": "./start.sh",
       "url": "http://localhost:5190",
@@ -20,6 +21,7 @@
       "name": "Hero Motion Studio",
       "subtitle": "Turn a few lines of text into an animated slide hero, exported as PNG, MP4, GIF or PPTX",
       "group": "Presentations",
+      "icon": "public/icons/clapperboard.svg",
       "dir": "hero-motion-studio",
       "start": "./start.sh",
       "url": "http://localhost:5180",
@@ -33,6 +35,7 @@
       "name": "My Own AI Assistant",
       "subtitle": "Personal chat assistant on IBM ICA for technical work and document analysis",
       "group": "AI Tools",
+      "icon": "public/icons/message-square-text.svg",
       "dir": "My-Own-AI-Assistant",
       "start": "./start.sh",
       "url": "http://localhost:5173",
@@ -46,6 +49,7 @@
       "name": "Project Schedule Tool",
       "subtitle": "AI-assisted project schedule builder with grid, Excel import/export and document generation",
       "group": "Project Management",
+      "icon": "public/icons/calendar-range.svg",
       "dir": "Project-Schedule-Tool",
       "start": "./start.sh",
       "url": "http://localhost:5200",
@@ -59,6 +63,7 @@
       "name": "Daily Articles Pages",
       "subtitle": "Morning Edition: generates a daily tech-news magazine as self-contained HTML",
       "group": "AI Tools",
+      "icon": "public/icons/newspaper.svg",
       "dir": "Daily-Articles-Pages",
       "start": "./start.sh",
       "url": "http://localhost:5210",
@@ -72,12 +77,40 @@
       "name": "Strategy Analyzer",
       "subtitle": "Analyzes business strategies and provides AI-driven insights",
       "group": "AI Tools",
+      "icon": "public/icons/target.svg",
       "dir": "Strategy-Analyzer",
       "start": "./start.sh",
       "url": "http://localhost:5220",
       "ports": [
         8050,
         5220
+      ],
+      "enabled": true
+    },
+    {
+      "name": "MD to DOCX",
+      "subtitle": "Converts Markdown files into formatted Word documents, including Mermaid diagrams",
+      "group": "Document Tools",
+      "icon": "public/icons/file-output.svg",
+      "dir": "md-to-docx",
+      "start": "./start.sh",
+      "url": "http://localhost:5230",
+      "ports": [
+        5230
+      ],
+      "enabled": true
+    },
+    {
+      "name": "File Compare",
+      "subtitle": "Compare two PDFs, Word documents or images and get a section-by-section AI report",
+      "group": "Document Tools",
+      "icon": "public/icons/git-compare-arrows.svg",
+      "dir": "File-Compare",
+      "start": "./start.sh",
+      "url": "http://localhost:5240",
+      "ports": [
+        8060,
+        5240
       ],
       "enabled": true
     }

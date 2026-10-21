@@ -16,7 +16,7 @@ success() { echo -e "${GREEN}[✓]${NC} $1"; }
 warn()    { echo -e "${YELLOW}[!]${NC} $1"; }
 fail()    { echo -e "${RED}[✗]${NC} $1"; exit 1; }
 
-PORT=5173
+PORT=5230
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODE="update"
 case "$1" in
@@ -25,6 +25,15 @@ case "$1" in
   "")          ;;
   *)           fail "Unknown option: $1 (use --latest or --no-update)" ;;
 esac
+
+# Started by the Lab Launcher (root start.sh sets LAB_LAUNCHER): don't pop a browser tab,
+# and skip the slow dependency update. `npm install` below still runs, so a fresh checkout works.
+if [ -n "$LAB_LAUNCHER" ]; then
+  [ "$MODE" = "update" ] && MODE="skip"
+  OPEN_FLAG=""
+else
+  OPEN_FLAG="--open"
+fi
 
 cd "$PROJECT_ROOT"
 echo -e "${BLUE}════════════════════════════════════════${NC}"
@@ -64,12 +73,13 @@ if [ "$MODE" != "skip" ]; then
 fi
 
 # --- Port -------------------------------------------------------------------
-if lsof -ti:"$PORT" >/dev/null 2>&1; then
+#     (LISTEN only, so a browser tab connected to the port is never killed)
+if lsof -tiTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; then
   warn "Port $PORT is in use – stopping the existing process"
-  lsof -ti:"$PORT" | xargs kill -9 2>/dev/null || true
+  lsof -tiTCP:"$PORT" -sTCP:LISTEN | xargs kill -9 2>/dev/null || true
   sleep 1
 fi
 
 # --- Start ------------------------------------------------------------------
 success "Starting app at http://localhost:$PORT (Ctrl+C to stop)"
-exec npm run dev -- --open
+exec npm run dev -- $OPEN_FLAG

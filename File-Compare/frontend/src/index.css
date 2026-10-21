@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color: #111827;
+  background: #f6f7f9;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button, textarea, input {
+  font: inherit;
+}
+
+.markdown h1 { font-size: 1.45rem; font-weight: 750; margin: 0.4rem 0 0.8rem; }
+.markdown h2 { font-size: 1.1rem; font-weight: 750; margin: 1.4rem 0 0.5rem; padding-bottom: 0.3rem; border-bottom: 1px solid #e2e8f0; }
+.markdown h3 { font-size: 0.95rem; font-weight: 750; margin: 1rem 0 0.35rem; }
+.markdown p { margin: 0.5rem 0; }
+.markdown ul { list-style: disc; padding-left: 1.2rem; margin: 0.5rem 0; }
+.markdown ol { list-style: decimal; padding-left: 1.3rem; margin: 0.5rem 0; }
+.markdown li { margin: 0.28rem 0; }
+.markdown strong { color: #0f172a; }
+.markdown code { background: #f1f5f9; border-radius: 4px; padding: 0.1rem 0.3rem; font-size: 0.85em; }
+.markdown blockquote { border-left: 3px solid #cbd5e1; padding-left: 0.8rem; color: #475569; margin: 0.6rem 0; }
+.markdown hr { border: 0; border-top: 1px solid #e2e8f0; margin: 1.2rem 0; }
+
+/* Tables scroll sideways on their own so a wide report never breaks the page layout. */
+.markdown .table-wrap { overflow-x: auto; margin: 0.8rem 0; border: 1px solid #e2e8f0; border-radius: 8px; }
+.markdown table { border-collapse: collapse; width: 100%; font-size: 0.82rem; }
+.markdown th { background: #f8fafc; text-align: left; font-weight: 700; color: #0f172a; white-space: nowrap; }
+.markdown th, .markdown td { padding: 0.5rem 0.7rem; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+.markdown tr:last-child td { border-bottom: 0; }

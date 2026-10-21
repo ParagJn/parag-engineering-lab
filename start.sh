@@ -32,6 +32,9 @@ RULE="────────────────────────�
 # Each service gets its own process group (job control), so we can signal the whole tree.
 set -m
 
+# Lets an app's own start.sh know it was started by the launcher (e.g. skip opening a browser tab).
+export LAB_LAUNCHER=1
+
 PIDS=()                 # app process groups (the dashboard is tracked separately)
 NAMES=()
 APP_PORTS=()
@@ -116,7 +119,7 @@ stop_apps() {
         done
         [ "$pending" = "0" ] && break
         [ "$FORCE" = "1" ] && break
-        [ "$tick" -lt "$GRACE_TICKS" ] && sleep 0.2
+        [ "$tick" -lt "$GRACE_TICKS" ] && sleep 0.6
     done
 
     # Force kill whatever is still running.

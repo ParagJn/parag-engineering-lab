@@ -5,7 +5,7 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  server: { port: 5173, strictPort: true },
+  server: { port: 5230, strictPort: true },
   // docx + markdown-it make one large chunk; fine for a local tool (Mermaid is split out lazily).
   build: { chunkSizeWarningLimit: 2000 },
   test: { environment: "node" },
