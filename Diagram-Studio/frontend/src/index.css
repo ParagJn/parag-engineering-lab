@@ -1,0 +1,126 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --paper: #faf7f2;
+  --panel: #f2eee6;
+  --ink: #1c1a17;
+  --muted: #6f695f;
+  --rule: #ddd6ca;
+  --line: #a39b8d;
+  --accent: #b4532f;
+  --accent-soft: #f6e6dd;
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --paper: #15130f;
+  --panel: #1d1b16;
+  --ink: #f1ede4;
+  --muted: #a29b8e;
+  --rule: #37332c;
+  --line: #6d675c;
+  --accent: #e0795a;
+  --accent-soft: #3a231b;
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: Geist, ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+.kicker {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.hairline {
+  border: 1px solid var(--rule);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.btn:hover:not(:disabled) {
+  border-color: var(--line);
+  background: var(--panel);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn-primary {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--ink);
+  border-color: var(--ink);
+  opacity: 0.88;
+}
+
+.field {
+  width: 100%;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 14px;
+  padding: 10px 12px;
+  outline: none;
+}
+.field:focus {
+  border-color: var(--accent);
+}
+
+.viewport {
+  outline: none;
+}
+.viewport:focus-visible {
+  border-color: var(--accent) !important;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation-duration: 3s;
+  }
+}

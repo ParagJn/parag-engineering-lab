@@ -874,15 +874,15 @@
               name: "File Compare",
               type: "project",
               color: "#3b82f6",
-              desc: "Streamlit workbook comparison tool, converting page text to markdown, and running OCR on layout charts via Azure OpenAI Vision.",
-              tech: ["Streamlit", "Azure OpenAI", "pypdf", "python-docx"],
-              benefits: ["Section-by-section diff reports", "Diagram visual text conversions", "Fast markdown diff exports"],
-              orchestration: "OCR vision image text extraction + comparative evaluations",
+              desc: "Compares two PDF, Word or image files section by section: a local heuristic diff plus a Claude report via IBM ICA, an aligned side-by-side view, and saved comparisons.",
+              tech: ["FastAPI", "React", "Tailwind", "SQLite", "IBM ICA"],
+              benefits: ["Section-by-section diff reports", "Aligned side-by-side view with word-level highlights", "Saved, searchable comparison history"],
+              orchestration: "Local heuristic diff + Claude report via IBM ICA, vision model for images",
               dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/File-Compare",
               children: [
-                { name: "Streamlit / Azure OpenAI / pypdf", type: "tech", color: "#10b981" },
-                { name: "Document comparisons & image text extracts", type: "benefit", color: "#8b5cf6" },
-                { name: "Comparative vision check OCR parsing", type: "orchestration", color: "#0ea5e9" }
+                { name: "FastAPI / React / SQLite / IBM ICA", type: "tech", color: "#10b981" },
+                { name: "Document comparisons & saved history", type: "benefit", color: "#8b5cf6" },
+                { name: "Heuristic diff + LLM comparison report", type: "orchestration", color: "#0ea5e9" }
               ]
             },
             {
@@ -943,6 +943,21 @@
                 { name: "FastAPI / DuckDB / React / ECharts", type: "tech", color: "#10b981" },
                 { name: "Animated story dashboards & executive summary", type: "benefit", color: "#8b5cf6" },
                 { name: "Scored insights + number-guarded LLM narrative", type: "orchestration", color: "#0ea5e9" }
+              ]
+            },
+            {
+              name: "Diagram Studio",
+              type: "project",
+              color: "#3b82f6",
+              desc: "Turns a Markdown, text or Word document into the diagrams it contains, drawn in an editorial style, with zoom and pan, saved history, SVG/PNG export and animated SVG.",
+              tech: ["FastAPI", "React", "ELK", "SQLite", "IBM ICA"],
+              benefits: ["Finds every diagram a document supports", "Clean, consistent editorial styling", "Static or animated SVG export"],
+              orchestration: "Claude plans and specifies diagrams as validated JSON + deterministic ELK layout and SVG renderer",
+              dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/Diagram-Studio",
+              children: [
+                { name: "FastAPI / React / ELK / SQLite", type: "tech", color: "#10b981" },
+                { name: "Document-to-diagram generation & animated SVG", type: "benefit", color: "#8b5cf6" },
+                { name: "LLM spec (no coordinates) + deterministic layout", type: "orchestration", color: "#0ea5e9" }
               ]
             }
           ]

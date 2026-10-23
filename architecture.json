@@ -46,7 +46,7 @@
       "id": "azure",
       "label": "Azure OpenAI",
       "type": "integration",
-      "description": "Azure-hosted GPT-5.4 and GPT-5.3 Codex. Used by Strategy-Analyzer and File-Compare.",
+      "description": "Azure-hosted GPT-5.4 and GPT-5.3 Codex. Used by Strategy-Analyzer and Document Processor.",
       "tech": [
         "GPT-5.4",
         "GPT-5.3 Codex",
@@ -57,7 +57,7 @@
       "id": "ibm",
       "label": "IBM ICA",
       "type": "ai",
-      "description": "IBM watsonx Code Assistant gateway: Claude Sonnet 5.5 and Gemini 3.7 Flash hosted on IBM infrastructure. Primary model provider for Project Schedule Tool, Daily Articles Pages, Skills Generator, My Own AI Assistant, Hero Motion Studio and Data Story Studio.",
+      "description": "IBM watsonx Code Assistant gateway: Claude Sonnet 5.5 and Gemini 3.7 Flash hosted on IBM infrastructure. Primary model provider for Project Schedule Tool, Daily Articles Pages, Skills Generator, My Own AI Assistant, Hero Motion Studio, Data Story Studio, File Compare and Diagram Studio.",
       "tech": [
         "Claude Sonnet 5.5",
         "Gemini 3.7 Flash",
@@ -193,12 +193,15 @@
       "id": "filecomp",
       "label": "File Compare",
       "type": "project",
-      "description": "Document comparison (PDF/DOCX/images). Heuristic diffing + Azure AI section-by-section reports. Image OCR via vision API.",
+      "description": "Document comparison (PDF/DOCX/images). Heuristic line and section diffing, then a Claude section-by-section report via IBM ICA. Aligned side-by-side view, comparisons saved to SQLite, image reading via the vision model.",
       "tech": [
-        "Streamlit",
-        "Azure OpenAI",
+        "FastAPI",
+        "React",
+        "Tailwind",
+        "SQLite",
         "pypdf",
-        "python-docx"
+        "python-docx",
+        "IBM ICA Client"
       ]
     },
     {
@@ -307,6 +310,20 @@
         "Playwright",
         "IBM ICA Client"
       ]
+    },
+    {
+      "id": "diagramstudio",
+      "label": "Diagram Studio",
+      "type": "project",
+      "description": "Markdown, text or Word documents to editorial-style diagrams. The model plans which diagrams the document supports and returns validated specs (architecture, flowchart, state, sequence, timeline, quadrant); the browser lays them out with ELK. Zoom and pan, saved history, SVG/PNG export and animated SVG.",
+      "tech": [
+        "FastAPI",
+        "React",
+        "ELK",
+        "SQLite",
+        "SVG",
+        "IBM ICA Client"
+      ]
     }
   ],
   "edges": [
@@ -392,8 +409,8 @@
     },
     {
       "from": "filecomp",
-      "to": "azure",
-      "label": "compare+vision"
+      "to": "ibm",
+      "label": "report+vision"
     },
     {
       "from": "strategy",
@@ -439,6 +456,11 @@
       "from": "datastory",
       "to": "ibm",
       "label": "narrator"
+    },
+    {
+      "from": "diagramstudio",
+      "to": "ibm",
+      "label": "plans+specs"
     }
   ],
   "flows": [
@@ -795,6 +817,34 @@
         {
           "node": "datastory",
           "action": "Export: self-contained HTML, PDF via Playwright, and an Executive Summary as Markdown or PDF"
+        }
+      ]
+    },
+    {
+      "id": "f14",
+      "name": "Document to Diagrams",
+      "project": "Diagram Studio",
+      "description": "Markdown/text/Word → plan which diagrams exist → validated JSON specs (IBM ICA) → ELK layout → editorial SVG with history and export",
+      "steps": [
+        {
+          "node": "diagramstudio",
+          "action": "A Markdown, text or Word file (or pasted text) is read and saved as a project in SQLite"
+        },
+        {
+          "node": "ibm",
+          "action": "Claude plans which diagrams the document supports (architecture, flowchart, state, sequence, timeline, quadrant)"
+        },
+        {
+          "node": "ibm",
+          "action": "Claude draws each diagram as a small JSON spec, one call per diagram, three at a time"
+        },
+        {
+          "node": "diagramstudio",
+          "action": "Backend validates each spec: dangling edges dropped, ids made unique, highlighted nodes capped at two"
+        },
+        {
+          "node": "diagramstudio",
+          "action": "Browser lays graphs out with ELK and renders SVG; zoom, pan, redraw, and static or animated SVG and PNG export"
         }
       ]
     }

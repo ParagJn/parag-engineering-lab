@@ -49,6 +49,7 @@ graph TD
         voltstream[VoltStream Energy Dashboard]
         file_comp[File Compare]
         strat_analyzer[Strategy Analyzer]
+        diagram[Diagram Studio]
     end
 
     subgraph Tier 5: Developer Utilities
@@ -79,12 +80,13 @@ graph TD
     sap --> claude
     sap --> gpt
     
-    file_comp --> azure
     doc_proc --> azure
     strat_analyzer --> azure
     skills --> azure
+    file_comp --> claude
     hero --> claude
     datastory --> claude
+    diagram --> claude
     
     azure --> gpt
 ```
@@ -199,8 +201,8 @@ Below is a detailed breakdown of each project directory, detailing its business 
 #### 🔀 File Compare
 * **Directory**: [File-Compare](file:///Users/paragjain/dev-works/parag-engineering-lab/File-Compare)
 * **Business Value**: Comparison engine highlighting changes across document versions (PDFs, DOCX, or images) page-by-page or section-by-section.
-* **Tech Stack**: Streamlit, Azure OpenAI (GPT-4o Vision API), pypdf, python-docx.
-* **AI Orchestration Pattern**: **Visual OCR & Comparative Analysis**. Converts documents to structured Markdown (running OCR on images via GPT-4o Vision) and performs section-by-section semantic diff reporting.
+* **Tech Stack**: FastAPI, React, Tailwind CSS, SQLite, pypdf, python-docx, IBM ICA (Claude).
+* **AI Orchestration Pattern**: **Heuristic Diff + LLM Report**. Documents are split into sections (by page or heading) and diffed locally at line and section level; images are read by the vision model on IBM ICA; Claude then writes the section-by-section report. An aligned side-by-side view and a saved, searchable comparison history sit on top.
 
 ---
 
@@ -239,6 +241,12 @@ Below is a detailed breakdown of each project directory, detailing its business 
 * **Business Value**: Produces animated, on-brand hero visuals for presentation slides from a short brief, exported as PNG, MP4, GIF or a ready-made PPTX slide.
 * **Tech Stack**: FastAPI, Vite, React 19, TypeScript, Canvas 2D, WebCodecs + mp4-muxer, gifenc, pptxgenjs, IBM ICA (Claude).
 * **AI Orchestration Pattern**: **LLM Copywriter + Deterministic Renderer**. Claude (via IBM ICA) writes validated JSON copy; a pure function-of-time canvas engine with closed-form springs renders the loop, and exports encode it frame by frame.
+
+#### 🧩 Diagram Studio
+* **Directory**: [Diagram-Studio](file:///Users/paragjain/dev-works/parag-engineering-lab/Diagram-Studio)
+* **Business Value**: Turns a Markdown, text or Word document into the diagrams it contains (architecture, flowchart, state, sequence, timeline, quadrant), drawn in a consistent editorial style and exportable as static or animated SVG or PNG.
+* **Tech Stack**: FastAPI, python-docx, SQLite, Vite, React, ELK (elkjs), SVG, IBM ICA (Claude).
+* **AI Orchestration Pattern**: **LLM Planner and Spec Writer + Deterministic Layout and Renderer**. Claude first plans which diagrams the document supports, then returns one small JSON spec per diagram with no coordinates; the backend validates and cleans each spec, and the browser lays it out with ELK and draws the SVG. Animation is a plan chosen from a fixed set of effects and rendered as plain CSS, never model-written code.
 
 ---
 
@@ -314,7 +322,7 @@ Several projects connect to LLMs via the **SAP AI Core** gateway.
 * **Routing**: Maps standard OpenAI, Anthropic, or Google API payloads to deployment endpoints configured in SAP AI Core resource resource groups.
 
 ### Azure OpenAI Service
-Used in `Strategy-Analyzer`, `File-Compare`, and `Document-Processor` for highly secure, low-latency enterprise model calls.
+Used in `Strategy-Analyzer` and `Document-Processor` for highly secure, low-latency enterprise model calls.
 * **Mechanism**: Deployments of GPT-4o, GPT-5.4, and GPT-5.3 Codex models.
 * **Use Cases**:
   - Image OCR and analysis (GPT-4o Vision).
@@ -325,7 +333,7 @@ Used in `Strategy-Analyzer`, `File-Compare`, and `Document-Processor` for highly
 
 ## 5. Cross-Cutting Architectural Patterns
 
-Across the 17 projects, several repeating structural design decisions are evident:
+Across the 18 projects, several repeating structural design decisions are evident:
 
 1. **Clean Architecture (Separation of Concerns)**:
    Backend folders consistently separate route definitions (`routes/`), request/response data shapes (`models/` using Pydantic), and database and LLM interaction layers (`services/` and `repositories/`).

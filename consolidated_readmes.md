@@ -1,6 +1,6 @@
 # Consolidated Project Documentation — Parag Engineering Lab
 
-This document aggregates the specifications, features, technology stacks, and orchestration frameworks for all 17 AI-powered applications and utility tools in this repository.
+This document aggregates the specifications, features, technology stacks, and orchestration frameworks for all 18 AI-powered applications and utility tools in this repository.
 
 ---
 
@@ -22,6 +22,7 @@ This document aggregates the specifications, features, technology stacks, and or
 15. [Document Processor for Vector Databases](#15-document-processor-for-vector-databases)
 16. [Hero Motion Studio](#16-hero-motion-studio)
 17. [Data Story Studio](#17-data-story-studio)
+18. [Diagram Studio](#18-diagram-studio)
 
 ---
 
@@ -154,10 +155,12 @@ This document aggregates the specifications, features, technology stacks, and or
 
 ## 12. File Compare
 * **Directory**: [File-Compare](file:///Users/paragjain/dev-works/parag-engineering-lab/File-Compare)
-* **Overview & Value**: Multi-format document diff comparison tool highlighting changes in text, layout, or diagrams.
-* **Tech Stack**: Streamlit, Azure OpenAI Vision (GPT-4o), pypdf, python-docx.
-* **Orchestration Pattern**: **Comparative Vision Analysis**. Converts uploads to structured Markdown (running OCR on images via GPT-4o Vision) and runs semantic version comparison reviews.
-* **Business Benefit**: Simplifies version control reviews for PDF/DOCX agreements and detects differences in visual diagrams.
+* **Overview & Value**: Compares two PDF, Word or image files section by section, with an aligned side-by-side view and a saved, searchable history of past comparisons.
+* **Tech Stack**:
+  - **Frontend**: Vite, React, Tailwind CSS.
+  - **Backend**: FastAPI, SQLite, pypdf, python-docx, Pillow, IBM ICA client (Claude).
+* **Orchestration Pattern**: **Heuristic Diff + LLM Report**. Documents are split into sections (by page or heading) and diffed locally at line and section level; images are first converted to Markdown by the vision model; Claude then writes the detailed comparison report.
+* **Business Benefit**: Simplifies version reviews of agreements and reports, and shows exactly what changed, down to the word.
 
 ---
 
@@ -211,3 +214,14 @@ This document aggregates the specifications, features, technology stacks, and or
   - **Backend**: FastAPI, DuckDB, pandas, openpyxl, Playwright (PDF), IBM ICA client (Claude).
 * **Orchestration Pattern**: **Deterministic Insight Engine + Number-Guarded LLM Narrator**. Readiness checks and ~25 scored insight candidates are computed in DuckDB; Claude only orders panels and writes prose from a pre-formatted fact sheet, and any sentence with an unsupported figure is dropped. Q&A SQL is validated as a single read-only SELECT and sandboxed.
 * **Business Benefit**: Data to boardroom story in minutes, with figures you can trust and drill into, exportable as interactive HTML, PDF or an executive summary.
+
+---
+
+## 18. Diagram Studio
+* **Directory**: [Diagram-Studio](file:///Users/paragjain/dev-works/parag-engineering-lab/Diagram-Studio)
+* **Overview & Value**: Upload a Markdown, text or Word file (or paste text) and get back the diagrams it contains: architecture, flowchart, state, sequence, timeline and quadrant, drawn in a consistent editorial style. Includes zoom and pan, a saved history, redraw with an instruction, and static or animated SVG and PNG export.
+* **Tech Stack**:
+  - **Frontend**: Vite, React, Tailwind CSS, ELK (elkjs), SVG.
+  - **Backend**: FastAPI, python-docx, SQLite, IBM ICA client (Claude).
+* **Orchestration Pattern**: **LLM Planner and Spec Writer + Deterministic Layout and Renderer**. One model call plans which diagrams the document supports; a call per diagram returns a small JSON spec with no coordinates. The backend validates and cleans each spec (dropping dangling edges, deduplicating ids, capping highlighted nodes), and the browser lays it out with ELK and draws the SVG. Animation is chosen from a fixed set of effects and rendered as plain CSS, never as model-written code.
+* **Business Benefit**: Turns design docs and READMEs into presentation-ready diagrams in minutes, with a consistent look and nothing invented beyond what the document says.

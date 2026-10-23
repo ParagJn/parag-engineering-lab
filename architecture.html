@@ -1058,11 +1058,11 @@
       { id: "gemini", label: "Google Gemini", type: "ai", color: "#7c5cd8", desc: "Gemini 2.0 Flash & 2.5 Pro: handles data extraction, RAG summarization, content calendar expansion, and lineage analysis.", tech: "Gemini 2.0 Flash · 2.5 Pro", dir: "https://github.com/ParagJn/parag-engineering-lab", x: 434, y: 70 },
       { id: "claude", label: "Anthropic Claude", type: "ai", color: "#7c5cd8", desc: "Claude 3.5 Sonnet & 4.7 Sonnet: executes procurement negotiations, article score loops, and LangGraph DB queries.", tech: "Claude Sonnet · Claude Sonnet", dir: "https://github.com/ParagJn/parag-engineering-lab", x: 626, y: 70 },
       { id: "openai", label: "OpenAI GPT", type: "ai", color: "#7c5cd8", desc: "GPT-4 & GPT-5.4: powers core interview question banks and multi-agent report synthesizers.", tech: "GPT-4 · GPT-5.4", dir: "https://github.com/ParagJn/parag-engineering-lab", x: 818, y: 70 },
-      { id: "ibm_ica", label: "IBM ICA", type: "ai", color: "#7c5cd8", desc: "IBM watsonx Code Assistant gateway: Claude Sonnet 5.5 and Gemini 3.7 Flash hosted on IBM infrastructure. Primary model provider for Project Schedule, Daily Articles, Skills Generator, My Own AI Assistant and Hero Motion Studio.", tech: "Claude Sonnet 5.5 · Gemini 3.7 Flash · watsonx", dir: "https://github.com/ParagJn/parag-engineering-lab", x: 1010, y: 70 },
+      { id: "ibm_ica", label: "IBM ICA", type: "ai", color: "#7c5cd8", desc: "IBM watsonx Code Assistant gateway: Claude Sonnet 5.5 and Gemini 3.7 Flash hosted on IBM infrastructure. Primary model provider for Project Schedule, Daily Articles, Skills Generator, My Own AI Assistant, Hero Motion Studio, Data Story Studio, File Compare and Diagram Studio.", tech: "Claude Sonnet 5.5 · Gemini 3.7 Flash · watsonx", dir: "https://github.com/ParagJn/parag-engineering-lab", x: 1010, y: 70 },
       
       // ROW 2: Integrations
       { id: "sap_ai", label: "SAP AI Core", type: "integration", color: "#0ea5e9", desc: "Enterprise AI gateway providing isolated tenant routing, OAuth 2.0 credentials handshake, and model endpoint token caching.", tech: "OAuth 2.0 · httpx · Token Cache", dir: "https://github.com/ParagJn/parag-engineering-lab", x: 626, y: 190 },
-      { id: "azure_openai", label: "Azure OpenAI", type: "integration", color: "#0ea5e9", desc: "Azure instances of GPT-4o and GPT-5.3 models, supporting vision-based document OCR comparison and report synthesis.", tech: "Vision API · gpt-4o · gpt-5.3", dir: "https://github.com/ParagJn/parag-engineering-lab", x: 818, y: 190 },
+      { id: "azure_openai", label: "Azure OpenAI", type: "integration", color: "#0ea5e9", desc: "Azure instances of GPT-4o and GPT-5.3 models, supporting vision-based image enrichment for document chunking and multi-agent report synthesis.", tech: "Vision API · gpt-4o · gpt-5.3", dir: "https://github.com/ParagJn/parag-engineering-lab", x: 818, y: 190 },
       
       // ROW 3: Core Apps
       { id: "agentic_procure", label: "Agentic Procurement", type: "project", color: "#3b82f6", desc: "Interactive buyer/supplier simulator. Runs autonomous loops between MegaMart (Gemini) and FreshFizz (Claude) with HITL controls.", tech: "FastAPI · React 19 · Pydantic", dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/Agentic-Procurement", x: 50, y: 310 },
@@ -1077,7 +1077,7 @@
       { id: "chat_db", label: "Chat With Database", type: "project", color: "#3b82f6", desc: "Conversational database assistant. LangGraph ReAct agent parses database schemas and executes secure SQL queries without user SQL code.", tech: "FastAPI · React 19 · LangGraph", dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/Chat-With-Database", x: 242, y: 430 },
       { id: "daily_articles", label: "Daily Articles", type: "project", color: "#3b82f6", desc: "Daily tech newspaper aggregator. Enriches news RSS streams through Gemini and curates articles using Claude (both via IBM ICA) into a formatted magazine PDF.", tech: "FastAPI · React 19 · Playwright · IBM ICA", dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/Daily-Articles-Pages", x: 434, y: 430 },
       { id: "energy_dash", label: "Energy Dashboard", type: "project", color: "#3b82f6", desc: "Utility data pipeline manager showing interactive visual lineages and correcting missing anomalies using Gemini.", tech: "FastAPI · React 19 · Pandas", dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/Energy-Dashboard-Monitor", x: 626, y: 430 },
-      { id: "file_compare", label: "File Compare", type: "project", color: "#3b82f6", desc: "Section-by-section document diff comparison tool using Azure OpenAI Vision API to run OCR on version uploads.", tech: "Streamlit · Azure OpenAI · python-docx", dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/File-Compare", x: 818, y: 430 },
+      { id: "file_compare", label: "File Compare", type: "project", color: "#3b82f6", desc: "Section-by-section comparison of two PDF, DOCX or image files. A local heuristic diff plus a Claude report via IBM ICA, an aligned side-by-side view, and comparisons saved to SQLite. Images are read by the vision model.", tech: "FastAPI · React · Tailwind · SQLite · IBM ICA", dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/File-Compare", x: 818, y: 430 },
       { id: "strategy_analyzer", label: "Strategy Analyzer", type: "project", color: "#3b82f6", desc: "Enterprise document analyst routing decks to 4 parallel specialized agents, compiling synthesis maps using Pillow in backend.", tech: "FastAPI · React 18 · Pillow · LangChain", dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/Strategy-Analyzer", x: 1010, y: 430 },
       
       // ROW 5: Utilities
@@ -1088,6 +1088,7 @@
       { id: "myownai", label: "My Own AI Assistant", type: "project", color: "#3b82f6", desc: "Personal ChatGPT-like interface powered by IBM ICA. Supports session management, document uploads, and conversation renaming. Internal use only.", tech: "FastAPI · React 18 · IBM ICA · PyPDF2", dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/My-Own-AI-Assistant", x: 818, y: 550 },
       { id: "hero_motion", label: "Hero Motion Studio", type: "project", color: "#3b82f6", desc: "Animated presentation hero generator. One accent dot drives a looping canvas film; exports PNG, MP4 (WebCodecs), GIF and PPTX. Claude via IBM ICA writes the copy.", tech: "FastAPI · React 19 · Canvas · WebCodecs", dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/hero-motion-studio", x: 1010, y: 550 },
       { id: "data_story", label: "Data Story Studio", type: "project", color: "#3b82f6", desc: "CSV/Excel to AI-built animated story dashboards: DuckDB-scored insights narrated by Claude via IBM ICA with a number guard; Q&A, HTML/PDF export and an executive summary.", tech: "FastAPI · DuckDB · React · ECharts · IBM ICA", dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/Data-Story-Studio", x: 1010, y: 670 },
+      { id: "diagram_studio", label: "Diagram Studio", type: "project", color: "#3b82f6", desc: "Markdown, text or Word documents to editorial-style diagrams. The model plans which diagrams the document supports and returns validated specs; the browser lays them out with ELK. Zoom and pan, saved history, SVG/PNG export and animated SVG.", tech: "FastAPI · React · ELK · SQLite · IBM ICA", dir: "file:///Users/paragjain/dev-works/parag-engineering-lab/Diagram-Studio", x: 818, y: 670 },
     ];
 
     const EDGES = [
@@ -1112,14 +1113,15 @@
       { source: "chat_db", target: "claude", color: "#3b82f6" },
       { source: "daily_articles", target: "ibm_ica", color: "#3b82f6" },
       { source: "energy_dash", target: "sap_ai", color: "#3b82f6" },
-      { source: "file_compare", target: "azure_openai", color: "#3b82f6" },
+      { source: "file_compare", target: "ibm_ica", color: "#3b82f6" },
       { source: "strategy_analyzer", target: "sap_ai", color: "#3b82f6" },
       { source: "strategy_analyzer", target: "azure_openai", color: "#3b82f6" },
       { source: "skills_gen", target: "ibm_ica", color: "#10b981" },
       { source: "doc_processor", target: "azure_openai", color: "#10b981" },
       { source: "myownai", target: "ibm_ica", color: "#3b82f6" },
       { source: "hero_motion", target: "ibm_ica", color: "#3b82f6" },
-      { source: "data_story", target: "ibm_ica", color: "#3b82f6" }
+      { source: "data_story", target: "ibm_ica", color: "#3b82f6" },
+      { source: "diagram_studio", target: "ibm_ica", color: "#3b82f6" }
     ];
 
     const FLOWS = [
@@ -1366,16 +1368,17 @@
         name: "Section-by-Section Document Diff",
         project: "File Compare",
         color: "#f97316",
-        desc: "Splits two uploaded documents into sections, runs a quick heuristic diff, then calls Azure OpenAI for a detailed AI comparison report.",
-        nodes: ["file_compare", "azure_openai"],
+        desc: "Splits two uploaded documents into sections, runs a quick heuristic diff, then calls Claude via IBM ICA for a detailed AI comparison report.",
+        nodes: ["file_compare", "ibm_ica"],
         edges: [
-          { source: "file_compare", target: "azure_openai" }
+          { source: "file_compare", target: "ibm_ica" }
         ],
         steps: [
           { node: "file_compare", text: "User uploads two files (PDF, DOCX, or image) to compare." },
+          { node: "ibm_ica", text: "Images are converted to Markdown by the vision model on IBM ICA before they are compared." },
           { node: "file_compare", text: "Text is extracted and split into sections — by page (PDF), heading style (DOCX), or Markdown headings (image)." },
           { node: "file_compare", text: "A quick heuristic line- and section-level diff is computed locally." },
-          { node: "azure_openai", text: "Azure OpenAI generates a detailed section-by-section AI comparison report, downloadable as Markdown." }
+          { node: "ibm_ica", text: "Claude on IBM ICA writes the detailed section-by-section comparison report; the comparison is saved to SQLite with an aligned side-by-side view, and the report downloads as Markdown." }
         ]
       },
       {
@@ -1454,6 +1457,23 @@
           { node: "data_story", text: "About 25 candidate panels (trends, anomalies, drivers, concentration, correlations) are computed and scored by business significance." },
           { node: "ibm_ica", text: "Claude on IBM ICA orders the panels into headline, evidence and drivers, writing prose only from a pre-formatted fact sheet." },
           { node: "data_story", text: "A number guard drops unsupported figures; users explore, ask questions (sandboxed SQL) and export HTML, PDF or an Executive Summary." }
+        ]
+      },
+      {
+        id: "f20",
+        name: "Document to Diagrams",
+        project: "Diagram Studio",
+        color: "#10b981",
+        desc: "A document goes in, the diagrams it contains come out: the model plans and specifies them, the browser lays them out and draws them.",
+        nodes: ["diagram_studio", "ibm_ica"],
+        edges: [
+          { source: "diagram_studio", target: "ibm_ica" }
+        ],
+        steps: [
+          { node: "diagram_studio", text: "A Markdown, text or Word file (or pasted text) is read and the project is saved to SQLite." },
+          { node: "ibm_ica", text: "Claude on IBM ICA plans which diagrams the document supports (architecture, flowchart, state, sequence, timeline or quadrant) and draws each as a small JSON spec." },
+          { node: "diagram_studio", text: "The backend validates every spec: dangling edges are dropped, ids made unique and highlighted nodes capped." },
+          { node: "diagram_studio", text: "The browser lays graphs out with ELK and renders editorial-style SVG, with zoom, pan, history, and static or animated SVG and PNG export." }
         ]
       }
     ];

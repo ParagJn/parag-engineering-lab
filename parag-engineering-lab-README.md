@@ -18,7 +18,7 @@ A full-stack app that generates high-quality articles from user-provided source 
 
 ## File Compare
 
-A Streamlit-based document comparison tool powered by Azure OpenAI. Upload any two files (PDF, DOCX, or image) and get a detailed section-by-section AI-generated diff report. Content is extracted and segmented intelligently — PDFs by page, DOCX by heading, images by converting to markdown first — and the report can be downloaded as Markdown.
+A document comparison tool (FastAPI + React) powered by Claude via IBM ICA. Upload any two files (PDF, DOCX, or image) and get a detailed section-by-section AI-generated diff report. Content is extracted and segmented intelligently — PDFs by page, DOCX by heading, images by converting to markdown first. Includes an aligned side-by-side view with word-level highlights and a saved, searchable history of comparisons, and the report can be downloaded as Markdown.
 
 ---
 
@@ -67,6 +67,12 @@ Turns uploaded CSV or Excel files into an AI-built, animated story dashboard. A 
 ## Hero Motion Studio
 
 Turns a short text brief into an animated hero for a presentation slide. A single accent dot drives a looping motion film (toggle, hero word, stat, shape morph, kinetic words, halftone reveal and end card), with selectable stat, shape and word styles, scene switches, slide-ready sizes from full slide to banner, and frame-by-frame export to PNG, MP4, GIF or PPTX. Claude via IBM ICA writes the copy.
+
+---
+
+## Diagram Studio
+
+Turns a Markdown, text or Word document (or pasted text) into the diagrams it contains. Claude via IBM ICA first plans which diagrams the document supports, from architecture, flowchart, state, sequence, timeline and quadrant, then returns a small validated spec for each one with no coordinates. The browser lays graphs out with ELK and draws them as clean editorial-style SVG: one accent colour, hairline strokes, serif titles. Includes zoom and pan with a full-window view, a saved and searchable history, redraw with a plain-language instruction, and SVG or PNG export, plus an animated SVG built from a fixed set of CSS effects.
 
 ---
 

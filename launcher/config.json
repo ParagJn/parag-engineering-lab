@@ -113,6 +113,20 @@
         5240
       ],
       "enabled": true
+    },
+    {
+      "name": "Diagram Studio",
+      "subtitle": "Turn a Markdown, text or Word document into editorial-style diagrams, with zoom, history and animated SVG export",
+      "group": "Document Tools",
+      "icon": "public/icons/workflow.svg",
+      "dir": "Diagram-Studio",
+      "start": "./start.sh",
+      "url": "http://localhost:5250",
+      "ports": [
+        8070,
+        5250
+      ],
+      "enabled": true
     }
   ]
 }

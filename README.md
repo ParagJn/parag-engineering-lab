@@ -56,6 +56,7 @@ Every app has its own backend and frontend ports, so they can all run at the sam
 | Strategy Analyzer | 8050 | 5220 |
 | MD to DOCX (frontend only) | n/a | 5230 |
 | File Compare | 8060 | 5240 |
+| Diagram Studio | 8070 | 5250 |
 | Launcher dashboard | | 8999 |
 
 **Adding or renaming an app.** Edit [`launcher/config.json`](launcher/config.json). Each entry is a few lines:
@@ -87,7 +88,8 @@ Set `"enabled": false` to hide an app from startup. The launcher refuses to star
 | [Chat With Database](Chat-With-Database) | Data & Analytics | Ask questions about a relational DB in plain English, no SQL needed | Claude, LangGraph, PostgreSQL/MySQL, React |
 | [Daily Articles Pages](Daily-Articles-Pages) | Content | AI-curated daily tech magazine with PDF and email export | Gemini, Claude, Playwright |
 | [Energy Dashboard Monitor (VoltStream)](Energy-Dashboard-Monitor) | Data Platform | AI-native data quality, lineage, and anomaly detection for energy and utilities | AI/ML, Python, React |
-| [File Compare](File-Compare) | Document Tools | Section-by-section AI comparison of PDF, DOCX, or image files | IBM ICA, FastAPI, React, Tailwind |
+| [File Compare](File-Compare) | Document Tools | Section-by-section AI comparison of PDF, DOCX, or image files, with a side-by-side view and saved history | IBM ICA, FastAPI, React, Tailwind, SQLite |
+| [Diagram Studio](Diagram-Studio) | Document Tools | Turns a Markdown, text or Word document into the diagrams it contains, with zoom, history and animated SVG export | Claude via IBM ICA, FastAPI, React, ELK, SQLite |
 | [Document Processor](document_processor) | RAG / Document Tools | Turns DOCX files into chunks ready for a vector database, with image enrichment | Azure OpenAI Vision, Milvus |
 | [MD to DOCX](md-to-docx) | Document Tools | Converts Markdown to formatted Word files, including Mermaid diagrams | Streamlit, Python |
 | [Interview Coach](Interview-Coach) | Career Tools | Interview practice with three AI agents asking questions and scoring answers | GPT-4, Gemini, Claude, React, FastAPI |
@@ -125,7 +127,10 @@ An AI-curated daily tech magazine generator. Pick from 10 top tech news sources,
 An AI-powered data platform prototype for the energy and utilities sector. It shows how organizations can modernize legacy data infrastructure to support AI at scale. It uses **generative AI to fix data quality issues** with explanations, **AI-generated data lineage** that pinpoints where a pipeline failed, and **ML-based anomaly detection**, plus pipeline run history and an AI explainability log.
 
 ### 🔀 File Compare
-A document comparison tool (FastAPI + React + Tailwind) powered by IBM ICA. Upload any two files (PDF, DOCX, or image) and get a detailed AI report of the differences, section by section. PDFs are split by page and DOCX files by heading, and images are converted to Markdown first. The report can be downloaded as Markdown.
+A document comparison tool (FastAPI + React + Tailwind) powered by IBM ICA. Upload any two files (PDF, DOCX, or image) and get a detailed AI report of the differences, section by section. PDFs are split by page and DOCX files by heading, and images are converted to Markdown first. An aligned side-by-side view highlights changes word by word, finished comparisons are saved to a searchable history, and the report can be downloaded as Markdown.
+
+### 🧩 Diagram Studio
+Hand it a Markdown, text or Word document (or paste text) and get back the diagrams it contains. Claude via IBM ICA plans which diagrams the document supports (architecture, flowchart, state, sequence, timeline or quadrant) and returns a small validated spec for each. It never sees coordinates: the browser lays graphs out with ELK and draws editorial-style SVG, inspired by [cathrynlavery/diagram-design](https://github.com/cathrynlavery/diagram-design). You can zoom and pan (with a full-window view), reopen past documents from a saved history, redraw a diagram with a plain-language instruction, and export SVG or PNG. An optional animated SVG is built from a fixed set of CSS effects (entrances, flowing dots, pulses, a step-by-step walkthrough), so the file needs no JavaScript.
 
 ### 📑 Document Processor
 A pipeline that converts `.docx` files into chunks ready for **RAG** and vector databases. It keeps the document structure (headings, sections, tables, images). It can optionally use Azure OpenAI Vision to add OCR text, captions, and Markdown versions of images. Output is formatted for direct loading into Milvus or similar vector databases.
