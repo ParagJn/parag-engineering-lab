@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Trust Deficit — Sunday, October 25, 2026</title>
+
+<!-- SEO Meta -->
+<meta name="description" content="This week: $12 AI attacks, rogue-agent fears at Microsoft, the LiteLLM supply-chain hit, Railway&#39;s secret rotation alert, and PHP2Shell zero-day exploitation.">
+<meta name="keywords" content="AI cybersecurity, AI agents security, prompt injection, supply chain attack, LiteLLM, PHP2Shell zero-day, insider threat, cloud security, secret rotation, Microsoft Guardian Agents, AI pen-testing tools, zero-click spyware">
+<meta name="author" content="Morning Edition — AI Curated">
+<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
+<meta name="generator" content="Morning Edition AI Magazine Generator">
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="article">
+<meta property="og:title" content="The Trust Deficit — Sunday, October 25, 2026">
+<meta property="og:description" content="This week: $12 AI attacks, rogue-agent fears at Microsoft, the LiteLLM supply-chain hit, Railway&#39;s secret rotation alert, and PHP2Shell zero-day exploitation.">
+<meta property="og:site_name" content="Morning Edition">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2026-10-25T19:21:57">
+<meta property="article:section" content="Technology">
+<meta property="article:tag" content="AI cybersecurity, AI agents security, prompt injection, supply chain attack, LiteLLM, PHP2Shell zero-day, insider threat, cloud security, secret rotation, Microsoft Guardian Agents, AI pen-testing tools, zero-click spyware">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="The Trust Deficit — Sunday, October 25, 2026">
+<meta name="twitter:description" content="This week: $12 AI attacks, rogue-agent fears at Microsoft, the LiteLLM supply-chain hit, Railway&#39;s secret rotation alert, and PHP2Shell zero-day exploitation.">
+
+<!-- JSON-LD Structured Data -->
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "CollectionPage", "name": "The Trust Deficit", "description": "This week: $12 AI attacks, rogue-agent fears at Microsoft, the LiteLLM supply-chain hit, Railway's secret rotation alert, and PHP2Shell zero-day exploitation.", "datePublished": "2026-10-25T19:21:57", "dateModified": "2026-10-25T19:21:57", "publisher": {"@type": "Organization", "name": "Morning Edition"}, "about": {"@type": "Thing", "name": "Technology News"}, "hasPart": [{"@type": "Article", "headline": "Twelve Dollars to Own a Domain", "description": "Open-weight models have made offense so cheap that defenders are now fighting an economics problem, not just a technical one.", "url": "https://www.darkreading.com/cybersecurity-operations/ai-tools-massive-attacks-little-cost", "articleSection": "SECURITY ALERT", "position": 1}, {"@type": "Article", "headline": "Who Guards the Guardian Agents?", "description": "Microsoft wants AI agents to police other AI agents. Skeptics say that may multiply the risk instead of containing it.", "url": "https://www.darkreading.com/cybersecurity-operations/ai-agents-insider-threats-inside-microsoft-unified-security-stack", "articleSection": "AI SECURITY", "position": 2}, {"@type": "Article", "headline": "The Data You Didn't Know Your Cloud Was Holding", "description": "The TiDB breach is a reminder that providers may hold sensitive customer data that neither side has inventoried.", "url": "https://www.darkreading.com/cloud-security/tidb-breach-flawed-cloud-security", "articleSection": "INFRASTRUCTURE", "position": 3}, {"@type": "Article", "headline": "The Bug in the Boardroom", "description": "An ex-OpenAI engineer is accused of bugging a conference room, and frontier AI labs now face the espionage threats of a defense contractor.", "url": "https://www.darkreading.com/insider-threats/ex-openai-engineer-secret-recorder-saudi-ties", "articleSection": "INSIDER THREAT", "position": 4}, {"@type": "Article", "headline": "The Pen-Test Tool That Switched Sides", "description": "A Chinese-speaking attacker is using the AI security tool Cairn to loot hundreds of sites, including John Deere, SharkNinja and Cummins.", "url": "https://www.darkreading.com/cyberattacks-data-breaches/hackers-abuse-ai-pen-test-tool-cairn", "articleSection": "AI THREATS", "position": 5}, {"@type": "Article", "headline": "The Ad That Watches Back", "description": "'AdFection' research suggests spyware vendors are using the ad-bidding ecosystem to find and track the people they want to target.", "url": "https://www.darkreading.com/data-privacy/adfection-online-ads-spyware-delivery", "articleSection": "PRIVACY", "position": 6}, {"@type": "Article", "headline": "Your Agent Has Your Keys. Who's Whispering to It?", "description": "Malicious emails, web pages and plugins can steer AI agents into misusing their legitimate permissions. Gen Digital pitches runtime controls as the fix.", "url": "https://www.bleepingcomputer.com/news/security/you-gave-your-ai-agent-access-but-who-is-giving-it-orders/", "articleSection": "AI TOOLS", "position": 7}, {"@type": "Article", "headline": "Rotate Everything: Railway's Warning", "description": "Suspicious activity hit the systems that store customer environment variables, so developers are being told to change their secrets now.", "url": "https://www.bleepingcomputer.com/news/security/railway-warns-devs-to-rotate-secrets-after-potential-breach/", "articleSection": "SECURITY ALERT", "position": 8}, {"@type": "Article", "headline": "pip install compromise", "description": "Attackers hijacked LiteLLM's release pipeline, publishing a malicious PyPI package and Docker images built to steal credentials.", "url": "https://www.bleepingcomputer.com/news/security/litellm-release-pipeline-hacked-to-distribute-info-stealer-malware/", "articleSection": "SUPPLY CHAIN", "position": 9}, {"@type": "Article", "headline": "Four Days of Darkness", "description": "Amazon says attackers were exploiting the PHP2Shell flaws four days before patches arrived. Defenders never had a head start.", "url": "https://www.bleepingcomputer.com/news/security/amazon-says-php2shell-exploitation-began-4-days-before-patches/", "articleSection": "ZERO-DAY", "position": 10}]}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; font-size: 18px; }
+body { font-family: 'Inter', sans-serif; overflow-x: hidden; }
+
+.cover {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: #0a0a0a;
+  color: #fff;
+  text-align: center;
+  padding: 4rem 2rem;
+  position: relative;
+  overflow: hidden;
+}
+.cover::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at 30% 40%, rgba(99,102,241,0.15), transparent 50%),
+              radial-gradient(circle at 70% 60%, rgba(244,63,94,0.1), transparent 50%);
+  animation: drift 20s ease-in-out infinite;
+}
+@keyframes drift {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(2%, -2%) rotate(1deg); }
+}
+.cover-content { position: relative; z-index: 1; max-width: 900px; }
+.cover h1 {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(3rem, 8vw, 7rem);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin-bottom: 1rem;
+}
+.cover .tagline {
+  font-size: clamp(1.2rem, 2.5vw, 1.8rem);
+  opacity: 0.7;
+  font-weight: 300;
+  margin-bottom: 2rem;
+}
+.cover .meta {
+  font-size: 1rem;
+  opacity: 0.5;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+.cover .source-badge {
+  display: inline-block;
+  margin-top: 1.5rem;
+  padding: 0.5rem 1.5rem;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 100px;
+  font-size: 0.9rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* === SPREAD BASE === */
+.spread {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 6rem 2rem;
+  position: relative;
+}
+.spread-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+.category-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  margin-bottom: 1.5rem;
+}
+.numeral {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(4rem, 10vw, 8rem);
+  font-weight: 900;
+  opacity: 0.12;
+  position: absolute;
+  top: 2rem;
+  right: 3rem;
+  line-height: 1;
+}
+.headline {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(2.2rem, 5vw, 4rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.8rem;
+}
+.deck {
+  font-size: clamp(1.1rem, 2vw, 1.4rem);
+  font-weight: 300;
+  opacity: 0.75;
+  margin-bottom: 2.5rem;
+  line-height: 1.4;
+}
+.body p {
+  font-size: clamp(1.05rem, 1.5vw, 1.2rem);
+  line-height: 1.8;
+  margin-bottom: 1.2rem;
+}
+.pull-quote {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  font-style: italic;
+  font-weight: 400;
+  line-height: 1.4;
+  padding: 2rem 0;
+  margin: 2rem 0;
+  border-top: 3px solid currentColor;
+  border-bottom: 1px solid currentColor;
+  opacity: 0.9;
+}
+.read-more {
+  display: inline-block;
+  margin-top: 1.5rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  padding: 0.7rem 1.5rem;
+  border: 2px solid currentColor;
+  transition: all 0.3s;
+}
+.read-more:hover { opacity: 0.7; }
+.flag-badge {
+  display: inline-block;
+  padding: 0.3rem 0.8rem;
+  background: #f43f5e;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  border-radius: 3px;
+  margin-bottom: 1rem;
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* === SPREAD STYLES === */
+.spread-hero {
+  background: #fafaf9;
+  color: #1a1a1a;
+}
+.spread-hero .category-label { color: #6366f1; }
+.spread-hero .read-more { color: #1a1a1a; }
+
+.spread-midnight {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+.spread-midnight .category-label { color: #818cf8; }
+.spread-midnight .numeral { color: #334155; opacity: 0.3; }
+.spread-midnight .read-more { color: #e2e8f0; }
+
+.spread-rose_alert {
+  background: #fff1f2;
+  color: #1a1a1a;
+  border-left: 8px solid #f43f5e;
+}
+.spread-rose_alert .category-label { color: #e11d48; }
+.spread-rose_alert .pull-quote { border-color: #f43f5e; }
+.spread-rose_alert .numeral { color: #f43f5e; opacity: 0.15; }
+.spread-rose_alert .read-more { color: #e11d48; }
+
+.spread-terminal {
+  background: #0a0a0a;
+  color: #4ade80;
+  font-family: 'JetBrains Mono', monospace;
+}
+.spread-terminal .headline {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+}
+.spread-terminal .headline::before { content: '> '; opacity: 0.5; }
+.spread-terminal .body p { font-family: 'JetBrains Mono', monospace; font-size: 1rem; }
+.spread-terminal .pull-quote { border-color: #4ade80; font-family: 'JetBrains Mono', monospace; }
+.spread-terminal .category-label { color: #22d3ee; }
+.spread-terminal .numeral { color: #4ade80; }
+.spread-terminal .read-more { color: #4ade80; }
+
+.spread-academic {
+  background: #fef9ef;
+  color: #292524;
+}
+.spread-academic .body p:first-child::first-letter {
+  font-family: 'Fraunces', serif;
+  font-size: 4.5rem;
+  font-weight: 900;
+  float: left;
+  line-height: 0.8;
+  margin-right: 0.5rem;
+  margin-top: 0.1rem;
+  color: #78716c;
+}
+.spread-academic .category-label { color: #a16207; }
+.spread-academic .pull-quote { border-color: #d6d3d1; font-style: italic; }
+.spread-academic .read-more { color: #292524; }
+
+.spread-big_stat {
+  background: #1e1b4b;
+  color: #e0e7ff;
+  text-align: center;
+}
+.spread-big_stat .spread-inner { text-align: center; }
+.spread-big_stat .headline { font-size: clamp(2.5rem, 6vw, 5rem); }
+.spread-big_stat .pull-quote {
+  font-size: clamp(3rem, 8vw, 6rem);
+  font-weight: 900;
+  font-style: normal;
+  border: none;
+  color: #a5b4fc;
+}
+.spread-big_stat .body p { text-align: left; max-width: 700px; margin-left: auto; margin-right: auto; }
+.spread-big_stat .category-label { color: #818cf8; }
+.spread-big_stat .numeral { color: #312e81; opacity: 0.4; }
+.spread-big_stat .read-more { color: #e0e7ff; }
+
+.spread-blueprint {
+  background: #eff6ff;
+  color: #1e3a5f;
+  border: 2px dashed #93c5fd;
+}
+.spread-blueprint .headline { color: #1e40af; }
+.spread-blueprint .category-label { color: #2563eb; }
+.spread-blueprint .pull-quote { border-color: #93c5fd; }
+.spread-blueprint .numeral { color: #3b82f6; opacity: 0.15; }
+.spread-blueprint .read-more { color: #1e40af; }
+
+.spread-neon {
+  background: #18181b;
+  color: #fafafa;
+}
+.spread-neon .headline { color: #f0abfc; text-shadow: 0 0 40px rgba(240,171,252,0.3); }
+.spread-neon .category-label { color: #22d3ee; text-shadow: 0 0 20px rgba(34,211,238,0.4); }
+.spread-neon .pull-quote { border-color: #a855f7; color: #e879f9; }
+.spread-neon .numeral { color: #a855f7; opacity: 0.25; }
+.spread-neon .read-more { color: #e879f9; }
+
+.spread-editorial {
+  background: #ffffff;
+  color: #171717;
+}
+.spread-editorial .pull-quote {
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  padding: 3rem 0;
+  text-align: center;
+}
+.spread-editorial .category-label { color: #dc2626; }
+.spread-editorial .read-more { color: #171717; }
+
+.spread-sunset {
+  background: linear-gradient(135deg, #fef3c7, #fde68a, #fbbf24, #f59e0b);
+  color: #451a03;
+}
+.spread-sunset .headline { color: #78350f; }
+.spread-sunset .category-label { color: #92400e; }
+.spread-sunset .pull-quote { border-color: #d97706; }
+.spread-sunset .numeral { color: #f59e0b; opacity: 0.2; }
+.spread-sunset .read-more { color: #78350f; }
+
+/* Footer */
+.footer {
+  background: #0a0a0a;
+  color: #737373;
+  text-align: center;
+  padding: 4rem 2rem;
+  font-size: 0.9rem;
+}
+.footer .logo { font-family: 'Fraunces', serif; font-size: 1.5rem; color: #fff; margin-bottom: 0.5rem; }
+
+/* === TABLE OF CONTENTS === */
+.toc {
+  background: #fafaf9;
+  padding: 5rem 2rem;
+  position: relative;
+}
+.toc-inner {
+  max-width: 800px;
+  margin: 0 auto;
+}
+.toc-heading {
+  font-family: 'Fraunces', serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  color: #a8a29e;
+  margin-bottom: 2.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e7e5e4;
+}
+.toc-item {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid #f5f5f4;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s;
+}
+.toc-item:hover {
+  padding-left: 0.5rem;
+  background: #f5f5f4;
+  border-radius: 0.5rem;
+}
+.toc-numeral {
+  font-family: 'Fraunces', serif;
+  font-size: 1.6rem;
+  font-weight: 900;
+  min-width: 3rem;
+  text-align: center;
+  opacity: 0.7;
+}
+.toc-text {
+  flex: 1;
+  min-width: 0;
+}
+.toc-cat {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: #a8a29e;
+  margin-bottom: 0.2rem;
+}
+.toc-headline {
+  display: block;
+  font-family: 'Fraunces', serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1c1917;
+  line-height: 1.3;
+}
+.toc-arrow {
+  font-size: 1.2rem;
+  color: #d6d3d1;
+  transition: transform 0.2s, color 0.2s;
+}
+.toc-item:hover .toc-arrow {
+  transform: translateX(4px);
+  color: #6366f1;
+}
+
+/* === BACK TO TOP === */
+.back-to-top {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #0a0a0a;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s;
+  z-index: 999;
+}
+.back-to-top.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.back-to-top:hover {
+  background: #6366f1;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(99,102,241,0.4);
+}
+</style>
+<link rel="canonical" href="https://paragjn.github.io/parag-engineering-lab/articles/morning-edition-2026-10-25.html">
+<meta property="og:url" content="https://paragjn.github.io/parag-engineering-lab/articles/morning-edition-2026-10-25.html">
+<meta property="og:image" content="https://paragjn.github.io/parag-engineering-lab/articles/morning-edition-2026-10-25.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="627">
+<meta property="og:image:alt" content="The Trust Deficit — Sunday, October 25, 2026">
+<meta name="twitter:image" content="https://paragjn.github.io/parag-engineering-lab/articles/morning-edition-2026-10-25.png">
+</head>
+<body>
+
+<header>
+<section class="cover" role="banner">
+  <div class="cover-content">
+    <time class="meta" datetime="2026-10-25T19:21:57">Sunday, October 25, 2026</time>
+    <h1>The Trust Deficit</h1>
+    <p class="tagline">Agents with keys, attackers with coupons, and a supply chain that keeps snapping.</p>
+    <div class="source-badge">Curated from Dark Reading + BleepingComputer</div>
+  </div>
+</section>
+</header>
+
+<nav class="toc" id="toc">
+  <div class="toc-inner">
+    <h2 class="toc-heading">In This Edition</h2>
+    
+      <a href="#story-0" class="toc-item">
+        <span class="toc-numeral" style="color:#818cf8">01</span>
+        <span class="toc-text">
+          <span class="toc-cat">SECURITY ALERT</span>
+          <span class="toc-headline">Twelve Dollars to Own a Domain</span>
+        </span>
+        <span class="toc-arrow">→</span>
+      </a>
+      <a href="#story-1" class="toc-item">
+        <span class="toc-numeral" style="color:#818cf8">II</span>
+        <span class="toc-text">
+          <span class="toc-cat">AI SECURITY</span>
+          <span class="toc-headline">Who Guards the Guardian Agents?</span>
+        </span>
+        <span class="toc-arrow">→</span>
+      </a>
+      <a href="#story-2" class="toc-item">
+        <span class="toc-numeral" style="color:#2563eb">三</span>
+        <span class="toc-text">
+          <span class="toc-cat">INFRASTRUCTURE</span>
+          <span class="toc-headline">The Data You Didn't Know Your Cloud Was Holding</span>
+        </span>
+        <span class="toc-arrow">→</span>
+      </a>
+      <a href="#story-3" class="toc-item">
+        <span class="toc-numeral" style="color:#dc2626">No. 4</span>
+        <span class="toc-text">
+          <span class="toc-cat">INSIDER THREAT</span>
+          <span class="toc-headline">The Bug in the Boardroom</span>
+        </span>
+        <span class="toc-arrow">→</span>
+      </a>
+      <a href="#story-4" class="toc-item">
+        <span class="toc-numeral" style="color:#e879f9">§5</span>
+        <span class="toc-text">
+          <span class="toc-cat">AI THREATS</span>
+          <span class="toc-headline">The Pen-Test Tool That Switched Sides</span>
+        </span>
+        <span class="toc-arrow">→</span>
+      </a>
+      <a href="#story-5" class="toc-item">
+        <span class="toc-numeral" style="color:#92400e">VI</span>
+        <span class="toc-text">
+          <span class="toc-cat">PRIVACY</span>
+          <span class="toc-headline">The Ad That Watches Back</span>
+        </span>
+        <span class="toc-arrow">→</span>
+      </a>
+      <a href="#story-6" class="toc-item">
+        <span class="toc-numeral" style="color:#a16207">007</span>
+        <span class="toc-text">
+          <span class="toc-cat">AI TOOLS</span>
+          <span class="toc-headline">Your Agent Has Your Keys. Who's Whispering to It?</span>
+        </span>
+        <span class="toc-arrow">→</span>
+      </a>
+      <a href="#story-7" class="toc-item">
+        <span class="toc-numeral" style="color:#e11d48">∞</span>
+        <span class="toc-text">
+          <span class="toc-cat">SECURITY ALERT</span>
+          <span class="toc-headline">Rotate Everything: Railway's Warning</span>
+        </span>
+        <span class="toc-arrow">→</span>
+      </a>
+      <a href="#story-8" class="toc-item">
+        <span class="toc-numeral" style="color:#4ade80">IX</span>
+        <span class="toc-text">
+          <span class="toc-cat">SUPPLY CHAIN</span>
+          <span class="toc-headline">pip install compromise</span>
+        </span>
+        <span class="toc-arrow">→</span>
+      </a>
+      <a href="#story-9" class="toc-item">
+        <span class="toc-numeral" style="color:#6366f1">X</span>
+        <span class="toc-text">
+          <span class="toc-cat">ZERO-DAY</span>
+          <span class="toc-headline">Four Days of Darkness</span>
+        </span>
+        <span class="toc-arrow">→</span>
+      </a>
+  </div>
+</nav>
+
+<main>
+
+<article class="spread spread-big_stat" id="story-0" itemscope itemtype="https://schema.org/Article">
+  <div class="numeral" aria-hidden="true">01</div>
+  <div class="spread-inner">
+    <div class="flag-badge">⚡ Applies to You</div>
+    <div class="category-label" itemprop="articleSection">SECURITY ALERT</div>
+    <h2 class="headline" itemprop="headline">Twelve Dollars to Own a Domain</h2>
+    <p class="deck" itemprop="description">Open-weight models have made offense so cheap that defenders are now fighting an economics problem, not just a technical one.</p>
+    <div class="body" itemprop="articleBody">
+      <p>Here is the number that should be taped to every CISO's monitor: $12. According to Dark Reading's reporting, that is what it cost one attacker to use public AI models to gain full control of a domain. In another campaign, open-weight models were pointed at 105 sites. Neither effort needed a nation-state budget or an elite crew.</p>
+      <p>The economics are the real story. For decades, defenders leaned on the fact that skilled offensive work was scarce and expensive, so attackers spent it carefully. Generative AI breaks that assumption. When tailored payloads, phishing lures and reconnaissance cost close to nothing, attackers no longer have to choose their targets. They can try everyone. Signature-based detection and simple rate limits were built for a world of repeated, similar attacks. They struggle against a flood of attempts that each look a little different.</p>
+      <p>Practitioners should read this as a mandate to change the defensive model, not to buy another tool. Behavioral detection, anomaly baselines and automated response are becoming the minimum requirement, because a human analyst triaging alerts cannot keep pace with machine-generated variation. Patch latency, credential hygiene and exposure management also matter more than ever, since cheap automation will find every neglected corner.</p>
+      <p>The uncomfortable conclusion is that the asymmetry will not fix itself. Defenders can use the same models, but attackers need to succeed only once. The teams that do well will be the ones that automate their own response before the next $12 campaign arrives.</p>
+    </div>
+    <blockquote class="pull-quote">"$12 — the price of full domain control in one AI-driven campaign."</blockquote>
+    <a href="https://www.darkreading.com/cybersecurity-operations/ai-tools-massive-attacks-little-cost" target="_blank" rel="noopener noreferrer" class="read-more" itemprop="url">Read Original →</a>
+  </div>
+</article>
+
+<article class="spread spread-midnight" id="story-1" itemscope itemtype="https://schema.org/Article">
+  <div class="numeral" aria-hidden="true">II</div>
+  <div class="spread-inner">
+    <div class="flag-badge">⚡ Applies to You</div>
+    <div class="category-label" itemprop="articleSection">AI SECURITY</div>
+    <h2 class="headline" itemprop="headline">Who Guards the Guardian Agents?</h2>
+    <p class="deck" itemprop="description">Microsoft wants AI agents to police other AI agents. Skeptics say that may multiply the risk instead of containing it.</p>
+    <div class="body" itemprop="articleBody">
+      <p>Enterprises have spent years learning to watch the humans on their payroll for insider threats. Now they are hiring a new kind of employee, the autonomous AI agent, and it arrives with tool access, API keys and no behavioral history. Microsoft's answer, as Dark Reading reports, is Project Perception, which adds Guardian Agents to monitor and contain agents that behave anomalously.</p>
+      <p>The logic is sound. If agents hold persistent access to databases and systems, they belong in the same identity and insider-risk framework as people. Folding agent telemetry into a unified security stack, next to human identity tracking, is a necessary step for zero-trust architecture. An agent that can act across many systems in a single chain of steps can slip past role-based access controls that were designed around a human doing one thing at a time.</p>
+      <p>But the experts quoted in the coverage raise a pointed objection. Agents are unpredictable by nature. Using more unpredictable agents to supervise them stacks one probabilistic system on another, and the failure modes may compound. A guardian that can be fooled, or that simply misjudges, becomes one more privileged component to attack.</p>
+      <p>The practical lesson is not to wait for the perfect overseer. Give agents narrow, least-privilege identities. Log every action they take. Keep deterministic controls, such as hard permission boundaries and approval gates for destructive actions, underneath any AI-based monitoring. Treat a guardian agent as a useful sensor, not as a lock.</p>
+    </div>
+    <blockquote class="pull-quote">"Policing unpredictable agents with other agents may compound — not contain — the risk."</blockquote>
+    <a href="https://www.darkreading.com/cybersecurity-operations/ai-agents-insider-threats-inside-microsoft-unified-security-stack" target="_blank" rel="noopener noreferrer" class="read-more" itemprop="url">Read Original →</a>
+  </div>
+</article>
+
+<article class="spread spread-blueprint" id="story-2" itemscope itemtype="https://schema.org/Article">
+  <div class="numeral" aria-hidden="true">三</div>
+  <div class="spread-inner">
+    <div class="flag-badge">⚡ Applies to You</div>
+    <div class="category-label" itemprop="articleSection">INFRASTRUCTURE</div>
+    <h2 class="headline" itemprop="headline">The Data You Didn't Know Your Cloud Was Holding</h2>
+    <p class="deck" itemprop="description">The TiDB breach is a reminder that providers may hold sensitive customer data that neither side has inventoried.</p>
+    <div class="body" itemprop="articleBody">
+      <p>The most unsettling idea in Dark Reading's TiDB coverage is that a cloud provider may be storing sensitive customer data without the provider or the customer knowing. Nobody chose to keep it. It accumulated, as logs, snapshots, diagnostics and copies tend to do. It stayed invisible until a breach exposed it.</p>
+      <p>That undermines a quiet assumption behind much cloud adoption: that if you didn't deliberately put something somewhere, it isn't there. Managed databases and distributed data platforms generate a lot of byproducts. Support workflows, telemetry pipelines and backups can all carry real customer information well beyond the system of record you thought you were protecting.</p>
+      <p>The shared-responsibility model is part of the problem. It is usually drawn as a clean line, with the provider securing the platform and the customer securing their data. In practice, data moves across that line in ways neither party fully tracks. A breach on the provider's side then becomes a data-exposure event for customers who never knew those records existed.</p>
+      <p>For architects, the lesson is to ask harder questions of vendors. Where does our data actually flow? What derived copies exist, and for how long are they retained? What is encrypted with keys we control? Minimize what you send, classify what you can't avoid sending, and assume anything held by a third party will eventually be in someone else's hands.</p>
+    </div>
+    <blockquote class="pull-quote">"Cloud providers may be storing sensitive customer data, without either party knowing it."</blockquote>
+    <a href="https://www.darkreading.com/cloud-security/tidb-breach-flawed-cloud-security" target="_blank" rel="noopener noreferrer" class="read-more" itemprop="url">Read Original →</a>
+  </div>
+</article>
+
+<article class="spread spread-editorial" id="story-3" itemscope itemtype="https://schema.org/Article">
+  <div class="numeral" aria-hidden="true">No. 4</div>
+  <div class="spread-inner">
+    <div class="flag-badge">⚡ Applies to You</div>
+    <div class="category-label" itemprop="articleSection">INSIDER THREAT</div>
+    <h2 class="headline" itemprop="headline">The Bug in the Boardroom</h2>
+    <p class="deck" itemprop="description">An ex-OpenAI engineer is accused of bugging a conference room, and frontier AI labs now face the espionage threats of a defense contractor.</p>
+    <div class="body" itemprop="articleBody">
+      <p>Cybersecurity people like to say the most dangerous exploit is a person with a badge. This week's version has a recording device in it. Dark Reading reports that a former OpenAI engineer with reported Saudi ties was detained over allegedly planting a secret recorder in an OpenAI conference room. Allegations are not convictions, and the details will come out in the legal process. The incident still shows how exposed these labs are.</p>
+      <p>Frontier AI companies hold some of the most valuable intellectual property in the world, including model architectures, training methods and unreleased capabilities. A conference room where those subjects are discussed is worth far more to a rival than most databases. If you want the roadmap, you don't need to break the firewall. You need a few minutes in the right room.</p>
+      <p>The case points to a blind spot in tech security culture. Companies pour money into endpoint detection and identity governance, and then treat their offices as trusted space. Former employees, contractors and visitors can keep a lot of residual access: knowledge of the building, familiarity with the people and sometimes working credentials. Offboarding has to cover physical access and relationships as well as accounts.</p>
+      <p>The takeaway for any company building valuable AI is to apply digital rigor to the physical world. That means audited access, device sweeps for sensitive rooms, escorted visitors and fast revocation of every kind of access. Insider risk doesn't end when someone leaves the building.</p>
+    </div>
+    <blockquote class="pull-quote">"The most valuable thing in an AI lab may not be on a server at all. It may be what gets said in the room."</blockquote>
+    <a href="https://www.darkreading.com/insider-threats/ex-openai-engineer-secret-recorder-saudi-ties" target="_blank" rel="noopener noreferrer" class="read-more" itemprop="url">Read Original →</a>
+  </div>
+</article>
+
+<article class="spread spread-neon" id="story-4" itemscope itemtype="https://schema.org/Article">
+  <div class="numeral" aria-hidden="true">§5</div>
+  <div class="spread-inner">
+    <div class="flag-badge">⚡ Applies to You</div>
+    <div class="category-label" itemprop="articleSection">AI THREATS</div>
+    <h2 class="headline" itemprop="headline">The Pen-Test Tool That Switched Sides</h2>
+    <p class="deck" itemprop="description">A Chinese-speaking attacker is using the AI security tool Cairn to loot hundreds of sites, including John Deere, SharkNinja and Cummins.</p>
+    <div class="body" itemprop="articleBody">
+      <p>Security teams built AI pen-testing tools to find weaknesses before criminals did. Cairn is now being used by the criminals. Dark Reading reports that a Chinese-speaking attacker has used it to compromise hundreds of websites worldwide, taking data from large names including John Deere, SharkNinja and engine maker Cummins.</p>
+      <p>It is the oldest dual-use problem in security. A tool that can autonomously probe, chain and exploit weaknesses does so for whoever runs it. The scanner doesn't know whether it has a signed scope document. What AI changes is scale and speed. Work that once needed a skilled operator staying with each target can now be delegated to an agent that moves quickly and doesn't tire.</p>
+      <p>The campaign also shows that large, well-resourced companies are not safe just because they are large. If hundreds of sites fall to automated tooling, the weakness is often the long tail of forgotten web properties, unpatched components and exposed services that every big organization has somewhere. Machines are good at finding exactly those.</p>
+      <p>Defenders should respond by using the same logic. Run continuous, automated testing against your own attack surface so you find the weak spots first. Shorten patch windows. Watch for the signature of machine-speed activity, such as rapid and systematic probing. The vendors of offensive security tools also face a harder question about how they stop their products from becoming the attacker's best employee.</p>
+    </div>
+    <blockquote class="pull-quote">"Hundreds of sites compromised — and the attacker's best tool was built for defenders."</blockquote>
+    <a href="https://www.darkreading.com/cyberattacks-data-breaches/hackers-abuse-ai-pen-test-tool-cairn" target="_blank" rel="noopener noreferrer" class="read-more" itemprop="url">Read Original →</a>
+  </div>
+</article>
+
+<article class="spread spread-sunset" id="story-5" itemscope itemtype="https://schema.org/Article">
+  <div class="numeral" aria-hidden="true">VI</div>
+  <div class="spread-inner">
+    
+    <div class="category-label" itemprop="articleSection">PRIVACY</div>
+    <h2 class="headline" itemprop="headline">The Ad That Watches Back</h2>
+    <p class="deck" itemprop="description">'AdFection' research suggests spyware vendors are using the ad-bidding ecosystem to find and track the people they want to target.</p>
+    <div class="body" itemprop="articleBody">
+      <p>Every time a page loads, an auction runs in the background. Dozens of bidders learn something about who is looking, and one of them wins the chance to show an ad. Dark Reading reports that spyware vendors are exploiting that machinery, in a technique called AdFection, to identify and track individuals and organizations of interest.</p>
+      <p>That is a different kind of threat from the usual one. Targeted advertising was built to know who you are, what you read and where you are, because that information sells ads. The same properties make it attractive for surveillance. If an operator can bid on a profile that matches a target, the ad system becomes a delivery and targeting layer that needs no phishing email and no malicious link.</p>
+      <p>The details of what is delivered, and how widely, will matter as the research develops, and readers should be wary of claims that outrun the evidence. The structural point stands either way. The advertising ecosystem is large and opaque, and almost no one inside it is positioned to notice an abuse.</p>
+      <p>For most readers this is a privacy story more than an enterprise emergency, and the immediate risk falls on a narrow set of high-value targets such as journalists, activists and executives. The mitigations are familiar but worth repeating: ad and tracker blocking, up-to-date browsers and devices, and lockdown-style modes for people at elevated risk. The larger fix will have to come from the ad industry.</p>
+    </div>
+    <blockquote class="pull-quote">"The ad auction was built to know who you are. That is exactly what makes it useful for surveillance."</blockquote>
+    <a href="https://www.darkreading.com/data-privacy/adfection-online-ads-spyware-delivery" target="_blank" rel="noopener noreferrer" class="read-more" itemprop="url">Read Original →</a>
+  </div>
+</article>
+
+<article class="spread spread-academic" id="story-6" itemscope itemtype="https://schema.org/Article">
+  <div class="numeral" aria-hidden="true">007</div>
+  <div class="spread-inner">
+    <div class="flag-badge">⚡ Applies to You</div>
+    <div class="category-label" itemprop="articleSection">AI TOOLS</div>
+    <h2 class="headline" itemprop="headline">Your Agent Has Your Keys. Who's Whispering to It?</h2>
+    <p class="deck" itemprop="description">Malicious emails, web pages and plugins can steer AI agents into misusing their legitimate permissions. Gen Digital pitches runtime controls as the fix.</p>
+    <div class="body" itemprop="articleBody">
+      <p>An AI agent doesn't need to be hacked in the traditional sense to do damage. It only needs to be persuaded. As BleepingComputer's piece, sponsored by Gen Digital, explains, malicious emails, websites and plugins can manipulate agents into running commands, stealing data or deleting files, all using permissions the agent was legitimately given. To the logging system, it looks like normal activity.</p>
+      <p>The root cause is indirect prompt injection. Language models don't reliably separate instructions from data. A line of text hidden in a document, an email or a web page can read to the model as a command. Software engineering spent decades separating code from data, and agentic AI has partly undone that.</p>
+      <p>Gen Digital presents its Agent Trust Hub as one answer, with skill verification, secure connectivity and runtime controls that intercept dangerous actions before they execute. The piece is vendor-sponsored, so treat the product claims as claims. The architecture it describes is sound: assume the model can be tricked, and place enforcement outside the model.</p>
+      <p>That is the principle practitioners should take away, whichever product they choose. Give agents minimal permissions. Vet every plugin and skill as you would a third-party dependency. Require human approval for irreversible actions. Never rely on a system prompt to enforce a security boundary. The agent will believe whatever it reads, so the controls have to sit somewhere it can't talk its way past.</p>
+    </div>
+    <blockquote class="pull-quote">"The agent didn't break in. It was handed the keys, then talked into using them."</blockquote>
+    <a href="https://www.bleepingcomputer.com/news/security/you-gave-your-ai-agent-access-but-who-is-giving-it-orders/" target="_blank" rel="noopener noreferrer" class="read-more" itemprop="url">Read Original →</a>
+  </div>
+</article>
+
+<article class="spread spread-rose_alert" id="story-7" itemscope itemtype="https://schema.org/Article">
+  <div class="numeral" aria-hidden="true">∞</div>
+  <div class="spread-inner">
+    <div class="flag-badge">⚡ Applies to You</div>
+    <div class="category-label" itemprop="articleSection">SECURITY ALERT</div>
+    <h2 class="headline" itemprop="headline">Rotate Everything: Railway's Warning</h2>
+    <p class="deck" itemprop="description">Suspicious activity hit the systems that store customer environment variables, so developers are being told to change their secrets now.</p>
+    <div class="body" itemprop="articleBody">
+      <p>Few phrases frighten a developer more than 'suspicious activity' next to 'environment variables.' Railway, the cloud deployment platform, has warned users to rotate their secrets after detecting suspicious activity on systems that store exactly that data, BleepingComputer reports. The incident was described as a potential breach, so the full scope is not yet public.</p>
+      <p>Environment variables are where modern applications keep their most sensitive material: database connection strings, API tokens, third-party service keys and signing secrets. A platform-as-a-service that stores them for convenience becomes a concentrated target. One compromise there can reach into every service its customers connect to, and the effects can spread well beyond Railway.</p>
+      <p>The right move is not complicated, but it is tedious, and tedium is where security often fails. Treat every secret on the platform as exposed. Rotate database credentials, API keys and tokens, starting with production. Then check the logs of downstream services for unfamiliar access. Revoking and reissuing a credential is the only reliable response, because you can't know whether a copied secret was ever used.</p>
+      <p>The longer-term lesson is about blast radius. Short-lived credentials, scoped tokens and a secrets manager with automated rotation turn an incident like this from a weekend of emergency work into a routine event. If rotating your secrets is a painful manual process, this week is a good time to fix that.</p>
+    </div>
+    <blockquote class="pull-quote">"If rotating your secrets is a manual fire drill, you've found your next project."</blockquote>
+    <a href="https://www.bleepingcomputer.com/news/security/railway-warns-devs-to-rotate-secrets-after-potential-breach/" target="_blank" rel="noopener noreferrer" class="read-more" itemprop="url">Read Original →</a>
+  </div>
+</article>
+
+<article class="spread spread-terminal" id="story-8" itemscope itemtype="https://schema.org/Article">
+  <div class="numeral" aria-hidden="true">IX</div>
+  <div class="spread-inner">
+    <div class="flag-badge">⚡ Applies to You</div>
+    <div class="category-label" itemprop="articleSection">SUPPLY CHAIN</div>
+    <h2 class="headline" itemprop="headline">pip install compromise</h2>
+    <p class="deck" itemprop="description">Attackers hijacked LiteLLM's release pipeline, publishing a malicious PyPI package and Docker images built to steal credentials.</p>
+    <div class="body" itemprop="articleBody">
+      <p>The AI developer stack has an upstream problem. BleepingComputer reports that hackers compromised the LiteLLM project's release pipeline, pushing a malicious PyPI package and Docker images carrying a payload that steals credentials, secrets and environment variables.</p>
+      <p>LiteLLM is popular because it gives teams one interface to many model providers. That is what makes it an excellent target. A machine that runs LiteLLM tends to hold the keys to several LLM vendors, plus cloud credentials and application secrets. An infostealer there skips the small fish and goes straight to the high-value material.</p>
+      <p>The attack vector matters as much as the payload. Compromising the release pipeline means the malicious code arrives through the channel everyone trusts and automates. Nobody reviews a routine dependency update line by line, and CI systems pull images without a second thought. A poisoned release gets installed because the system is working as designed.</p>
+      <p>If you ran affected versions, assume the secrets in those environments are compromised and rotate them, including LLM provider keys and cloud credentials. Then harden the process: pin dependencies to exact versions and hashes, use private mirrors with a delay before new releases are allowed in, scan images before deploying, and keep API keys scoped and budget-capped. The AI ecosystem is moving fast, and attackers have noticed that its dependency hygiene is not keeping up.</p>
+    </div>
+    <blockquote class="pull-quote">"The payload was built to steal credentials, secrets and environment variables, which is the whole AI stack in one grab."</blockquote>
+    <a href="https://www.bleepingcomputer.com/news/security/litellm-release-pipeline-hacked-to-distribute-info-stealer-malware/" target="_blank" rel="noopener noreferrer" class="read-more" itemprop="url">Read Original →</a>
+  </div>
+</article>
+
+<article class="spread spread-hero" id="story-9" itemscope itemtype="https://schema.org/Article">
+  <div class="numeral" aria-hidden="true">X</div>
+  <div class="spread-inner">
+    <div class="flag-badge">⚡ Applies to You</div>
+    <div class="category-label" itemprop="articleSection">ZERO-DAY</div>
+    <h2 class="headline" itemprop="headline">Four Days of Darkness</h2>
+    <p class="deck" itemprop="description">Amazon says attackers were exploiting the PHP2Shell flaws four days before patches arrived. Defenders never had a head start.</p>
+    <div class="body" itemprop="articleBody">
+      <p>A patch Wednesday that feels like a rescue looks different when you learn the fire started on Sunday. Amazon Threat Intelligence told BleepingComputer that attackers began exploiting the PHP2Shell flaws about four days before security patches were released. Anyone who waited for the advisory was already behind.</p>
+      <p>PHP is an unglamorous technology that holds up a surprising share of the internet's infrastructure, including content management systems, admin consoles, internal portals and back-office tools. Remote code execution flaws in that stack are serious because those applications often sit close to sensitive data and are rarely a priority in modern security programs. Attackers know this and keep a steady eye on the neglected PHP application in the corner.</p>
+      <p>The four-day gap shows the limits of a purely reactive model. If your security depends on learning about a vulnerability and then patching it, the attackers' head start is built in. Zero-day exploitation by definition happens before you can act on a fix.</p>
+      <p>That is why defense in depth is not just a slogan here. Reduce the exposed attack surface and put web application firewalls in front of anything that must face the internet. Restrict what a web process can reach on the network. Hunt for post-exploitation behavior, such as unexpected shells, new files in web directories and odd outbound connections. Patch quickly once fixes land, and then look back through the logs to the days before they did.</p>
+    </div>
+    <blockquote class="pull-quote">"Exploitation began four days before the patch. For those 96 hours, defenders had nothing to apply."</blockquote>
+    <a href="https://www.bleepingcomputer.com/news/security/amazon-says-php2shell-exploitation-began-4-days-before-patches/" target="_blank" rel="noopener noreferrer" class="read-more" itemprop="url">Read Original →</a>
+  </div>
+</article>
+
+</main>
+
+<button class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Back to top">↑</button>
+
+<footer class="footer">
+  <div class="logo">Morning Edition</div>
+  <p>Generated with AI — Anthropic Claude &amp; Google Gemini</p>
+  <p style="margin-top:0.5rem;"><time datetime="2026-10-25T19:21:57">Sunday, October 25, 2026</time></p>
+</footer>
+
+<script>
+(function() {
+  var btn = document.getElementById('backToTop');
+  window.addEventListener('scroll', function() {
+    if (window.scrollY > 600) {
+      btn.classList.add('visible');
+    } else {
+      btn.classList.remove('visible');
+    }
+  });
+})();
+</script>
+
+</body>
+</html>
