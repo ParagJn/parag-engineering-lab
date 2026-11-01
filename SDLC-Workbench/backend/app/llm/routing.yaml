@@ -1,0 +1,25 @@
+# Which model slot each agent role uses. Slots are sonnet, haiku, openai, gemini; the actual
+# model behind each slot comes from backend/.env. Change a row to change who does the job.
+# Rationale for each row is in docs/03-agents-and-models.md.
+
+roles:
+  orchestrator: sonnet
+  requirements_analyst: sonnet
+  backlog_splitter: haiku
+  ux_designer: gemini
+  solution_architect: sonnet
+  diagram_author: haiku
+  database_engineer: haiku
+  backend_developer: openai
+  frontend_developer: gemini
+  test_engineer: openai
+  devops_engineer: openai
+  security_reviewer: sonnet
+  handover_author: haiku
+  incident_triage: sonnet
+
+# Sonnet reviews every artefact. When it is unavailable, the user picks another family from
+# the options below (independent families are offered first, then this order).
+reviewer:
+  default: sonnet
+  alternatives: [gemini, openai, haiku]

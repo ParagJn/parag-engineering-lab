@@ -1,0 +1,6 @@
+{
+  "events": "/api/projects/p0000000demo/events",
+  "run_id": "p0000000demo",
+  "state": "/api/projects/p0000000demo/runs/p0000000demo",
+  "status": "running"
+}

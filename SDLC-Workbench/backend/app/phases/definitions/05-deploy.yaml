@@ -1,0 +1,38 @@
+key: deploy
+order: 5
+name: Deploy
+summary: Get the tested product running somewhere, and prove it is running.
+approver: deployment engineer
+artefacts:
+  - key: deployment_plan
+    name: Deployment plan
+    id_prefix: DEP-PLN
+    role: devops_engineer
+    required: true
+    description: Where it runs, in what order things happen, and how to go back if it goes wrong.
+  - key: infrastructure_as_code
+    name: Infrastructure as code
+    id_prefix: DEP-IAC
+    role: devops_engineer
+    required: true
+    after: [deployment_plan]
+    description: The container and infrastructure files that describe the environment.
+  - key: release_notes
+    name: Release notes
+    id_prefix: DEP-REL
+    role: devops_engineer
+    required: true
+    after: [deployment_plan]
+    description: What is in this release, in words the business can read.
+  - key: cicd_pipeline
+    name: CI/CD pipeline
+    id_prefix: DEP-CI
+    role: devops_engineer
+    after: [deployment_plan]
+    description: The automated steps that build, test and release the product.
+  - key: deployment_verification
+    name: Deployment verification
+    id_prefix: DEP-VER
+    role: devops_engineer
+    after: [infrastructure_as_code]
+    description: Checks run against the running product to show the release worked.

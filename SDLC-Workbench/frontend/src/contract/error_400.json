@@ -1,0 +1,3 @@
+{
+  "detail": "this action needs a name for the audit trail: send it in the X-Actor header (a label, not a sign-in)"
+}

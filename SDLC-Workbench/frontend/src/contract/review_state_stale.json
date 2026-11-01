@@ -1,0 +1,119 @@
+{
+  "artefacts_with_notes": [],
+  "open": {
+    "built_on_changed": [
+      "REQ-EPC-001",
+      "REQ-F-001",
+      "REQ-US-001"
+    ],
+    "guardrail_flags": {},
+    "open_high_findings": 0,
+    "review_out_of_date": [
+      "REQ-PER-001"
+    ],
+    "traceability_gaps": {
+      "explained": 0,
+      "items": [],
+      "needs_attention": 0
+    },
+    "unreviewed": []
+  },
+  "replay_sentence": null,
+  "reviews_available": true,
+  "stale": [
+    {
+      "artefact_id": "REQ-EPC-001",
+      "built_on": {
+        "REQ-F-001": 1,
+        "REQ-NF-001": 1,
+        "REQ-PER-001": 1
+      },
+      "now": {
+        "REQ-PER-001": 2
+      },
+      "version": 1
+    },
+    {
+      "artefact_id": "REQ-F-001",
+      "built_on": {
+        "REQ-PER-001": 1,
+        "REQ-PRB-001": 1,
+        "SET-CHR-001": 1
+      },
+      "now": {
+        "REQ-PER-001": 2
+      },
+      "version": 1
+    },
+    {
+      "artefact_id": "REQ-US-001",
+      "built_on": {
+        "REQ-EPC-001": 1,
+        "REQ-F-001": 1,
+        "REQ-PER-001": 1
+      },
+      "now": {
+        "REQ-PER-001": 2
+      },
+      "version": 1
+    }
+  ],
+  "statuses": [
+    {
+      "artefact_id": "REQ-EPC-001",
+      "high_findings": 0,
+      "latest_version": 1,
+      "reviewed_version": 1,
+      "state": "reviewed",
+      "verdict": "ok"
+    },
+    {
+      "artefact_id": "REQ-F-001",
+      "high_findings": 0,
+      "latest_version": 1,
+      "reviewed_version": 1,
+      "state": "reviewed",
+      "verdict": "ok"
+    },
+    {
+      "artefact_id": "REQ-NF-001",
+      "high_findings": 0,
+      "latest_version": 1,
+      "reviewed_version": 1,
+      "state": "reviewed",
+      "verdict": "ok"
+    },
+    {
+      "artefact_id": "REQ-PER-001",
+      "high_findings": 0,
+      "latest_version": 2,
+      "reviewed_version": 1,
+      "state": "stale",
+      "verdict": "ok"
+    },
+    {
+      "artefact_id": "REQ-PRB-001",
+      "high_findings": 0,
+      "latest_version": 1,
+      "reviewed_version": 1,
+      "state": "reviewed",
+      "verdict": "ok"
+    },
+    {
+      "artefact_id": "REQ-US-001",
+      "high_findings": 0,
+      "latest_version": 1,
+      "reviewed_version": 1,
+      "state": "reviewed",
+      "verdict": "ok"
+    },
+    {
+      "artefact_id": "REQ-VIS-001",
+      "high_findings": 0,
+      "latest_version": 1,
+      "reviewed_version": 1,
+      "state": "reviewed",
+      "verdict": "ok"
+    }
+  ]
+}

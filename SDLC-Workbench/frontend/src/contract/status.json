@@ -1,0 +1,273 @@
+{
+  "api_key_set": false,
+  "context": {
+    "max_docs_per_project": 500,
+    "max_file_mb": 10,
+    "max_pdf_pages": 200,
+    "search": "keyword (BM25 with stemming)",
+    "supported_types": [
+      "txt",
+      "md",
+      "docx",
+      "pdf"
+    ]
+  },
+  "db": {
+    "projects": 0,
+    "schema_version": 6
+  },
+  "endpoint_set": false,
+  "gateway": {
+    "config_ok": true,
+    "openai_key": "shared",
+    "problems": [],
+    "provider": "replay",
+    "recordings": {
+      "count": 0,
+      "mode": "replay",
+      "problems": [],
+      "set": "demo"
+    },
+    "reviewer": {
+      "alternatives": [
+        "gemini",
+        "openai",
+        "haiku"
+      ],
+      "default_slot": "sonnet",
+      "model": ""
+    },
+    "routing": [
+      {
+        "model": "",
+        "role": "orchestrator",
+        "slot": "sonnet",
+        "using_fallback": false
+      },
+      {
+        "model": "",
+        "role": "requirements_analyst",
+        "slot": "sonnet",
+        "using_fallback": false
+      },
+      {
+        "model": "",
+        "role": "backlog_splitter",
+        "slot": "haiku",
+        "using_fallback": false
+      },
+      {
+        "model": "",
+        "role": "ux_designer",
+        "slot": "gemini",
+        "using_fallback": false
+      },
+      {
+        "model": "",
+        "role": "solution_architect",
+        "slot": "sonnet",
+        "using_fallback": false
+      },
+      {
+        "model": "",
+        "role": "diagram_author",
+        "slot": "haiku",
+        "using_fallback": false
+      },
+      {
+        "model": "",
+        "role": "database_engineer",
+        "slot": "haiku",
+        "using_fallback": false
+      },
+      {
+        "model": "",
+        "role": "backend_developer",
+        "slot": "openai",
+        "using_fallback": false
+      },
+      {
+        "model": "",
+        "role": "frontend_developer",
+        "slot": "gemini",
+        "using_fallback": false
+      },
+      {
+        "model": "",
+        "role": "test_engineer",
+        "slot": "openai",
+        "using_fallback": false
+      },
+      {
+        "model": "",
+        "role": "devops_engineer",
+        "slot": "openai",
+        "using_fallback": false
+      },
+      {
+        "model": "",
+        "role": "security_reviewer",
+        "slot": "sonnet",
+        "using_fallback": false
+      },
+      {
+        "model": "",
+        "role": "handover_author",
+        "slot": "haiku",
+        "using_fallback": false
+      },
+      {
+        "model": "",
+        "role": "incident_triage",
+        "slot": "sonnet",
+        "using_fallback": false
+      }
+    ]
+  },
+  "guardrails": {
+    "cannot_be_disabled": [
+      "configured_credential",
+      "private_key"
+    ],
+    "disabled": [],
+    "personal_rules": 4,
+    "rules": 14,
+    "secret_rules": 10
+  },
+  "mode": "replay",
+  "review": {
+    "alternatives": [
+      "gemini",
+      "openai",
+      "haiku"
+    ],
+    "reviewer": "sonnet",
+    "rubric_loaded": true
+  },
+  "run": {
+    "active_runs": 0,
+    "event_watchers": 0,
+    "max_concurrency": 3,
+    "max_cost_usd": 5.0,
+    "max_seconds": 1800.0
+  },
+  "skills": {
+    "artefacts": 33,
+    "keys": [
+      "component_overview",
+      "epics_features",
+      "flow_diagram",
+      "functional_requirements",
+      "hifi_wireframes",
+      "high_level_design",
+      "low_level_design",
+      "lowfi_wireframes",
+      "non_functional_requirements",
+      "personas",
+      "problem_statement",
+      "project_charter",
+      "usecase_diagram",
+      "user_journey",
+      "user_stories",
+      "vision_objectives"
+    ],
+    "with_skill": 16
+  },
+  "slots": [
+    {
+      "fallback_model_id": "",
+      "model_id": "",
+      "price_input": null,
+      "price_output": null,
+      "priced": false,
+      "slot": "sonnet"
+    },
+    {
+      "fallback_model_id": "",
+      "model_id": "",
+      "price_input": null,
+      "price_output": null,
+      "priced": false,
+      "slot": "haiku"
+    },
+    {
+      "fallback_model_id": "",
+      "model_id": "",
+      "price_input": null,
+      "price_output": null,
+      "priced": false,
+      "slot": "openai"
+    },
+    {
+      "fallback_model_id": "",
+      "model_id": "",
+      "price_input": null,
+      "price_output": null,
+      "priced": false,
+      "slot": "gemini"
+    }
+  ],
+  "workflow": {
+    "artefact_count": 33,
+    "phase_count": 7,
+    "phases": [
+      {
+        "approver": "business engineer",
+        "artefacts": 1,
+        "key": "setup",
+        "name": "Setup",
+        "order": 0,
+        "required": 1
+      },
+      {
+        "approver": "business engineer",
+        "artefacts": 7,
+        "key": "requirements",
+        "name": "Requirements",
+        "order": 1,
+        "required": 6
+      },
+      {
+        "approver": "business engineer",
+        "artefacts": 3,
+        "key": "design",
+        "name": "Design",
+        "order": 2,
+        "required": 2
+      },
+      {
+        "approver": "technical lead",
+        "artefacts": 5,
+        "key": "architecture",
+        "name": "Architecture",
+        "order": 3,
+        "required": 3
+      },
+      {
+        "approver": "technical lead",
+        "artefacts": 6,
+        "key": "build",
+        "name": "Build & Test",
+        "order": 4,
+        "required": 4
+      },
+      {
+        "approver": "deployment engineer",
+        "artefacts": 5,
+        "key": "deploy",
+        "name": "Deploy",
+        "order": 5,
+        "required": 3
+      },
+      {
+        "approver": "BAU lead",
+        "artefacts": 6,
+        "key": "handover",
+        "name": "BAU handover",
+        "order": 6,
+        "required": 2
+      }
+    ],
+    "required_count": 21
+  }
+}

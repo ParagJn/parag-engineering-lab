@@ -1,0 +1,439 @@
+{
+  "archived_at": null,
+  "brief": "Staff book rooms.",
+  "connectors": [
+    "source_control",
+    "ci_cd"
+  ],
+  "connectors_are_simulated": true,
+  "created_at": "2026-01-01T00:00:00.000Z",
+  "id": "p0000000demo",
+  "mode": "replay",
+  "name": "Meeting Room Booking",
+  "next_action": "Setup can start",
+  "notes": [],
+  "phases": [
+    {
+      "allowed_actions": [
+        "run"
+      ],
+      "approver": "business engineer",
+      "artefacts": [
+        {
+          "has_content": false,
+          "key": "project_charter",
+          "name": "Project charter",
+          "required": true,
+          "waits_for": [],
+          "wave": 1
+        }
+      ],
+      "blocked_by": null,
+      "decided_by": null,
+      "decision": null,
+      "feedback": null,
+      "key": "setup",
+      "name": "Setup",
+      "needs_review": false,
+      "order": 0,
+      "status": "not_started"
+    },
+    {
+      "allowed_actions": [],
+      "approver": "business engineer",
+      "artefacts": [
+        {
+          "has_content": false,
+          "key": "personas",
+          "name": "Personas",
+          "required": true,
+          "waits_for": [],
+          "wave": 1
+        },
+        {
+          "has_content": false,
+          "key": "problem_statement",
+          "name": "Problem statement",
+          "required": true,
+          "waits_for": [],
+          "wave": 1
+        },
+        {
+          "has_content": false,
+          "key": "vision_objectives",
+          "name": "Vision and objectives",
+          "required": true,
+          "waits_for": [
+            "problem_statement"
+          ],
+          "wave": 2
+        },
+        {
+          "has_content": false,
+          "key": "functional_requirements",
+          "name": "Functional requirements",
+          "required": true,
+          "waits_for": [
+            "personas",
+            "problem_statement"
+          ],
+          "wave": 2
+        },
+        {
+          "has_content": false,
+          "key": "non_functional_requirements",
+          "name": "Non-functional requirements",
+          "required": true,
+          "waits_for": [
+            "problem_statement"
+          ],
+          "wave": 2
+        },
+        {
+          "has_content": false,
+          "key": "epics_features",
+          "name": "Epics and features",
+          "required": true,
+          "waits_for": [
+            "functional_requirements",
+            "non_functional_requirements"
+          ],
+          "wave": 3
+        },
+        {
+          "has_content": false,
+          "key": "user_stories",
+          "name": "User stories",
+          "required": false,
+          "waits_for": [
+            "epics_features"
+          ],
+          "wave": 4
+        }
+      ],
+      "blocked_by": "Setup",
+      "decided_by": null,
+      "decision": null,
+      "feedback": null,
+      "key": "requirements",
+      "name": "Requirements",
+      "needs_review": false,
+      "order": 1,
+      "status": "not_started"
+    },
+    {
+      "allowed_actions": [],
+      "approver": "business engineer",
+      "artefacts": [
+        {
+          "has_content": false,
+          "key": "user_journey",
+          "name": "User journey",
+          "required": true,
+          "waits_for": [],
+          "wave": 1
+        },
+        {
+          "has_content": false,
+          "key": "lowfi_wireframes",
+          "name": "Low-fidelity wireframes",
+          "required": true,
+          "waits_for": [
+            "user_journey"
+          ],
+          "wave": 2
+        },
+        {
+          "has_content": false,
+          "key": "hifi_wireframes",
+          "name": "High-fidelity wireframes",
+          "required": false,
+          "waits_for": [
+            "lowfi_wireframes"
+          ],
+          "wave": 3
+        }
+      ],
+      "blocked_by": "Setup",
+      "decided_by": null,
+      "decision": null,
+      "feedback": null,
+      "key": "design",
+      "name": "Design",
+      "needs_review": false,
+      "order": 2,
+      "status": "not_started"
+    },
+    {
+      "allowed_actions": [],
+      "approver": "technical lead",
+      "artefacts": [
+        {
+          "has_content": false,
+          "key": "component_overview",
+          "name": "Component overview",
+          "required": true,
+          "waits_for": [],
+          "wave": 1
+        },
+        {
+          "has_content": false,
+          "key": "high_level_design",
+          "name": "High-level design",
+          "required": true,
+          "waits_for": [
+            "component_overview"
+          ],
+          "wave": 2
+        },
+        {
+          "has_content": false,
+          "key": "low_level_design",
+          "name": "Low-level design",
+          "required": true,
+          "waits_for": [
+            "high_level_design"
+          ],
+          "wave": 3
+        },
+        {
+          "has_content": false,
+          "key": "flow_diagram",
+          "name": "Flow diagram",
+          "required": false,
+          "waits_for": [
+            "high_level_design"
+          ],
+          "wave": 3
+        },
+        {
+          "has_content": false,
+          "key": "usecase_diagram",
+          "name": "Use-case diagram",
+          "required": false,
+          "waits_for": [
+            "component_overview"
+          ],
+          "wave": 2
+        }
+      ],
+      "blocked_by": "Setup",
+      "decided_by": null,
+      "decision": null,
+      "feedback": null,
+      "key": "architecture",
+      "name": "Architecture",
+      "needs_review": false,
+      "order": 3,
+      "status": "not_started"
+    },
+    {
+      "allowed_actions": [],
+      "approver": "technical lead",
+      "artefacts": [
+        {
+          "has_content": false,
+          "key": "database_schema",
+          "name": "Database schema",
+          "required": true,
+          "waits_for": [],
+          "wave": 1
+        },
+        {
+          "has_content": false,
+          "key": "backend_code",
+          "name": "Backend code",
+          "required": true,
+          "waits_for": [],
+          "wave": 1
+        },
+        {
+          "has_content": false,
+          "key": "frontend_code",
+          "name": "Frontend code",
+          "required": true,
+          "waits_for": [],
+          "wave": 1
+        },
+        {
+          "has_content": false,
+          "key": "test_suite",
+          "name": "Test suite",
+          "required": true,
+          "waits_for": [
+            "backend_code"
+          ],
+          "wave": 2
+        },
+        {
+          "has_content": false,
+          "key": "test_report",
+          "name": "Test report",
+          "required": false,
+          "waits_for": [
+            "test_suite"
+          ],
+          "wave": 3
+        },
+        {
+          "has_content": false,
+          "key": "code_security_review",
+          "name": "Code and security review",
+          "required": false,
+          "waits_for": [
+            "backend_code",
+            "frontend_code",
+            "test_suite"
+          ],
+          "wave": 3
+        }
+      ],
+      "blocked_by": "Setup",
+      "decided_by": null,
+      "decision": null,
+      "feedback": null,
+      "key": "build",
+      "name": "Build & Test",
+      "needs_review": false,
+      "order": 4,
+      "status": "not_started"
+    },
+    {
+      "allowed_actions": [],
+      "approver": "deployment engineer",
+      "artefacts": [
+        {
+          "has_content": false,
+          "key": "deployment_plan",
+          "name": "Deployment plan",
+          "required": true,
+          "waits_for": [],
+          "wave": 1
+        },
+        {
+          "has_content": false,
+          "key": "infrastructure_as_code",
+          "name": "Infrastructure as code",
+          "required": true,
+          "waits_for": [
+            "deployment_plan"
+          ],
+          "wave": 2
+        },
+        {
+          "has_content": false,
+          "key": "release_notes",
+          "name": "Release notes",
+          "required": true,
+          "waits_for": [
+            "deployment_plan"
+          ],
+          "wave": 2
+        },
+        {
+          "has_content": false,
+          "key": "cicd_pipeline",
+          "name": "CI/CD pipeline",
+          "required": false,
+          "waits_for": [
+            "deployment_plan"
+          ],
+          "wave": 2
+        },
+        {
+          "has_content": false,
+          "key": "deployment_verification",
+          "name": "Deployment verification",
+          "required": false,
+          "waits_for": [
+            "infrastructure_as_code"
+          ],
+          "wave": 3
+        }
+      ],
+      "blocked_by": "Setup",
+      "decided_by": null,
+      "decision": null,
+      "feedback": null,
+      "key": "deploy",
+      "name": "Deploy",
+      "needs_review": false,
+      "order": 5,
+      "status": "not_started"
+    },
+    {
+      "allowed_actions": [],
+      "approver": "BAU lead",
+      "artefacts": [
+        {
+          "has_content": false,
+          "key": "runbook",
+          "name": "Runbook",
+          "required": true,
+          "waits_for": [],
+          "wave": 1
+        },
+        {
+          "has_content": false,
+          "key": "support_guide",
+          "name": "Support guide",
+          "required": true,
+          "waits_for": [],
+          "wave": 1
+        },
+        {
+          "has_content": false,
+          "key": "slos_alerts",
+          "name": "SLOs and alerts",
+          "required": false,
+          "waits_for": [
+            "runbook"
+          ],
+          "wave": 2
+        },
+        {
+          "has_content": false,
+          "key": "kt_pack",
+          "name": "Knowledge-transfer pack",
+          "required": false,
+          "waits_for": [
+            "runbook",
+            "support_guide"
+          ],
+          "wave": 2
+        },
+        {
+          "has_content": false,
+          "key": "hypercare_plan",
+          "name": "Hypercare plan",
+          "required": false,
+          "waits_for": [
+            "runbook"
+          ],
+          "wave": 2
+        },
+        {
+          "has_content": false,
+          "key": "handover_signoff",
+          "name": "Handover sign-off",
+          "required": false,
+          "waits_for": [
+            "runbook",
+            "support_guide"
+          ],
+          "wave": 2
+        }
+      ],
+      "blocked_by": "Setup",
+      "decided_by": null,
+      "decision": null,
+      "feedback": null,
+      "key": "handover",
+      "name": "BAU handover",
+      "needs_review": false,
+      "order": 6,
+      "status": "not_started"
+    }
+  ],
+  "updated_at": "2026-01-01T00:00:00.000Z"
+}

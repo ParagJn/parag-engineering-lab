@@ -1,0 +1,21 @@
+{
+  "added_by": "human:Demo Person",
+  "already_added": false,
+  "chars": 361,
+  "chunk_count": 2,
+  "created_at": "2026-01-01T00:00:00.000Z",
+  "filename": "meeting-room-policy.md",
+  "flags": [
+    {
+      "class": "personal",
+      "heading": "Meeting Room Policy > Cancellation",
+      "length": 24,
+      "line": 11,
+      "rule": "email"
+    }
+  ],
+  "kind": "md",
+  "number": 1,
+  "size_bytes": 372,
+  "source_id": "DOC-001"
+}

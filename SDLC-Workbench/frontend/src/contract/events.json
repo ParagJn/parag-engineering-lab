@@ -1,0 +1,148 @@
+{
+  "artefact.attempt": {
+    "at": "2026-01-01T00:00:00.000Z",
+    "attempt": 1,
+    "fell_back": false,
+    "key": "epics_features",
+    "model_attempts": 1,
+    "problems": 1,
+    "run_id": "p0000000demo",
+    "will_repair": true
+  },
+  "artefact.failed": {
+    "at": "2026-01-01T00:00:00.000Z",
+    "key": "personas",
+    "reason": "model call failed for slot 'sonnet' after 1 attempt(s); last error (content_filter): blocked",
+    "run_id": "p0000000demo",
+    "saved": false
+  },
+  "artefact.finished": {
+    "artefact_id": "REQ-EPC-001",
+    "at": "2026-01-01T00:00:00.000Z",
+    "attempts": 2,
+    "author": "agent:requirements_analyst@demo-model",
+    "cost_usd": 0.0156,
+    "flags": 0,
+    "items": 4,
+    "key": "epics_features",
+    "links": 8,
+    "run_id": "p0000000demo",
+    "tokens_in": 3600,
+    "tokens_out": 840,
+    "version": 1
+  },
+  "artefact.skipped": {
+    "at": "2026-01-01T00:00:00.000Z",
+    "key": "epics_features",
+    "reason": "blocked by personas",
+    "run_id": "p0000000demo"
+  },
+  "artefact.started": {
+    "at": "2026-01-01T00:00:00.000Z",
+    "key": "epics_features",
+    "run_id": "p0000000demo"
+  },
+  "gate.changed": {
+    "at": "2026-01-01T00:00:00.000Z",
+    "phase": "requirements",
+    "run_id": "p0000000demo",
+    "status": "running"
+  },
+  "review.finished": {
+    "artefact_id": "REQ-F-001",
+    "at": "2026-01-01T00:00:00.000Z",
+    "cost_usd": 0.003,
+    "findings": 1,
+    "label": "same_family",
+    "run_id": "p0000000demo",
+    "verdict": "ok"
+  },
+  "review.paused": {
+    "artefact_id": "REQ-PER-001",
+    "at": "2026-01-01T00:00:00.000Z",
+    "options": [
+      "haiku"
+    ],
+    "run_id": "p0000000demo",
+    "slot": "sonnet"
+  },
+  "review.paused.reason": {
+    "artefact_id": "REQ-EPC-001",
+    "at": "2026-01-01T00:00:00.000Z",
+    "reason": "the reply failed its checks after 2 attempt(s) (1 problem(s))",
+    "run_id": "p0000000demo"
+  },
+  "review.started": {
+    "artefact_id": "REQ-EPC-001",
+    "at": "2026-01-01T00:00:00.000Z",
+    "run_id": "p0000000demo"
+  },
+  "run.finished": {
+    "artefacts": {
+      "done": 1,
+      "failed": 0,
+      "not_started": 0,
+      "skipped": 0
+    },
+    "at": "2026-01-01T00:00:00.000Z",
+    "calls": 1,
+    "cost_is_partial": false,
+    "cost_usd": 0.0078,
+    "elapsed_seconds": 0,
+    "max_in_flight": 0,
+    "over_budget_by_usd": null,
+    "reason": null,
+    "run_id": "p0000000demo",
+    "serial_seconds": 0,
+    "status": "finished",
+    "tokens_in": 1800,
+    "tokens_out": 420,
+    "unpriced_calls": 0
+  },
+  "run.started": {
+    "artefacts": [
+      "personas",
+      "problem_statement",
+      "vision_objectives",
+      "functional_requirements",
+      "non_functional_requirements",
+      "epics_features",
+      "user_stories"
+    ],
+    "at": "2026-01-01T00:00:00.000Z",
+    "concurrency": 3,
+    "max_cost_usd": null,
+    "max_seconds": 1800.0,
+    "phase": "requirements",
+    "review": false,
+    "run_id": "p0000000demo"
+  },
+  "run.stopped": {
+    "artefacts": {
+      "done": 1,
+      "failed": 0,
+      "not_started": 0,
+      "skipped": 0
+    },
+    "at": "2026-01-01T00:00:00.000Z",
+    "calls": 1,
+    "cost_is_partial": false,
+    "cost_usd": 0.0078,
+    "elapsed_seconds": 0,
+    "max_in_flight": 0,
+    "over_budget_by_usd": 0.0077,
+    "reason": "budget",
+    "run_id": "p0000000demo",
+    "serial_seconds": 0,
+    "status": "stopped",
+    "tokens_in": 1800,
+    "tokens_out": 420,
+    "unpriced_calls": 0
+  },
+  "run.stopped.short": {
+    "at": "2026-01-01T00:00:00.000Z",
+    "reason": "the backend stopped while this run was in progress",
+    "run_id": "p0000000demo",
+    "status": "interrupted"
+  }
+}

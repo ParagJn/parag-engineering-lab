@@ -1,0 +1,124 @@
+{
+  "attempts": 1,
+  "author": "agent:diagram_author@demo-haiku",
+  "body": "## Overview\nFour calls between the three components: staff ask the booking service, which asks the store; the administration service changes the store.\n## Flow\n- FLOW-001 COMP-001 -> COMP-003: asks if a room is free. Derives from: IFC-001, COMP-001, COMP-003\n- FLOW-002 COMP-003 -> COMP-001: answers free or taken. Derives from: IFC-001, COMP-001, COMP-003\n- FLOW-003 COMP-002 -> COMP-003: changes the room list. Derives from: IFC-002, COMP-002, COMP-003\n- FLOW-004 COMP-003 -> COMP-002: confirms the change. Derives from: IFC-002, COMP-002, COMP-003\n## Coverage check\nNone.\n## Open questions\nNone.",
+  "cost_usd": 0.0038,
+  "created_at": "2026-01-01T00:00:00.000Z",
+  "flags": 0,
+  "generation": {
+    "attempts": 1,
+    "built_on": {
+      "ARC-CMP-001": 1,
+      "ARC-HLD-001": 1
+    },
+    "cost_usd": 0.0038,
+    "fell_back": false,
+    "guardrails": [],
+    "human_edit": false,
+    "items": [
+      "FLOW-001",
+      "FLOW-002",
+      "FLOW-003",
+      "FLOW-004"
+    ],
+    "models": [
+      "demo-haiku"
+    ],
+    "repair_reasons": [],
+    "repairs": 0,
+    "run_id": "p0000000demo",
+    "skill": "flow_diagram",
+    "tokens_in": 2000,
+    "tokens_out": 900
+  },
+  "id": "ARC-FLW-001",
+  "is_latest": true,
+  "item_count": 4,
+  "latest_version": 1,
+  "links": {
+    "derived_from": [
+      {
+        "from": "FLOW-001",
+        "kind": "derives",
+        "to": "IFC-001"
+      },
+      {
+        "from": "FLOW-001",
+        "kind": "derives",
+        "to": "COMP-001"
+      },
+      {
+        "from": "FLOW-001",
+        "kind": "derives",
+        "to": "COMP-003"
+      },
+      {
+        "from": "FLOW-002",
+        "kind": "derives",
+        "to": "IFC-001"
+      },
+      {
+        "from": "FLOW-002",
+        "kind": "derives",
+        "to": "COMP-001"
+      },
+      {
+        "from": "FLOW-002",
+        "kind": "derives",
+        "to": "COMP-003"
+      },
+      {
+        "from": "FLOW-003",
+        "kind": "derives",
+        "to": "IFC-002"
+      },
+      {
+        "from": "FLOW-003",
+        "kind": "derives",
+        "to": "COMP-002"
+      },
+      {
+        "from": "FLOW-003",
+        "kind": "derives",
+        "to": "COMP-003"
+      },
+      {
+        "from": "FLOW-004",
+        "kind": "derives",
+        "to": "IFC-002"
+      },
+      {
+        "from": "FLOW-004",
+        "kind": "derives",
+        "to": "COMP-002"
+      },
+      {
+        "from": "FLOW-004",
+        "kind": "derives",
+        "to": "COMP-003"
+      }
+    ],
+    "used_by": []
+  },
+  "models": [
+    "demo-haiku"
+  ],
+  "phase_key": "architecture",
+  "renderings": {
+    "drawio": "<svg viewBox=\"0 0 484 426\" width=\"484\" height=\"426\" xmlns=\"http://www.w3.org/2000/svg\"><title>Flow diagram: 3 components, 4 calls</title><rect x=\"0\" y=\"0\" width=\"484\" height=\"426\" fill=\"#ffffff\" /><rect x=\"28\" y=\"28\" width=\"176\" height=\"64\" rx=\"3\" fill=\"#dae8fc\" stroke=\"#6c8ebf\" stroke-width=\"1.5\" /><text x=\"116\" y=\"55\" font-size=\"9\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"normal\" text-anchor=\"middle\" fill=\"#4b6584\">COMP-001</text><text x=\"116\" y=\"72\" font-size=\"12.5\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"normal\" text-anchor=\"middle\" fill=\"#1f2937\">Booking service</text><rect x=\"280\" y=\"28\" width=\"176\" height=\"64\" rx=\"3\" fill=\"#dae8fc\" stroke=\"#6c8ebf\" stroke-width=\"1.5\" /><text x=\"368\" y=\"55\" font-size=\"9\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"normal\" text-anchor=\"middle\" fill=\"#4b6584\">COMP-003</text><text x=\"368\" y=\"72\" font-size=\"12.5\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"normal\" text-anchor=\"middle\" fill=\"#1f2937\">Room and booking store</text><rect x=\"28\" y=\"136\" width=\"176\" height=\"64\" rx=\"3\" fill=\"#dae8fc\" stroke=\"#6c8ebf\" stroke-width=\"1.5\" /><text x=\"116\" y=\"155\" font-size=\"9\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"normal\" text-anchor=\"middle\" fill=\"#4b6584\">COMP-002</text><text x=\"116\" y=\"172\" font-size=\"12.5\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"normal\" text-anchor=\"middle\" fill=\"#1f2937\">Room administration</text><text x=\"116\" y=\"188\" font-size=\"12.5\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"normal\" text-anchor=\"middle\" fill=\"#1f2937\">service</text><polyline points=\"204,60 224,60 224,44 280,44\" fill=\"none\" stroke=\"#4b5563\" stroke-width=\"1.6\" stroke-linejoin=\"round\" /><polygon points=\"280,44 271,48 271,40\" fill=\"#4b5563\" stroke=\"#4b5563\" /><polygon points=\"204,60 213,56 213,64\" fill=\"#4b5563\" stroke=\"#4b5563\" /><polyline points=\"204,168 244,168 244,76 280,76\" fill=\"none\" stroke=\"#4b5563\" stroke-width=\"1.6\" stroke-linejoin=\"round\" /><polygon points=\"280,76 271,80 271,72\" fill=\"#4b5563\" stroke=\"#4b5563\" /><polygon points=\"204,168 213,164 213,172\" fill=\"#4b5563\" stroke=\"#4b5563\" /><rect x=\"235\" y=\"36\" width=\"35\" height=\"16\" rx=\"8\" fill=\"#ffffff\" stroke=\"#6c8ebf\" /><text x=\"252\" y=\"48\" font-size=\"10\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" fill=\"#1f2937\">1,2</text><rect x=\"227\" y=\"114\" width=\"35\" height=\"16\" rx=\"8\" fill=\"#ffffff\" stroke=\"#6c8ebf\" /><text x=\"244\" y=\"126\" font-size=\"10\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" fill=\"#1f2937\">3,4</text><line x1=\"28\" y1=\"222\" x2=\"456\" y2=\"222\" stroke=\"#d1d5db\" /><text x=\"28\" y=\"242\" font-size=\"12\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"bold\" text-anchor=\"start\" fill=\"#1f2937\">Calls</text><rect x=\"28\" y=\"252\" width=\"21\" height=\"16\" rx=\"8\" fill=\"#ffffff\" stroke=\"#6c8ebf\" /><text x=\"38\" y=\"264\" font-size=\"10\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" fill=\"#1f2937\">1</text><text x=\"57\" y=\"264\" font-size=\"10.5\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"bold\" text-anchor=\"start\" fill=\"#1f2937\">Booking service → Room and booking store</text><text x=\"57\" y=\"277\" font-size=\"10.5\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"normal\" text-anchor=\"start\" fill=\"#6b7280\">asks if a room is free.</text><rect x=\"28\" y=\"288\" width=\"21\" height=\"16\" rx=\"8\" fill=\"#ffffff\" stroke=\"#6c8ebf\" /><text x=\"38\" y=\"300\" font-size=\"10\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" fill=\"#1f2937\">2</text><text x=\"57\" y=\"300\" font-size=\"10.5\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"bold\" text-anchor=\"start\" fill=\"#1f2937\">Room and booking store → Booking service</text><text x=\"57\" y=\"313\" font-size=\"10.5\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"normal\" text-anchor=\"start\" fill=\"#6b7280\">answers free or taken.</text><rect x=\"28\" y=\"324\" width=\"21\" height=\"16\" rx=\"8\" fill=\"#ffffff\" stroke=\"#6c8ebf\" /><text x=\"38\" y=\"336\" font-size=\"10\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" fill=\"#1f2937\">3</text><text x=\"57\" y=\"336\" font-size=\"10.5\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"bold\" text-anchor=\"start\" fill=\"#1f2937\">Room administration service → Room and booking store</text><text x=\"57\" y=\"349\" font-size=\"10.5\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"normal\" text-anchor=\"start\" fill=\"#6b7280\">changes the room list.</text><rect x=\"28\" y=\"360\" width=\"21\" height=\"16\" rx=\"8\" fill=\"#ffffff\" stroke=\"#6c8ebf\" /><text x=\"38\" y=\"372\" font-size=\"10\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" fill=\"#1f2937\">4</text><text x=\"57\" y=\"372\" font-size=\"10.5\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"bold\" text-anchor=\"start\" fill=\"#1f2937\">Room and booking store → Room administration service</text><text x=\"57\" y=\"385\" font-size=\"10.5\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"normal\" text-anchor=\"start\" fill=\"#6b7280\">confirms the change.</text></svg>",
+    "notion": "<svg viewBox=\"0 0 484 426\" width=\"484\" height=\"426\" xmlns=\"http://www.w3.org/2000/svg\"><title>Flow diagram: 3 components, 4 calls</title><rect x=\"0\" y=\"0\" width=\"484\" height=\"426\" fill=\"#ffffff\" /><rect x=\"28\" y=\"28\" width=\"176\" height=\"64\" rx=\"8\" fill=\"#f7f6f3\" stroke=\"#e3e2de\" stroke-width=\"1\" /><text x=\"116\" y=\"55\" font-size=\"9\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"normal\" text-anchor=\"middle\" fill=\"#9b9a97\">COMP-001</text><text x=\"116\" y=\"72\" font-size=\"12.5\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" fill=\"#37352f\">Booking service</text><rect x=\"280\" y=\"28\" width=\"176\" height=\"64\" rx=\"8\" fill=\"#f7f6f3\" stroke=\"#e3e2de\" stroke-width=\"1\" /><text x=\"368\" y=\"55\" font-size=\"9\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"normal\" text-anchor=\"middle\" fill=\"#9b9a97\">COMP-003</text><text x=\"368\" y=\"72\" font-size=\"12.5\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" fill=\"#37352f\">Room and booking store</text><rect x=\"28\" y=\"136\" width=\"176\" height=\"64\" rx=\"8\" fill=\"#f7f6f3\" stroke=\"#e3e2de\" stroke-width=\"1\" /><text x=\"116\" y=\"155\" font-size=\"9\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"normal\" text-anchor=\"middle\" fill=\"#9b9a97\">COMP-002</text><text x=\"116\" y=\"172\" font-size=\"12.5\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" fill=\"#37352f\">Room administration</text><text x=\"116\" y=\"188\" font-size=\"12.5\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" fill=\"#37352f\">service</text><polyline points=\"204,60 224,60 224,44 280,44\" fill=\"none\" stroke=\"#a8a7a3\" stroke-width=\"1.4\" stroke-linejoin=\"round\" /><polygon points=\"280,44 271,48 271,40\" fill=\"#a8a7a3\" stroke=\"#a8a7a3\" /><polygon points=\"204,60 213,56 213,64\" fill=\"#a8a7a3\" stroke=\"#a8a7a3\" /><polyline points=\"204,168 244,168 244,76 280,76\" fill=\"none\" stroke=\"#a8a7a3\" stroke-width=\"1.4\" stroke-linejoin=\"round\" /><polygon points=\"280,76 271,80 271,72\" fill=\"#a8a7a3\" stroke=\"#a8a7a3\" /><polygon points=\"204,168 213,164 213,172\" fill=\"#a8a7a3\" stroke=\"#a8a7a3\" /><rect x=\"235\" y=\"36\" width=\"35\" height=\"16\" rx=\"8\" fill=\"#ebeae6\" stroke=\"#ebeae6\" /><text x=\"252\" y=\"48\" font-size=\"10\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" fill=\"#37352f\">1,2</text><rect x=\"227\" y=\"114\" width=\"35\" height=\"16\" rx=\"8\" fill=\"#ebeae6\" stroke=\"#ebeae6\" /><text x=\"244\" y=\"126\" font-size=\"10\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" fill=\"#37352f\">3,4</text><line x1=\"28\" y1=\"222\" x2=\"456\" y2=\"222\" stroke=\"#ebeae6\" /><text x=\"28\" y=\"242\" font-size=\"12\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"bold\" text-anchor=\"start\" fill=\"#37352f\">Calls</text><rect x=\"28\" y=\"252\" width=\"21\" height=\"16\" rx=\"8\" fill=\"#ebeae6\" stroke=\"#ebeae6\" /><text x=\"38\" y=\"264\" font-size=\"10\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" fill=\"#37352f\">1</text><text x=\"57\" y=\"264\" font-size=\"10.5\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"bold\" text-anchor=\"start\" fill=\"#37352f\">Booking service → Room and booking store</text><text x=\"57\" y=\"277\" font-size=\"10.5\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"normal\" text-anchor=\"start\" fill=\"#9b9a97\">asks if a room is free.</text><rect x=\"28\" y=\"288\" width=\"21\" height=\"16\" rx=\"8\" fill=\"#ebeae6\" stroke=\"#ebeae6\" /><text x=\"38\" y=\"300\" font-size=\"10\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" fill=\"#37352f\">2</text><text x=\"57\" y=\"300\" font-size=\"10.5\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"bold\" text-anchor=\"start\" fill=\"#37352f\">Room and booking store → Booking service</text><text x=\"57\" y=\"313\" font-size=\"10.5\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"normal\" text-anchor=\"start\" fill=\"#9b9a97\">answers free or taken.</text><rect x=\"28\" y=\"324\" width=\"21\" height=\"16\" rx=\"8\" fill=\"#ebeae6\" stroke=\"#ebeae6\" /><text x=\"38\" y=\"336\" font-size=\"10\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" fill=\"#37352f\">3</text><text x=\"57\" y=\"336\" font-size=\"10.5\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"bold\" text-anchor=\"start\" fill=\"#37352f\">Room administration service → Room and booking store</text><text x=\"57\" y=\"349\" font-size=\"10.5\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"normal\" text-anchor=\"start\" fill=\"#9b9a97\">changes the room list.</text><rect x=\"28\" y=\"360\" width=\"21\" height=\"16\" rx=\"8\" fill=\"#ebeae6\" stroke=\"#ebeae6\" /><text x=\"38\" y=\"372\" font-size=\"10\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"bold\" text-anchor=\"middle\" fill=\"#37352f\">4</text><text x=\"57\" y=\"372\" font-size=\"10.5\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"bold\" text-anchor=\"start\" fill=\"#37352f\">Room and booking store → Room administration service</text><text x=\"57\" y=\"385\" font-size=\"10.5\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"normal\" text-anchor=\"start\" fill=\"#9b9a97\">confirms the change.</text></svg>"
+  },
+  "review": null,
+  "sources": [],
+  "title": "Flow diagram",
+  "type": "flow_diagram",
+  "version": 1,
+  "versions": [
+    {
+      "author": "agent:diagram_author@demo-haiku",
+      "created_at": "2026-01-01T00:00:00.000Z",
+      "human_edit": false,
+      "number": 1
+    }
+  ]
+}

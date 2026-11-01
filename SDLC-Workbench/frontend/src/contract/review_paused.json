@@ -1,0 +1,34 @@
+{
+  "artefact_id": "REQ-PER-001",
+  "options": [
+    {
+      "family": "google",
+      "independent": true,
+      "model_id": "gemini-x",
+      "price_input": null,
+      "price_output": null,
+      "priced": false,
+      "slot": "gemini"
+    },
+    {
+      "family": "openai",
+      "independent": true,
+      "model_id": "gpt-x",
+      "price_input": 2.0,
+      "price_output": 10.0,
+      "priced": true,
+      "slot": "openai"
+    },
+    {
+      "family": "anthropic",
+      "independent": false,
+      "model_id": "demo-haiku",
+      "price_input": 1.0,
+      "price_output": 2.0,
+      "priced": true,
+      "slot": "haiku"
+    }
+  ],
+  "paused": true,
+  "slot": "sonnet"
+}

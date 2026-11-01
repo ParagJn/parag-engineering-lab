@@ -1,0 +1,10 @@
+{
+  "artefacts_with_notes": [
+    "REQ-PER-001"
+  ],
+  "decided_by": "human:Demo Person",
+  "decision": "reject",
+  "feedback": "REQ-PER-001: Add a persona for the security team.",
+  "phase": "requirements",
+  "status": "rejected"
+}
