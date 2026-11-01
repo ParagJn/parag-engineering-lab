@@ -22,8 +22,11 @@ This file says where to pick up. `docs/PROGRESS.md` is the full record; read thi
 - S16 break-one-thing: 136 breaks, all caught (`backend/scripts/mutants/s16_sandbox.py`).
 - The real database (`backend/data/sdlc_workbench.db`) holds 17 projects, 3 visible (the rest are archived). A dated backup sits beside it. No `data/workspaces` folder exists yet.
 
-## Nothing is committed
-The whole `SDLC-Workbench/` folder is **untracked** in git (branch `inflight-Work`), and so are other lab apps' changes. Everything is safe on disk, but the user has not asked for a commit. Commit only when asked; end commit messages with the attribution line the harness gives.
+## Git state (2026-11-01)
+- The checkpoint through S16 is **committed locally** on `inflight-Work` (`b5a85ab`, 402 files, only `SDLC-Workbench/`), followed by a merge of the remote's bot "Deploy profile site" commit (`a0ab7cc`). **It is not pushed anywhere**, so the only copy is on this Mac. Other lab apps' changes (about 20 files) are still uncommitted and were left out on purpose.
+- The user tried a private repo (`ParagJn/sdlc-workbench`) for a second copy; the push failed on authentication (token needed) and they chose to leave it on `inflight-Work` for now. A local remote `sdlc` and a local branch `sdlc-workbench-only` (SDLC files only) exist from that attempt and are harmless.
+- The lab repo is **public** and GitHub Pages serves its `main`, so making it private would take the site down on a free plan. Pushing `inflight-Work` to `origin` is the user's call; the `git push` was blocked for the assistant, so the user runs pushes themselves. The saved git login was cleared during the attempt, so the next push will ask for a username and a personal access token.
+- Commit only when asked; end commit messages with the attribution line the harness gives. Nothing added to any README yet, by the user's choice.
 
 ## What S17 builds on (S16's surface)
 - `SandboxService` (`backend/app/sandbox/service.py`): `write_file`, `read_file`, `list_files`, `delete_file`, `make_dir`, `run_command`, `run_tests(project_id, target)`. Every action is audited without contents or output. Paths are relative to the project's workspace (`backend/data/workspaces/<project id>/`).
