@@ -8,7 +8,6 @@ from . import match as M
 from . import report as R
 from .design import read_design
 from .readers import python_fastapi as PF
-from .readers import web as WEB
 from .walk import FolderProblem, walk
 
 
@@ -17,7 +16,7 @@ def _backend_files(path: str):
     return walked, [(f.path, f.text) for f in walked.files]
 
 
-def check(store: Any, skills: Any, project_id: str, *, backend_path: str, frontend_path: str | None, actor: str) -> tuple[Any, R.Report]:
+def check(store: Any, skills: Any, project_id: str, *, backend_path: str, actor: str) -> tuple[Any, R.Report]:
     """Compare the build to the design and keep the result. Raises FolderProblem (a plain sentence) when a folder cannot be read."""
     design = read_design(store, skills, project_id)
     notes = list(design.notes)
@@ -29,21 +28,12 @@ def check(store: Any, skills: Any, project_id: str, *, backend_path: str, fronte
     notes += [f"backend: {p}" for p in backend.problems]
     if not backend.files_read:
         notes.append("backend: no Python or SQL file was found in the folder you named, so nothing could be compared")
-    frontend = None
-    if frontend_path:
-        front = walk(frontend_path)
-        frontend = WEB.read_frontend([(f.path, f.text) for f in front.files])
-        notes.append(f"frontend: read {frontend.files_read} files by pattern, not parsed: {len(frontend.pages)} pages and {len(frontend.calls)} API calls found")
-        notes += [f"frontend: {s}" for s in front.skipped[:10]]
-        notes += [f"frontend: {n}" for n in frontend.notes]
-        if front.stopped:
-            notes.append(f"frontend: {front.stopped}")
-    matched = M.match_all(design, backend, frontend)
+    matched = M.match_all(design, backend)
     report = R.build_report(matched.matches, matched.extras, notes)
     rows = [{**asdict(m), "differences": list(m.differences)} for m in report.matches]
     rows += [{"designed": None, "area": e.area, "state": "extra", "built": e.built, "file": e.file, "line": e.line, "differences": []} for e in report.extras]
     run = store.verify.add_run(
-        project_id, backend_path=backend_path, frontend_path=frontend_path or None, actor=actor, design=design.versions,
+        project_id, backend_path=backend_path, frontend_path=None, actor=actor, design=design.versions,
         counts=[asdict(c) for c in report.areas], notes=report.notes, matches=rows,
     )
     return run, report

@@ -88,7 +88,7 @@ function Trend({ runs }: { runs: readonly VerifyRun[] }) {
   if (runs.length < 2) return <p className="text-xs text-slate-500">Run the check again after more of the build is written to see how it moves.</p>
   return (
     <ul aria-label="How the share found moved over the runs" className="flex list-none flex-wrap gap-4 p-0">
-      {(['endpoint', 'table', 'screen', 'rule'] as Area[]).map((area) => {
+      {(['endpoint', 'table', 'rule'] as Area[]).map((area) => {
         const points = trendOf(runs, area)
         return (
           <li key={area} className="text-xs text-slate-700">
@@ -113,10 +113,8 @@ export interface VerifyPanelProps {
   busy: boolean
   error: string | null
   backend: string
-  frontend: string
   canRun: boolean
   onBackend: (v: string) => void
-  onFrontend: (v: string) => void
   onRun: () => void
   onOpenRun: (id: number) => void
 }
@@ -130,14 +128,12 @@ export function VerifyPanel(p: VerifyPanelProps): ReactElement {
       <div>
         <h2 className="text-lg font-bold">Build Verify</h2>
         <p className="mt-1 text-sm text-slate-600">{p.advice || 'This shows how far the build has drifted from the design. It is a highlighter, not a pass or fail, and it never runs your code.'}</p>
-        <p className="mt-1 text-xs text-slate-500">The folders are read as text on this computer only. Files that may hold a secret (.env, keys) are never read.</p>
+        <p className="mt-1 text-xs text-slate-500">The folder is read as text on this computer only. Files that may hold a secret (.env, keys) are never read.</p>
       </div>
       <form className="space-y-2 rounded-2xl border border-slate-200 bg-white p-4" aria-label="Check a build" onSubmit={(e) => { e.preventDefault(); if (p.canRun && p.backend.trim() && !p.busy) p.onRun() }}>
         <label className="block text-sm font-semibold" htmlFor="verify-backend">Backend folder</label>
         <input id="verify-backend" value={p.backend} onChange={(e) => p.onBackend(e.target.value)} placeholder="/Users/you/project/backend" spellCheck={false} maxLength={1000} className="w-full rounded-lg border border-slate-300 px-3 py-1.5 font-mono text-sm" />
-        <label className="block text-sm font-semibold" htmlFor="verify-frontend">Frontend folder (optional)</label>
-        <input id="verify-frontend" value={p.frontend} onChange={(e) => p.onFrontend(e.target.value)} placeholder="/Users/you/project/frontend" spellCheck={false} maxLength={1000} className="w-full rounded-lg border border-slate-300 px-3 py-1.5 font-mono text-sm" />
-        <p className="text-xs text-slate-500">Python/FastAPI for the backend; React, Vue or plain JavaScript/TypeScript for the frontend, read by pattern. Other languages are not understood in this version.</p>
+        <p className="text-xs text-slate-500">Python/FastAPI only. The check looks at the endpoints, the tables and the rules of the design; it does not look at a frontend. Other languages are not understood in this version.</p>
         <button type="submit" disabled={!p.canRun || !p.backend.trim() || p.busy} className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-40">{p.busy ? 'Checking…' : 'Check the build'}</button>
         {!p.canRun && <p className="text-xs text-slate-500">Give your name first (top right) so the check can be recorded in your name.</p>}
       </form>
@@ -146,7 +142,7 @@ export function VerifyPanel(p: VerifyPanelProps): ReactElement {
       {newer ? (
         <>
           <Legend />
-          <p className="text-xs text-slate-500">Run {newer.id} by {newer.by.replace(/^human:/, '')} · {newer.at} · backend <span className="font-mono">{newer.backend_path}</span>{newer.frontend_path ? <> · frontend <span className="font-mono">{newer.frontend_path}</span></> : null}</p>
+          <p className="text-xs text-slate-500">Run {newer.id} by {newer.by.replace(/^human:/, '')} · {newer.at} · backend <span className="font-mono">{newer.backend_path}</span></p>
           <div className="grid gap-3 md:grid-cols-2">
             {newer.counts.map((c) => <AreaCard key={c.area} counts={c} matches={newer.matches} previous={older} newer={newer} />)}
           </div>

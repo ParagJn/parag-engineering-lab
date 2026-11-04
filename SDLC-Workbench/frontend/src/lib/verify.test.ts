@@ -5,7 +5,7 @@ import { AREA_WORDS, STATE_LOOK, STATE_ORDER, changeSince, designChanged, howOf,
 const counts = (over: Partial<AreaCounts> = {}): AreaCounts => ({ area: 'endpoint', designed: 4, found: 1, differences: 1, possible: 1, not_found: 1, weak: 0, extras: 2, ...over })
 const match = (over: Partial<VerifyMatch> = {}): VerifyMatch => ({ designed: 'API-001', area: 'endpoint', state: 'found', step: 'exact', score: 1, built: 'GET /api/rooms', file: 'app.py', line: 4, differences: [], note: '', ...over })
 const run = (id: number, found: number, over: Partial<VerifyRun> = {}): VerifyRun => ({
-  id, backend_path: '/b', frontend_path: null, by: 'human:Ann', at: `2026-11-0${id}T10:00:00Z`, design: { 'DES-LLD-001': 1 }, notes: [],
+  id, backend_path: '/b', by: 'human:Ann', at: `2026-11-0${id}T10:00:00Z`, design: { 'DES-LLD-001': 1 }, notes: [],
   counts: [counts({ found, differences: 0, possible: 0, not_found: 4 - found })], ...over,
 })
 
@@ -65,7 +65,7 @@ describe('the tiles', () => {
     expect(howOf({ step: '', score: 0 })).toBe(''); expect(howOf({ step: 'exact', score: 1 })).toBe('Matched by the same method and path')
     expect(howOf({ step: 'shape', score: 1 })).toContain('apart from the prefix and plural forms'); expect(howOf({ step: 'words', score: 0.7 })).toBe('Matched by the words of the design and of the code, score 0.70')
   })
-  it('has a word for every area', () => { expect(AREA_WORDS).toEqual({ endpoint: 'Endpoints', table: 'Tables', screen: 'Screens', rule: 'Rules' }) })
+  it('has a word for every area', () => { expect(AREA_WORDS).toEqual({ endpoint: 'Endpoints', table: 'Tables', rule: 'Rules' }) })
 })
 
 describe('the trend', () => {

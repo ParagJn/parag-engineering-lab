@@ -1,7 +1,7 @@
-// Build Verify (S20): how far the real build has drifted from the design. The server reads the person's folders and computes all of it; the screen only shows it.
+// Build Verify (S20, S20f): how far the backend of the real build has drifted from the design (endpoints, tables, rules). The server reads the person's folder and computes all of it; the screen only shows it.
 import { arr, nullable, num, obj, oneOf, str, strings } from './decode'
 
-export const AREAS = ['endpoint', 'table', 'screen', 'rule'] as const
+export const AREAS = ['endpoint', 'table', 'rule'] as const
 export type Area = (typeof AREAS)[number]
 export const STATES = ['found', 'differences', 'possible', 'not_found', 'weak', 'extra'] as const
 export type VerifyState = (typeof STATES)[number]
@@ -12,7 +12,7 @@ export interface VerifyMatch {
   designed: string | null; area: Area; state: VerifyState; step: string; score: number; built: string; file: string; line: number; differences: string[]; note: string
 }
 export interface VerifyRun {
-  id: number; backend_path: string; frontend_path: string | null; by: string; at: string; design: Record<string, number>; counts: AreaCounts[]; notes: string[]
+  id: number; backend_path: string; by: string; at: string; design: Record<string, number>; counts: AreaCounts[]; notes: string[]
 }
 export interface VerifyDetail extends VerifyRun { advice: string; matches: VerifyMatch[] }
 export interface VerifyList { advice: string; runs: VerifyRun[] }
@@ -36,7 +36,7 @@ export function decodeVerifyRun(value: unknown, w = 'run'): VerifyRun {
   const o = obj(value, w)
   const design = obj(o.design, `${w}.design`)
   return {
-    id: num(o.id, `${w}.id`), backend_path: str(o.backend_path, `${w}.backend_path`), frontend_path: nullable(o.frontend_path, `${w}.frontend_path`, str), by: str(o.by, `${w}.by`), at: str(o.at, `${w}.at`),
+    id: num(o.id, `${w}.id`), backend_path: str(o.backend_path, `${w}.backend_path`), by: str(o.by, `${w}.by`), at: str(o.at, `${w}.at`),
     design: Object.fromEntries(Object.keys(design).map((k) => [k, num(design[k], `${w}.design.${k}`)])),
     counts: arr(o.counts, `${w}.counts`).map((c, i) => decodeCounts(c, `${w}.counts[${i}]`)), notes: strings(o.notes, `${w}.notes`),
   }

@@ -220,25 +220,21 @@ def _verify_examples() -> dict[str, Any]:
         (root / "app" / "main.py").write_text(CODE)
         (root / "app" / "schema.sql").write_text(SCHEMA)
         (root / ".env").write_text("SECRET=never-read\n")
-        front = Path(tmp) / "front"
-        (front / "src" / "pages").mkdir(parents=True)
-        (front / "src" / "pages" / "BrowseRooms.tsx").write_text('// RUL-001 the form checks this first\nfetch("/api/rooms")\n')
         settings = Settings(_env_file=None, data_dir=str(Path(tmp) / "data"), recordings_dir=str(Path(tmp) / "rec"), app_mode="replay")
         app = create_app(settings)
         client = TestClient(app, headers=ACTOR)
         pid = client.post("/api/projects", json={"name": "Verify", "brief": BRIEF}).json()["id"]
         lld = ("## Overview\nx\n## Endpoints\n- API-001 GET /api/rooms lists rooms. Derives from: FR-001\n- API-002 POST /api/reservations reserves a room. Derives from: FR-001\n"
                "- API-003 DELETE /api/reservations/{id} cancels. Derives from: FR-001\n## Tables\n- TBL-001 rooms: id, name, capacity. Derives from: FR-001\n"
-               "## Rules\n- RUL-001 A booking may not overlap another. Derives from: FR-001\n## Coverage check\nNone\n## Open questions\nNone")
+               "## Rules\n- RUL-001 A reservation may not overlap another reservation for the same room. Derives from: FR-001\n- RUL-002 Staff must wear a badge in the lobby. Derives from: FR-009\n- RUL-003 A room can be retired. Derives from: FR-001\n"
+               "## Coverage check\nNone\n## Open questions\nNone")
         app.state.store.artefacts.create_and_add_version(pid, artefact_type="low_level_design", phase_key="design", title="Low-level design", prefix="DES-LLD", body=lld, author="human:seed")
-        app.state.store.artefacts.create_and_add_version(pid, artefact_type="hifi_wireframes", phase_key="design", title="Hi-fi wireframes", prefix="DES-HFS",
-                                                         body="## Screens\n- HFS-001 Browse rooms: the page. Derives from: FR-001\n", author="human:seed")
-        made = client.post(f"/api/projects/{pid}/verify", json={"backend_path": str(root), "frontend_path": str(front)})
+        made = client.post(f"/api/projects/{pid}/verify", json={"backend_path": str(root)})
         out = {"verify_run": made.json()}
         out["verify_list"] = client.get(f"/api/projects/{pid}/verify").json()
         out["error_422_verify"] = client.post(f"/api/projects/{pid}/verify", json={"backend_path": str(Path(tmp) / "nope")}).json()
         out["error_404_verify"] = client.get(f"/api/projects/{pid}/verify/99").json()
-        text = json.dumps(out).replace(str(root), "/projects/build/backend").replace(str(front), "/projects/build/frontend").replace(str(Path(tmp) / "nope"), "/projects/build/missing")
+        text = json.dumps(out).replace(str(root), "/projects/build/backend").replace(str(Path(tmp) / "nope"), "/projects/build/missing")
         return json.loads(text)
 
 

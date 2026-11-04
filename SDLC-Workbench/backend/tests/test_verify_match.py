@@ -246,8 +246,8 @@ def test_the_counts_add_up_and_the_share_found_counts_found_and_differences_but_
     assert ep.designed == 3 and ep.found == 1 and ep.differences == 1 and ep.not_found + ep.possible == 1 and ep.extras >= 1
     assert ep.found + ep.differences + ep.possible + ep.not_found + ep.weak == ep.designed
     assert ep.share_found == round(2 / 3, 3)
-    assert [c.area for c in report.areas] == ["endpoint", "table", "screen", "rule"]
-    assert next(c for c in report.areas if c.area == "screen").share_found == 0.0
+    assert [c.area for c in report.areas] == ["endpoint", "table", "rule"]                          # S20f: screens were removed
+    assert next(c for c in report.areas if c.area == "rule").share_found == 0.0
 
 
 def test_the_report_orders_by_area_then_id_and_the_markdown_names_every_state_in_words():
@@ -366,7 +366,7 @@ def test_the_share_found_does_not_count_a_possible_match():
 
 def test_extras_are_counted_in_their_own_area_only():
     counts = R.counts_of([M.Match("API-001", "endpoint", M.FOUND)], [M.Extra("endpoint", "a", "f", 1), M.Extra("endpoint", "b", "f", 2), M.Extra("table", "t", "f", 3)])
-    assert {c.area: c.extras for c in counts} == {"endpoint": 2, "table": 1, "screen": 0, "rule": 0}
+    assert {c.area: c.extras for c in counts} == {"endpoint": 2, "table": 1, "rule": 0}
 
 
 def test_the_markdown_lists_each_extra_with_its_file_and_line_and_one_without_a_line_with_its_file_alone():

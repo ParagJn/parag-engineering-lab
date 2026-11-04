@@ -25,12 +25,19 @@ class VerifyBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     backend_path: str = Field(min_length=1, max_length=MAX_PATH_CHARS)
-    frontend_path: str | None = Field(default=None, max_length=MAX_PATH_CHARS)
+
+
+AREAS = set(R.AREAS)
 
 
 def run_payload(run: VerifyRun) -> dict[str, Any]:
-    return {"id": run.id, "backend_path": run.backend_path, "frontend_path": run.frontend_path, "by": run.actor, "at": run.at, "design": run.design,
-            "counts": run.counts, "notes": list(run.notes)}
+    """A run as the screen gets it. Runs made before S20f also hold screens (and a frontend folder); they stay in the record, but they are not shown or counted."""
+    return {"id": run.id, "backend_path": run.backend_path, "by": run.actor, "at": run.at, "design": run.design,
+            "counts": [c for c in run.counts if c.get("area") in AREAS], "notes": [n for n in run.notes if not n.startswith("frontend:")]}
+
+
+def shown(matches: list[VerifyMatch]) -> list[VerifyMatch]:
+    return [m for m in matches if m.area in AREAS]
 
 
 def match_payload(m: VerifyMatch) -> dict[str, Any]:
@@ -45,12 +52,12 @@ def run_check(project_id: str, body: VerifyBody, request: Request) -> dict:
     store = request.app.state.store
     try:
         store.projects.get(project_id)
-        run, _report = check(store, request.app.state.skills, project_id, backend_path=body.backend_path, frontend_path=body.frontend_path, actor=actor)
+        run, _report = check(store, request.app.state.skills, project_id, backend_path=body.backend_path, actor=actor)
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except FolderProblem as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    return {**run_payload(run), "matches": [match_payload(m) for m in store.verify.matches(project_id, run.id)]}
+    return {**run_payload(run), "matches": [match_payload(m) for m in store.verify.matches(project_id, run.id)]}          # a new run never holds a screen, so there is nothing to hide
 
 
 @router.get("")
@@ -70,7 +77,7 @@ def one_run(project_id: str, run_id: int, request: Request) -> dict:
         matches = store.verify.matches(project_id, run_id)
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return {**run_payload(run), "advice": R.ADVICE, "matches": [match_payload(m) for m in matches]}
+    return {**run_payload(run), "advice": R.ADVICE, "matches": [match_payload(m) for m in shown(matches)]}
 
 
 @router.get("/{run_id}/download")
@@ -78,7 +85,7 @@ def download(project_id: str, run_id: int, request: Request, format: str = "md")
     store = request.app.state.store
     try:
         run = store.verify.run(project_id, run_id)
-        matches = store.verify.matches(project_id, run_id)
+        matches = shown(store.verify.matches(project_id, run_id))
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     if format == "json":
@@ -88,5 +95,5 @@ def download(project_id: str, run_id: int, request: Request, format: str = "md")
     from .verify.match import Extra, Match
     designed = [Match(m.designed, m.area, m.state, m.step, m.score, m.built, m.file, m.line, m.differences, m.note) for m in matches if m.state != "extra"]
     extras = [Extra(m.area, m.built, m.file, m.line) for m in matches if m.state == "extra"]
-    text = R.markdown(R.build_report(designed, extras, run.notes), design_versions=run.design)
+    text = R.markdown(R.build_report(designed, extras, run_payload(run)["notes"]), design_versions=run.design)
     return Response(text, media_type="text/markdown; charset=utf-8", headers={"Content-Disposition": f'attachment; filename="build-verify-{run_id}.md"'})

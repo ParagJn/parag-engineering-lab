@@ -24,31 +24,19 @@
       "weak": 0
     },
     {
-      "area": "screen",
-      "designed": 1,
-      "differences": 0,
-      "extras": 0,
-      "found": 1,
-      "not_found": 0,
-      "possible": 0,
-      "weak": 0
-    },
-    {
       "area": "rule",
-      "designed": 1,
+      "designed": 3,
       "differences": 0,
       "extras": 0,
       "found": 0,
-      "not_found": 0,
+      "not_found": 1,
       "possible": 0,
-      "weak": 1
+      "weak": 2
     }
   ],
   "design": {
-    "DES-HFS-001": 1,
     "DES-LLD-001": 1
   },
-  "frontend_path": "/projects/build/frontend",
   "id": 1,
   "matches": [
     {
@@ -103,28 +91,40 @@
       "step": "shape"
     },
     {
-      "area": "screen",
-      "built": "BrowseRooms",
-      "designed": "HFS-001",
-      "differences": [],
-      "file": "src/pages/BrowseRooms.tsx",
-      "line": 1,
-      "note": "calls /api/rooms",
-      "score": 1.0,
-      "state": "found",
-      "step": "words"
-    },
-    {
       "area": "rule",
       "built": "",
       "designed": "RUL-001",
       "differences": [],
-      "file": "src/pages/BrowseRooms.tsx",
+      "file": "",
       "line": 0,
-      "note": "RUL-001 is written in a comment, a test or a message. This is weak evidence: it shows the rule was talked about, not that it is enforced.",
+      "note": "Linked to API-002 because both come from FR-001 and share the words reservation, room, but API-002 (POST /api/reservations) was not found in the build, so there is nowhere the rule could be enforced",
+      "score": 0.0,
+      "state": "not_found",
+      "step": ""
+    },
+    {
+      "area": "rule",
+      "built": "",
+      "designed": "RUL-002",
+      "differences": [],
+      "file": "app/main.py",
+      "line": 0,
+      "note": "RUL-002 is written in a comment, a test or a message. This is weak evidence: it shows the rule was talked about, not that it is enforced.",
       "score": 0.0,
       "state": "weak",
       "step": "words"
+    },
+    {
+      "area": "rule",
+      "built": "GET /api/rooms",
+      "designed": "RUL-003",
+      "differences": [],
+      "file": "app/main.py",
+      "line": 16,
+      "note": "Linked to API-001 because both come from FR-001 and share the word room. API-001 is built as GET /api/rooms; the design gives it no error code, so this only shows the rule has a home. This is weak evidence, not proof it is enforced.",
+      "score": 0.0,
+      "state": "weak",
+      "step": ""
     },
     {
       "area": "endpoint",
@@ -132,7 +132,7 @@
       "designed": null,
       "differences": [],
       "file": "app/main.py",
-      "line": 25,
+      "line": 26,
       "note": "",
       "score": 0.0,
       "state": "extra",
@@ -152,7 +152,6 @@
     }
   ],
   "notes": [
-    "backend: left out .env (it may hold a secret)",
-    "frontend: read 1 files by pattern, not parsed: 1 pages and 1 API calls found"
+    "backend: left out .env (it may hold a secret)"
   ]
 }

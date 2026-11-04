@@ -1,4 +1,4 @@
-// Build Verify's answers (S20), decoded from what the real server returned. If a route's shape changes, this fails until the screen is changed to match.
+// Build Verify's answers (S20, S20f), decoded from what the real server returned. If a route's shape changes, this fails until the screen is changed to match.
 import { describe, expect, it } from 'vitest'
 import { ContractError, decodeError, decodeVerifyDetail, decodeVerifyList, decodeVerifyMatch, decodeVerifyRun } from '../api'
 import run from './verify_run.json'
@@ -10,20 +10,28 @@ const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v))
 
 describe('a check, as the server answers it', () => {
   const detail = decodeVerifyDetail(run)
-  it('names the run, the person, the folders as typed and the design versions it compared against', () => {
-    expect(detail).toMatchObject({ id: 1, by: 'human:Demo Person', backend_path: '/projects/build/backend', frontend_path: '/projects/build/frontend' })
-    expect(Object.keys(detail.design).sort()).toEqual(['DES-HFS-001', 'DES-LLD-001'])
+  it('names the run, the person, the backend folder as typed and the design versions it compared against, and says nothing of a frontend', () => {
+    expect(detail).toMatchObject({ id: 1, by: 'human:Demo Person', backend_path: '/projects/build/backend' })
+    expect(detail).not.toHaveProperty('frontend_path'); expect(JSON.stringify(run)).not.toContain('frontend')
+    expect(Object.keys(detail.design).sort()).toEqual(['DES-LLD-001'])
     expect(detail.advice).toBe('')                                    // the answer to a new check holds no advice; the list and a single run do, and the screen reads the list's
   })
-  it('has the counts of all four areas, in the order the screen draws them', () => {
-    expect(detail.counts.map((c) => c.area)).toEqual(['endpoint', 'table', 'screen', 'rule'])
+  it('has the counts of the three areas, in the order the screen draws them, and none for screens', () => {
+    expect(detail.counts.map((c) => c.area)).toEqual(['endpoint', 'table', 'rule'])
     const endpoints = detail.counts[0]
     expect(endpoints.found + endpoints.differences + endpoints.possible + endpoints.not_found + endpoints.weak).toBe(endpoints.designed)
   })
   it('has a match for every designed item and one for every built thing nobody designed, each with a state the screen can draw', () => {
-    expect(detail.matches.filter((m) => m.designed !== null).map((m) => m.designed)).toEqual(['API-001', 'API-002', 'API-003', 'TBL-001', 'HFS-001', 'RUL-001'])
+    expect(detail.matches.filter((m) => m.designed !== null).map((m) => m.designed)).toEqual(['API-001', 'API-002', 'API-003', 'TBL-001', 'RUL-001', 'RUL-002', 'RUL-003'])
     expect(detail.matches.filter((m) => m.state === 'extra').every((m) => m.designed === null && m.built !== '')).toBe(true)
-    expect(detail.matches.find((m) => m.designed === 'RUL-001')?.state).toBe('weak')
+    expect(detail.matches.some((m) => m.area === ('screen' as never))).toBe(false)
+  })
+  it('gives a rule its three kinds of answer: not found with its endpoint named, weak because a comment names it, and weak because its endpoint is built', () => {
+    const rule = (id: string) => detail.matches.find((m) => m.designed === id)!
+    expect(rule('RUL-001').state).toBe('not_found'); expect(rule('RUL-001').note).toContain('Linked to API-002 because both come from FR-001')
+    expect(rule('RUL-002').state).toBe('weak'); expect(rule('RUL-002').note).toContain('is written in a comment')
+    expect(rule('RUL-003').state).toBe('weak'); expect(rule('RUL-003').built).toBe('GET /api/rooms'); expect(rule('RUL-003').note).toContain('Linked to API-001'); expect(rule('RUL-003').note).toContain('not proof')
+    expect(detail.matches.filter((m) => m.area === 'rule').every((m) => m.state !== 'found' && m.state !== 'differences')).toBe(true)                // a rule is never found
   })
   it('says where each found thing is, by a path relative to the folder, and never an absolute path or source text', () => {
     for (const m of detail.matches) { expect(m.file.startsWith('/')).toBe(false); expect(m.file.length).toBeLessThan(400) }
@@ -35,7 +43,7 @@ describe('a check, as the server answers it', () => {
 describe('the list of runs', () => {
   it('holds the advice and runs without their matches', () => {
     const decoded = decodeVerifyList(list)
-    expect(decoded.advice).toContain('highlighter'); expect(decoded.runs).toHaveLength(1); expect(decoded.runs[0].counts).toHaveLength(4)
+    expect(decoded.advice).toContain('highlighter'); expect(decoded.runs).toHaveLength(1); expect(decoded.runs[0].counts).toHaveLength(3); expect(list.runs[0]).not.toHaveProperty('frontend_path')
     expect(list.runs[0]).not.toHaveProperty('matches')
   })
 })
@@ -57,6 +65,12 @@ describe('a damaged answer is refused, not guessed at', () => {
     const n = clone(run); n.counts[0].found = 'many' as never
     expect(() => decodeVerifyDetail(n)).toThrow(ContractError)
     expect(() => decodeVerifyRun(null)).toThrow(ContractError); expect(() => decodeVerifyMatch([])).toThrow(ContractError); expect(() => decodeVerifyList({ runs: [] })).toThrow(ContractError)
+  })
+  it('a count or a match for screens, as an answer made before S20f might hold, is refused rather than drawn', () => {
+    const count = clone(run); count.counts[0].area = 'screen' as never
+    expect(() => decodeVerifyDetail(count)).toThrow(ContractError)
+    const match = clone(run); match.matches[0].area = 'screen' as never
+    expect(() => decodeVerifyDetail(match)).toThrow(ContractError)
   })
   it('a design version that is not a number, or a note that is not text', () => {
     const v = clone(run); v.design['DES-LLD-001'] = 'one' as never

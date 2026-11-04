@@ -26,7 +26,6 @@ POSSIBLE_SCORE = 0.25
 MAX_DIFFERENCES = 8
 _VERSION = re.compile(r"^v\d+$")
 
-
 @dataclass(frozen=True)
 class Match:
     designed: str                    # the design item ID
@@ -40,7 +39,6 @@ class Match:
     differences: tuple[str, ...] = ()
     note: str = ""
 
-
 @dataclass(frozen=True)
 class Extra:
     """Something the code has that the design never mentioned."""
@@ -49,12 +47,10 @@ class Extra:
     file: str
     line: int = 0
 
-
 @dataclass
 class Matched:
     matches: list[Match] = field(default_factory=list)
     extras: list[Extra] = field(default_factory=list)
-
 
 # ---- text helpers ------------------------------------------------------------------------------------------------------------------------------------
 
@@ -68,23 +64,19 @@ def singular(word: str) -> str:
         return w[:-1]
     return w
 
-
 def shape_of(path: str) -> tuple[str, ...]:
     """A path as its words: no `/api`, no `/v1`, every parameter `{}`, every word in the singular and lower case."""
     parts = [p for p in norm_path(path).split("/") if p]
     return tuple("{}" if p == "{}" else singular(p) for p in parts if p.lower() != "api" and not _VERSION.match(p.lower()))
 
-
 def normal(name: str) -> str:
     return re.sub(r"[^a-z0-9]", "", singular(name.replace("_", "")))                # `singular` lower-cases
-
 
 def cosine(a: Iterable[str], b: Iterable[str]) -> float:
     left, right = set(a), set(b)
     if not left or not right:
         return 0.0
     return len(left & right) / math.sqrt(len(left) * len(right))
-
 
 def names_agree(designed: str, built: Iterable[str]) -> bool:
     """A designed field name is present in the code if some name is the same once case, underscores and plurals are ignored, or one name's words hold the other's
@@ -100,10 +92,8 @@ def names_agree(designed: str, built: Iterable[str]) -> bool:
             return True
     return False
 
-
 def _bounded(items: Sequence[str]) -> tuple[str, ...]:
     return tuple(items[:MAX_DIFFERENCES]) + ((f"and {len(items) - MAX_DIFFERENCES} more",) if len(items) > MAX_DIFFERENCES else ())
-
 
 # ---- endpoints ---------------------------------------------------------------------------------------------------------------------------------------
 
@@ -114,7 +104,6 @@ def _route_fields(route: Route, backend: Backend) -> set[str]:
             names |= {f.name for f in backend.models[model].fields}
     return names
 
-
 def _model_in(response_model: str, backend: Backend) -> str:
     """The model a `response_model=` expression names: `Reservation`, `list[Reservation]`, `Optional[Reservation]`."""
     for word in re.findall(r"[A-Za-z_][A-Za-z0-9_]*", response_model or ""):
@@ -122,18 +111,14 @@ def _model_in(response_model: str, backend: Backend) -> str:
             return word
     return ""
 
-
 def _route_words(route: Route, backend: Backend) -> frozenset[str]:
     return words_of(" ".join([route.path.replace("/", " "), route.function, " ".join(sorted(_route_fields(route, backend)))]))
-
 
 def _route_key(route: Route) -> tuple[str, str, int, str]:
     return (route.file, route.method, route.line, route.path)
 
-
 def _label(route: Route) -> str:
     return f"{route.method} {route.path}"
-
 
 def _endpoint_differences(item: Designed, route: Route, backend: Backend) -> list[str]:
     out: list[str] = []
@@ -154,7 +139,6 @@ def _endpoint_differences(item: Designed, route: Route, backend: Backend) -> lis
     if route.prefix_unknown:
         out.append("the router's prefix is built in code, so the full path could not be read exactly")
     return out
-
 
 def match_endpoints(design: Design, backend: Backend) -> tuple[list[Match], list[Extra]]:
     wanted = design.of("endpoint")
@@ -200,7 +184,6 @@ def match_endpoints(design: Design, backend: Backend) -> tuple[list[Match], list
     extras = [Extra("endpoint", _label(r), r.file, r.line) for r in routes if _route_key(r) not in taken_routes]
     return matches, extras
 
-
 # ---- tables ------------------------------------------------------------------------------------------------------------------------------------------
 
 @dataclass(frozen=True)
@@ -209,7 +192,6 @@ class _Built:
     columns: frozenset[str]
     file: str
     line: int
-
 
 def _merged_tables(tables: Sequence[Table]) -> list[_Built]:
     """A table described twice (an ORM class and a CREATE TABLE) is one table with the columns of both."""
@@ -221,7 +203,6 @@ def _merged_tables(tables: Sequence[Table]) -> list[_Built]:
         first = sorted(group, key=lambda t: (t.file, t.line))[0]
         out.append(_Built(first.name, frozenset(c for t in group for c in t.columns), first.file, first.line))
     return sorted(out, key=lambda b: (b.name.lower(), b.file))
-
 
 def match_tables(design: Design, backend: Backend) -> tuple[list[Match], list[Extra]]:
     wanted = design.of("table")
@@ -266,17 +247,73 @@ def match_tables(design: Design, backend: Backend) -> tuple[list[Match], list[Ex
     extras = [Extra("table", b.name, b.file, b.line) for b in built if b.name not in taken_built]
     return matches, extras
 
-
 # ---- rules (weak evidence only) ----------------------------------------------------------------------------------------------------------------------
 
 RULE_WORDS_NEEDED = 3                # a rule quoted by its words needs this many of its words together in one comment, test name or message
+RULE_LINK_WORDS = 3                  # a rule and an endpoint with no requirement in common are kin if they share this many words
+_CITED_SOURCE = ("MEM-", "DOC-")     # a chunk of an uploaded document is not a requirement two items can be said to share
 
+@dataclass(frozen=True)
+class _Link:
+    endpoint: Designed
+    shared_sources: tuple[str, ...]
+    shared_words: tuple[str, ...]
 
-def match_rules(design: Design, texts: Sequence[tuple[str, str]]) -> list[Match]:
-    """A rule is logic, not a name, so the only evidence is WEAK: its ID written in a comment, a test name or a message, or RULE_WORDS_NEEDED of its own words together in
-    one of them. It is never FOUND. `texts` are (file, text) pairs picked out of the code by the readers."""
+def _requirements(item: Designed) -> frozenset[str]:
+    return frozenset(d for d in item.derives if not d.startswith(_CITED_SOURCE))
+
+def rule_link(rule: Designed, endpoints: Sequence[Designed]) -> _Link | None:
+    """The endpoint a rule belongs to, or None. Kin = they derive from a requirement in common AND share at least one meaningful word, or they share RULE_LINK_WORDS words
+    without a requirement in common. When several qualify the one sharing the most words wins, then the one with a shared requirement, then the lowest ID, so the
+    order of the design never changes the answer."""
+    best: tuple[tuple[int, int, str], _Link] | None = None
+    for ep in endpoints:
+        words = tuple(sorted(rule.words & ep.words))
+        sources = tuple(sorted(_requirements(rule) & _requirements(ep)))
+        if not ((sources and words) or len(words) >= RULE_LINK_WORDS):
+            continue
+        key = (-len(words), -len(sources), ep.id)
+        if best is None or key < best[0]:
+            best = (key, _Link(ep, sources, words))
+    return best[1] if best else None
+
+def _why(link: _Link) -> str:
+    kin = (f"both come from {', '.join(link.shared_sources)} and share the word{'s' if len(link.shared_words) != 1 else ''} {', '.join(link.shared_words)}" if link.shared_sources
+           else f"they share the words {', '.join(link.shared_words)}")
+    return f"Linked to {link.endpoint.id} because {kin}"
+
+def _by_label(backend: Backend | None) -> dict[str, Route]:
+    return {_label(r): r for r in (backend.routes if backend else [])}
+
+def _endpoint_hint(rule: Designed, link: _Link, found: dict[str, Match], routes: dict[str, Route]) -> Match:
+    """What the rule's endpoint says about the rule. NEVER FOUND: a rule is logic, and an endpoint that exists shows only that the rule has a home."""
+    ep, why = link.endpoint, _why(link)
+    m = found.get(ep.id)
+    if m is None or m.state not in (FOUND, DIFFERENCES):
+        if m is not None and m.state == POSSIBLE:
+            return Match(rule.id, "rule", NOT_FOUND, note=f"{why}, but {ep.id} was only a possible match in the build, so nothing is claimed for this rule")
+        return Match(rule.id, "rule", NOT_FOUND, note=f"{why}, but {ep.id} ({ep.title}) was not found in the build, so there is nowhere the rule could be enforced")
+    route = routes.get(m.built)
+    wanted = tuple(c for c in ep.codes if c >= 400)
+    answered = tuple(c for c in wanted if route is not None and c in route.status_codes)
+    where = dict(built=m.built, file=m.file, line=m.line)
+    if wanted and not answered:
+        return Match(rule.id, "rule", NOT_FOUND, **where, note=f"{why}. {ep.id} is built as {m.built}, but it never answers {', '.join(map(str, wanted))}, which is how the design says a refusal looks")
+    if answered:
+        return Match(rule.id, "rule", WEAK, **where, note=(f"{why}. {ep.id} is built as {m.built} and answers {', '.join(map(str, answered))}, which is how the design says a refusal looks. "
+                                                          "This is weak evidence: the rule has a home, but nothing shows it is enforced."))
+    return Match(rule.id, "rule", WEAK, **where, note=f"{why}. {ep.id} is built as {m.built}; the design gives it no error code, so this only shows the rule has a home. This is weak evidence, not proof it is enforced.")
+
+def match_rules(design: Design, texts: Sequence[tuple[str, str]], endpoints: Sequence[Match] = (), backend: Backend | None = None) -> list[Match]:
+    """A rule is logic, not a name, so the only evidence is WEAK, and it is never FOUND. Three kinds, strongest first:
+      1. its ID written in a comment, a test name or a message, or RULE_WORDS_NEEDED of its own words together in one of them (`texts`, picked out of the code by the reader);
+      2. its endpoint: the endpoint it is kin to (`rule_link`), built, and answering the error code the design gives it;
+      3. nothing: it is NOT FOUND, and the note says why."""
     out: list[Match] = []
     ordered = sorted(texts)
+    designed_endpoints = design.of("endpoint")
+    found = {m.designed: m for m in endpoints}
+    routes = _by_label(backend)
     for item in design.of("rule"):
         id_re = re.compile(rf"(?<![A-Za-z0-9-]){re.escape(item.id)}(?![A-Za-z0-9])")
         hit = next(((f, t) for f, t in ordered if id_re.search(t)), None)
@@ -286,83 +323,24 @@ def match_rules(design: Design, texts: Sequence[tuple[str, str]]) -> list[Match]
             best = max(((len(rule_words & words_of(t)), f, t) for f, t in ordered), default=(0, "", ""), key=lambda x: (x[0], -ord(x[1][:1] or " "), x[1], x[2]))
             if best[0] >= RULE_WORDS_NEEDED:
                 hit, how = (best[1], best[2]), f"{best[0]} of the rule's words appear together in one comment, test or message"
-        if hit is None:
-            out.append(Match(item.id, "rule", NOT_FOUND, note="no comment, test or message in the code mentions this rule"))
-        else:
+        if hit is not None:
             out.append(Match(item.id, "rule", WEAK, WORDS, 0.0, "", hit[0], 0, note=how + ". This is weak evidence: it shows the rule was talked about, not that it is enforced."))
+            continue
+        link = rule_link(item, designed_endpoints)
+        if link is None:
+            out.append(Match(item.id, "rule", NOT_FOUND, note="no comment, test or message in the code mentions this rule, and no endpoint of the design is clearly where it belongs"))
+        else:
+            out.append(_endpoint_hint(item, link, found, routes))
     return out
 
-
-# ---- screens (by the pages of the frontend) ----------------------------------------------------------------------------------------------------------
-
-GENERIC_FOLDERS = frozenset({"src", "app", "pages", "views", "screens", "routes", "components", "lib", "web", "client", "frontend", "ui", "index", "main"})
-
-
-def _page_words(name: str, file: str) -> frozenset[str]:
-    """The words of a page: its route and its file path, without the extension, the folders every project has, and file-name case (`BrowseRooms` is `browse rooms`)."""
-    stem = re.sub(r"\.[A-Za-z0-9]+$", "", file)
-    spaced = re.sub(r"([a-z])([A-Z])", r"\1 \2", f"{name} {stem}")
-    return frozenset(w for w in words_of(re.sub(r"[/\\._\-:\[\]]", " ", spaced)) if w not in GENERIC_FOLDERS)
-
-
-def match_screens(design: Design, pages: Sequence[tuple[str, str, int]], calls: dict[str, frozenset[str]], endpoints: Sequence[Match]) -> tuple[list[Match], list[Extra]]:
-    """`pages` are (route or page name, file, line); `calls` maps a file to the API paths it calls. A screen is matched to the page whose name and file share the most words with
-    it. A matched screen has DIFFERENCES when the design's endpoints that the screen is about (by shared words) are built, but the page never calls any of them."""
-    wanted = design.of("screen")
-    pairs = []
-    for item in wanted:
-        for name, file, line in pages:
-            score = cosine(item.words, _page_words(name, file))
-            if score >= POSSIBLE_SCORE:
-                pairs.append((-score, item.id, name, file, line))
-    pairs.sort()
-    taken: dict[str, tuple[float, str, str, int]] = {}
-    used: set[tuple[str, str]] = set()
-    for neg, item_id, name, file, line in pairs:
-        if item_id in taken or (name, file) in used:
-            continue
-        taken[item_id] = (-neg, name, file, line)
-        used.add((name, file))
-    built = {m.designed: norm_path(m.built.split(" ", 1)[1]) for m in endpoints if m.built and " " in m.built and m.state in (FOUND, DIFFERENCES)}
-    designed = {i.id: i for i in design.of("endpoint")}
-    out: list[Match] = []
-    for item in wanted:
-        if item.id not in taken:
-            out.append(Match(item.id, "screen", NOT_FOUND, note="no page in the frontend looks like this screen"))
-            continue
-        score, name, file, line = taken[item.id]
-        if score < FOUND_SCORE:
-            out.append(Match(item.id, "screen", POSSIBLE, WORDS, round(score, 2), name, file, line, note=f"'{name}' shares some words with this screen, not enough to be sure"))
-            continue
-        called = {norm_path(p) for p in calls.get(file, frozenset())}
-        about = [api for api in built if item.words & designed[api].words]
-        missing = [api for api in about if built[api] not in called]
-        diffs = ()
-        if about and missing and not any(built[api] in called for api in about):
-            diffs = (f"the screen is about {', '.join(sorted(missing))}, but its page never calls " + ("it" if len(missing) == 1 else "them"),)
-        out.append(Match(item.id, "screen", DIFFERENCES if diffs else FOUND, WORDS, round(score, 2), name, file, line, diffs, note=("calls " + ", ".join(sorted(called))) if called else ""))
-    extras = [Extra("screen", name, file, line) for name, file, line in pages if (name, file) not in used]
-    return out, extras
-
-
-def match_all(design: Design, backend: Backend, frontend=None) -> Matched:
+def match_all(design: Design, backend: Backend) -> Matched:
     out = Matched()
     for matcher in (match_endpoints, match_tables):
         m, e = matcher(design, backend)
         out.matches += m
         out.extras += e
-    texts = list(backend_texts(backend))
-    if frontend is not None:
-        pages = [(p.name, p.file, p.line) for p in frontend.pages]
-        m, e = match_screens(design, pages, frontend.calls_by_file(), [x for x in out.matches if x.area == "endpoint"])
-        out.matches += m
-        out.extras += e
-        texts += frontend.texts
-    elif design.of("screen"):
-        out.matches += [Match(i.id, "screen", NOT_FOUND, note="no frontend folder was given, so this screen could not be looked for") for i in design.of("screen")]
-    out.matches += match_rules(design, texts)
+    out.matches += match_rules(design, list(backend_texts(backend)), [x for x in out.matches if x.area == "endpoint"], backend)
     return out
-
 
 def backend_texts(backend: Backend) -> list[tuple[str, str]]:
     """Comments, docstrings, test names and messages from the Python files: `backend.texts`, filled by the reader."""

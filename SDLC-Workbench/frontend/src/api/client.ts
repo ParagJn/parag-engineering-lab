@@ -71,7 +71,7 @@ export interface Client {
   checklist(projectId: string, phase?: string): Promise<Checklist>
   answerCheck(projectId: string, checkId: string, actorName: string, answer: Answer, note: string, phase?: string): Promise<Checklist>
   verifyRun(projectId: string, runId: number): Promise<VerifyDetail>
-  runVerify(projectId: string, actorName: string, backendPath: string, frontendPath: string | null): Promise<VerifyDetail>
+  runVerify(projectId: string, actorName: string, backendPath: string): Promise<VerifyDetail>
   requestChanges(projectId: string, phase: string, actorName: string, input: ChangeRequest): Promise<ChangesRequested>
   rerun(projectId: string, phase: string, actorName: string): Promise<RerunStarted>
   rerunStale(projectId: string, phase: string, actorName: string): Promise<RerunStarted>
@@ -137,9 +137,9 @@ export function makeClient(fetcher: Fetcher = (...args) => fetch(...args), base 
       })),
     verifyRuns: async (projectId) => decodeVerifyList(await call(`/api/projects/${id(projectId)}/verify`)),
     verifyRun: async (projectId, runId) => decodeVerifyDetail(await call(`/api/projects/${id(projectId)}/verify/${id(String(runId))}`)),
-    runVerify: async (projectId, actorName, backendPath, frontendPath) =>
+    runVerify: async (projectId, actorName, backendPath) =>
       decodeVerifyDetail(await call(`/api/projects/${id(projectId)}/verify`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', ...who(actorName) }, body: JSON.stringify({ backend_path: backendPath, frontend_path: frontendPath }),
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...who(actorName) }, body: JSON.stringify({ backend_path: backendPath }),
       })),
     traceItem: async (projectId, itemId) => decodeTraceItem(await call(`/api/projects/${id(projectId)}/traceability/item/${id(itemId)}`)),
 

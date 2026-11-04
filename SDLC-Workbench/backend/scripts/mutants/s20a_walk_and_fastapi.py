@@ -120,5 +120,5 @@ MUTANTS = [
     ("the last column is lost", P, "        cols.append(piece)\n        names = []", "        names = []"),
     ("sql tables are marked as orm", P, "out.append(Table(m.group(1), tuple(names), rel, text.count(\"\\n\", 0, m.start()) + 1, source=\"sql\"))", "out.append(Table(m.group(1), tuple(names), rel, text.count(\"\\n\", 0, m.start()) + 1))"),
     ("non python files are parsed", P, "        if not rel.endswith(\".py\"):\n            continue", "        pass"),
-    ("files read is not counted", P, "        result.files_read += 1\n        trees.append((rel, tree))", "        trees.append((rel, tree))"),
+    ("files read is not counted", P, "        result.files_read += 1\n        result.texts += _texts_of(rel, text, tree)", "        result.texts += _texts_of(rel, text, tree)"),
 ]

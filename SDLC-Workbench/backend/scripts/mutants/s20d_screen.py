@@ -76,7 +76,7 @@ FRONTEND = [
     ("pressing enter checks without a folder", C, "if (p.canRun && p.backend.trim() && !p.busy) p.onRun()", "if (p.canRun && !p.busy) p.onRun()"),
     ("pressing enter checks twice", C, "if (p.canRun && p.backend.trim() && !p.busy) p.onRun()", "if (p.canRun && p.backend.trim()) p.onRun()"),
     ("the missing name is not explained", C, "{!p.canRun && <p className=\"text-xs text-slate-500\">Give your name first", "{false && <p className=\"text-xs text-slate-500\">Give your name first"),
-    ("the languages are not named", C, "Python/FastAPI for the backend; React, Vue or plain JavaScript/TypeScript for the frontend, read by pattern. Other languages are not understood in this version.", "Folders are read."),
+    ("the languages are not named", C, "Python/FastAPI only. The check looks at the endpoints, the tables and the rules of the design; it does not look at a frontend. Other languages are not understood in this version.", "Folders are read."),
     ("the secret rule is not said", C, "Files that may hold a secret (.env, keys) are never read.", ""),
     ("the changed design is not warned", C, "{newer && p.designChanged && <Notice", "{false && <Notice"),
     ("the warning shows without a run", C, "{newer && p.designChanged && <Notice", "{p.designChanged && <Notice"),
@@ -103,15 +103,15 @@ FRONTEND = [
     ("the list advice is optional", A, "advice: str(o.advice, 'verify runs.advice')", "advice: typeof o.advice === 'string' ? o.advice : ''"),
     ("a built thing may have a designed id", A, "designed: nullable(o.designed, `${w}.designed`, str)", "designed: o.designed as never"),
     ("the check goes to the wrong address", K, "`/api/projects/${id(projectId)}/verify`, {\n        method: 'POST'", "`/api/projects/${id(projectId)}/verify/x`, {\n        method: 'POST'"),
-    ("the check is a get", K, "        method: 'POST', headers: { 'Content-Type': 'application/json', ...who(actorName) }, body: JSON.stringify({ backend_path: backendPath, frontend_path: frontendPath }),", "        method: 'GET', headers: { 'Content-Type': 'application/json', ...who(actorName) }, body: undefined,"),
+    ("the check is a get", K, "        method: 'POST', headers: { 'Content-Type': 'application/json', ...who(actorName) }, body: JSON.stringify({ backend_path: backendPath }),", "        method: 'GET', headers: { 'Content-Type': 'application/json', ...who(actorName) }, body: undefined,"),
     ("the check does not name the person", K, "method: 'POST', headers: { 'Content-Type': 'application/json', ...who(actorName) }, body: JSON.stringify({ backend_path", "method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ backend_path"),
-    ("the check drops the frontend", K, "backend_path: backendPath, frontend_path: frontendPath }", "backend_path: backendPath }"),
+    # REMOVED (S20f, the frontend folder was removed): the check drops the frontend
     ("a run is read by the wrong number", K, "verify/${id(String(runId))}`", "verify/${id(String(runId + 1))}`"),
     # ---- the saved folders
     ("a folder is saved for every project", P, "const key = (projectId: string) => `sdlc.verify.paths.${projectId}`", "const key = (projectId: string) => `sdlc.verify.paths`"),
-    ("a damaged store breaks the page", P, "  } catch {\n    return { backend: '', frontend: '' }\n  }", "  } finally {\n  }"),
+    ("a damaged store breaks the page", P, "  } catch {\n    return { backend: '' }\n  }", "  } finally {\n  }"),
     ("a saved folder is not cut when read", P, "const text = (v: unknown) => (typeof v === 'string' ? v.slice(0, MAX) : '')", "const text = (v: unknown) => (typeof v === 'string' ? v : '')"),
-    ("a saved folder is not cut when saved", P, "JSON.stringify({ backend: paths.backend.slice(0, MAX), frontend: paths.frontend.slice(0, MAX) })", "JSON.stringify(paths)"),
+    ("a saved folder is not cut when saved", P, "JSON.stringify({ backend: paths.backend.slice(0, MAX) })", "JSON.stringify(paths)"),
     ("a blocked store breaks saving", P, "  } catch {\n    /* a full or blocked store is not an error: the page works without it */\n  }", "  } finally {\n  }"),
     # ---- the address
     ("the verify address is not parsed", R, "    if (parts.length === 3 && parts[2] === 'verify') return { name: 'verify', id }\n", ""),

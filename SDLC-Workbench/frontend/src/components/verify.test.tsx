@@ -1,4 +1,4 @@
-// Build Verify on the page (S20d). Static renders: a ring, a tile, a card and the whole panel are checked by what they SAY, not by how they look.
+// Build Verify on the page (S20d, S20f: backend only, three areas). Static renders: a ring, a tile, a card and the whole panel are checked by what they SAY, not by how they look.
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import type { AreaCounts, VerifyDetail, VerifyMatch, VerifyRun } from '../api/verify'
@@ -10,13 +10,13 @@ const noop = () => {}
 const counts = (over: Partial<AreaCounts> = {}): AreaCounts => ({ area: 'endpoint', designed: 4, found: 1, differences: 1, possible: 1, not_found: 1, weak: 0, extras: 2, ...over })
 const match = (over: Partial<VerifyMatch> = {}): VerifyMatch => ({ designed: 'API-001', area: 'endpoint', state: 'found', step: 'exact', score: 1, built: 'GET /api/rooms', file: 'app.py', line: 4, differences: [], note: '', ...over })
 const run = (id: number, found = 2, over: Partial<VerifyRun> = {}): VerifyRun => ({
-  id, backend_path: '/home/ann/back', frontend_path: null, by: 'human:Ann', at: '2026-11-05T10:00:00Z', design: { 'DES-LLD-001': 1 }, notes: [],
-  counts: (['endpoint', 'table', 'screen', 'rule'] as const).map((area) => counts({ area, found, differences: 0, possible: 0, not_found: 4 - found, extras: 0 })), ...over,
+  id, backend_path: '/home/ann/back', by: 'human:Ann', at: '2026-11-05T10:00:00Z', design: { 'DES-LLD-001': 1 }, notes: [],
+  counts: (['endpoint', 'table', 'rule'] as const).map((area) => counts({ area, found, differences: 0, possible: 0, not_found: 4 - found, extras: 0 })), ...over,
 })
 const detail = (id = 2, over: Partial<VerifyDetail> = {}): VerifyDetail => ({ ...run(id), advice: 'A highlighter, not a pass or fail.', matches: [match(), match({ designed: 'API-002', state: 'not_found', built: '', file: '', line: 0 })], ...over })
 const props = (over: Partial<VerifyPanelProps> = {}): VerifyPanelProps => ({
   projectId: 'p1', projectName: 'Rooms', advice: 'It is a highlighter, not a pass or fail, and it never runs your code.', runs: [run(2), run(1, 1)], detail: detail(2), designChanged: false,
-  busy: false, error: null, backend: '', frontend: '', canRun: true, onBackend: noop, onFrontend: noop, onRun: noop, onOpenRun: noop, ...over,
+  busy: false, error: null, backend: '', canRun: true, onBackend: noop, onRun: noop, onOpenRun: noop, ...over,
 })
 const disabled = (label: string) => new RegExp(`<button[^>]*\\sdisabled=""[^>]*>${label}`)
 
@@ -67,7 +67,7 @@ describe('an area card', () => {
     expect(out).toContain('3 of 4 found'); expect(out).toContain('2 built but not designed'); expect(out).toContain('aria-label="Endpoints"')
   })
   it('says nothing is in the design for an empty area, and lists no tiles', () => {
-    const out = html(<AreaCard counts={counts({ area: 'screen', designed: 0, found: 0, differences: 0, possible: 0, not_found: 0, extras: 0 })} matches={[]} newer={run(2)} />)
+    const out = html(<AreaCard counts={counts({ area: 'rule', designed: 0, found: 0, differences: 0, possible: 0, not_found: 0, extras: 0 })} matches={[]} newer={run(2)} />)
     expect(out).toContain('Nothing in the design.'); expect(out).not.toContain('items"')
   })
   it('says how much it moved since the run before, up or down, and nothing when it did not', () => {
@@ -96,12 +96,13 @@ describe('the panel', () => {
     expect(out).toContain('Build Verify'); expect(out).toContain('highlighter'); expect(out).toContain('never runs your code'); expect(out).toContain('.env, keys')
     expect(out).toContain('Back to Rooms'); expect(out).toContain('href="#/projects/p1"')
   })
-  it('asks for the folders, the backend required and the frontend optional, and says which languages are understood', () => {
+  it('asks for the backend folder only, and says it looks at endpoints, tables and rules in Python/FastAPI and not at a frontend', () => {
     const out = html(<VerifyPanel {...props()} />)
-    expect(out).toContain('Backend folder'); expect(out).toContain('Frontend folder (optional)'); expect(out).toContain('Python/FastAPI'); expect(out).toContain('Other languages are not understood')
+    expect(out).toContain('Backend folder'); expect(out).not.toContain('Frontend folder'); expect(out).not.toContain('verify-frontend'); expect(out).toContain('Python/FastAPI only')
+    expect(out).toContain('endpoints, the tables and the rules'); expect(out).toContain('does not look at a frontend'); expect(out).toContain('Other languages are not understood')
   })
-  it('keeps the typed folders and cannot be pressed without a backend folder, without a name or while it works', () => {
-    expect(html(<VerifyPanel {...props({ backend: '/x/back', frontend: '/x/front' })} />)).toContain('value="/x/back"')
+  it('keeps the typed folder and cannot be pressed without a backend folder, without a name or while it works', () => {
+    expect(html(<VerifyPanel {...props({ backend: '/x/back' })} />)).toContain('value="/x/back"')
     expect(html(<VerifyPanel {...props({ backend: '' })} />)).toMatch(disabled('Check the build'))
     expect(html(<VerifyPanel {...props({ backend: '   ' })} />)).toMatch(disabled('Check the build'))
     const nameless = html(<VerifyPanel {...props({ backend: '/x', canRun: false })} />)
@@ -109,17 +110,18 @@ describe('the panel', () => {
     expect(html(<VerifyPanel {...props({ backend: '/x', busy: true })} />)).toMatch(disabled('Checking…'))
     expect(html(<VerifyPanel {...props({ backend: '/x' })} />)).not.toMatch(disabled('Check the build'))
   })
-  it('shows a ring card for each of the four areas, the legend, who ran it and which folders', () => {
-    const out = html(<VerifyPanel {...props({ detail: detail(2, { frontend_path: '/home/ann/front' }) })} />)
-    for (const area of ['Endpoints', 'Tables', 'Screens', 'Rules']) expect(out).toContain(`aria-label="${area}"`)
-    expect(out).toContain('What the colours and shapes mean'); expect(out).toContain('Run 2 by Ann'); expect(out).toContain('/home/ann/back'); expect(out).toContain('/home/ann/front')
+  it('shows a ring card for each of the three areas and none for screens, the legend, who ran it and which folder', () => {
+    const out = html(<VerifyPanel {...props()} />)
+    for (const area of ['Endpoints', 'Tables', 'Rules']) expect(out).toContain(`aria-label="${area}"`)
+    expect(out).not.toContain('aria-label="Screens"'); expect((out.match(/aria-label="(Endpoints|Tables|Rules)"/g) ?? []).length).toBe(3)
+    expect(out).toContain('What the colours and shapes mean'); expect(out).toContain('Run 2 by Ann'); expect(out).toContain('/home/ann/back'); expect(out).not.toContain('Frontend folder'); expect(out).not.toContain(' · frontend ')
   })
   it('before any run says so, shows no rings, and offers no download', () => {
     const out = html(<VerifyPanel {...props({ runs: [], detail: null })} />)
     expect(out).toContain('No check yet'); expect(out).not.toContain('Download as'); expect(out).not.toContain('aria-label="Endpoints"'); expect(out).not.toContain('How it moved')
   })
   it('lists what could not be read, folded, with a count', () => {
-    const out = html(<VerifyPanel {...props({ detail: detail(2, { notes: ['backend: left out .env', 'frontend: no page route'] }) })} />)
+    const out = html(<VerifyPanel {...props({ detail: detail(2, { notes: ['backend: left out .env', 'backend: stopped after 3 files'] }) })} />)
     expect(out).toContain('What could not be read (2 notes)'); expect(out).toContain('backend: left out .env'); expect(out).not.toMatch(/<details[^>]* open/)
     expect(html(<VerifyPanel {...props()} />)).not.toContain('What could not be read')
   })
@@ -174,9 +176,10 @@ describe('the tile and the trend, in words', () => {
     const svgs = out.match(/<svg[^>]*lucide[^>]*>/g) ?? []
     expect(svgs.length).toBeGreaterThanOrEqual(7); expect(svgs.every((s) => s.includes('aria-hidden="true"'))).toBe(true)
   })
-  it('each trend line says its share at every run, in words', () => {
+  it('each trend line says its share at every run, in words, for the three areas and never for screens', () => {
     const out = html(<VerifyPanel {...props()} />)
-    expect(out).toContain('aria-label="Endpoints: 25%, then 50%"'); expect(out).toContain('aria-label="Rules: 25%, then 50%"')
+    expect(out).toContain('aria-label="Endpoints: 25%, then 50%"'); expect(out).toContain('aria-label="Rules: 25%, then 50%"'); expect(out).toContain('aria-label="Tables: 25%, then 50%"')
+    expect((out.match(/<polyline/g) ?? []).length).toBe(3); expect(out).not.toContain('Screens')
   })
   it('one run is drawn as a dot in the middle, never at the left edge', () => {
     const out = html(<VerifyPanel {...props({ runs: [run(1), run(2)], detail: detail(2) })} />)

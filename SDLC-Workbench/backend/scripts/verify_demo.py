@@ -1,4 +1,5 @@
-"""Build Verify, offline and free (S20b): a small FastAPI project written to a temporary folder, a design with one renamed endpoint, one missing endpoint and one extra route.
+"""Build Verify, offline and free (S20b, S20f): a small FastAPI project written to a temporary folder, a design with one renamed endpoint, one missing endpoint, one extra route and
+three rules (one reached through its endpoint, one quoted in a comment, one with nowhere to live).
 
     cd backend && python -m scripts.verify_demo
 
@@ -37,6 +38,7 @@ def list_rooms(): ...
 
 @app.post("/api/bookings", status_code=201)
 def book(body: Booking):
+    # RUL-002 a booking is at most four hours
     raise HTTPException(status_code=409, detail="that slot is taken")
 
 
@@ -49,11 +51,14 @@ app.include_router(router, prefix="/api")
 SCHEMA = "CREATE TABLE room (\n  id INTEGER PRIMARY KEY,\n  name TEXT NOT NULL\n);\n"
 
 DESIGN = Design(items=[
-    Designed("API-001", "endpoint", "GET /api/rooms", "lists rooms", method="GET", path="/api/rooms"),
+    Designed("API-001", "endpoint", "GET /api/rooms", "lists rooms", method="GET", path="/api/rooms", derives=("FR-001",)),
     Designed("API-002", "endpoint", "POST /api/reservations", "reserves a room", method="POST", path="/api/reservations",
-             fields=("room_id", "date", "start_time", "end_time"), codes=(201, 400, 409)),
+             fields=("room_id", "date", "start_time", "end_time"), codes=(201, 400, 409), derives=("FR-001",)),
     Designed("API-003", "endpoint", "DELETE /api/reservations/{id}", "cancels", method="DELETE", path="/api/reservations/{id}"),
     Designed("TBL-001", "table", "rooms", "rooms: id, name, capacity", fields=("id", "name", "capacity")),
+    Designed("RUL-001", "rule", "A reservation may not overlap another", "A reservation may not overlap another reservation for the same room.", derives=("FR-001",)),
+    Designed("RUL-002", "rule", "A booking is at most four hours", "A booking is at most four hours long.", derives=("FR-001",)),
+    Designed("RUL-003", "rule", "Staff wear a badge", "Staff must wear a badge in the lobby.", derives=("FR-009",)),
 ])
 
 

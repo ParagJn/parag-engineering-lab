@@ -68,7 +68,7 @@ FRONTEND = [
     ("download all asks for one file", R, "onClick={() => onDownload(r.artefactId!, r.version, null)}", "onClick={() => onDownload(r.artefactId!, r.version, r.pieces[0].file)}"),
     ("download all asks for the wrong version", R, "onClick={() => onDownload(r.artefactId!, r.version, null)}", "onClick={() => onDownload(r.artefactId!, null, null)}"),
     ("download all is after Read it", R, "                  {onDownload && r.pieces.length > 0 && (\n                    <button", "                  {false && (\n                    <button"),
-    ("Read it loses its place", R, "className={`${onDownload && r.pieces.length > 0 ? '' : 'ml-auto '}text-xs underline`}", "className=\"text-xs underline\""),
+    ("Read it loses its place", R, "className={`${(onDownload && r.pieces.length > 0) || (projectId && isDownloadable(r.key)) ? '' : 'ml-auto '}text-xs underline`}", "className=\"text-xs underline\""),
     ("every file has a download", R, "            {x.state === 'done' && onSave && (", "            {onSave && ("),
     ("no file has a download", R, "            {x.state === 'done' && onSave && (", "            {false && ("),
     ("a file download asks for another file", R, "<button type=\"button\" onClick={() => onSave(x.file)}", "<button type=\"button\" onClick={() => onSave(pieces[0].file)}"),

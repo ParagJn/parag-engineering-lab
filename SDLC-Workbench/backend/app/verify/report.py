@@ -6,14 +6,14 @@ from typing import Sequence
 
 from .match import DIFFERENCES, FOUND, NOT_FOUND, POSSIBLE, STATES, WEAK, Extra, Match
 
-AREAS = ("endpoint", "table", "screen", "rule")
-AREA_WORDS = {"endpoint": "Endpoints", "table": "Tables", "screen": "Screens", "rule": "Rules"}
+AREAS = ("endpoint", "table", "rule")
+AREA_WORDS = {"endpoint": "Endpoints", "table": "Tables", "rule": "Rules"}
 STATE_WORDS = {
     FOUND: "Found", DIFFERENCES: "Found with differences", POSSIBLE: "Possible", NOT_FOUND: "Not found", WEAK: "Weak evidence",
 }
 # One sentence for the screen and the download, so a person never has to decode a colour.
-ADVICE = ("This shows how far the build has drifted from the design. A real build always differs from its design, so this is a highlighter, not a pass or fail, and it "
-          "never runs your code.")
+ADVICE = ("This shows how far the backend of the build has drifted from the design: endpoints, tables and rules. A real build always differs from its design, so this is a "
+          "highlighter, not a pass or fail, and it never runs your code.")
 
 
 @dataclass(frozen=True)

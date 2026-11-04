@@ -16,7 +16,6 @@ export function VerifyPage({ client, id, actorName }: { client: Client; id: stri
   const [list, setList] = useState<VerifyList | null>(null)
   const [detail, setDetail] = useState<VerifyDetail | null>(null)
   const [backend, setBackend] = useState(() => loadPaths(browserStore(), id).backend)
-  const [frontend, setFrontend] = useState(() => loadPaths(browserStore(), id).frontend)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [changed, setChanged] = useState(false)
@@ -48,8 +47,8 @@ export function VerifyPage({ client, id, actorName }: { client: Client; id: stri
   const run = async () => {
     setBusy(true); setError(null)
     try {
-      const made = await client.runVerify(id, actorName, backend.trim(), frontend.trim() || null)
-      savePaths(browserStore(), id, { backend: backend.trim(), frontend: frontend.trim() })
+      const made = await client.runVerify(id, actorName, backend.trim())
+      savePaths(browserStore(), id, { backend: backend.trim() })
       await refresh(made.id)
     } catch (e) {
       setError(e instanceof ServerRefused || e instanceof Error ? e.message : 'The check could not be run.')
@@ -61,7 +60,7 @@ export function VerifyPage({ client, id, actorName }: { client: Client; id: stri
   return (
     <VerifyPanel
       projectId={id} projectName={project.value.name} advice={list?.advice ?? ''} runs={list?.runs ?? []} detail={detail} designChanged={changed} busy={busy} error={error}
-      backend={backend} frontend={frontend} canRun={!!actorName} onBackend={setBackend} onFrontend={setFrontend} onRun={run}
+      backend={backend} canRun={!!actorName} onBackend={setBackend} onRun={run}
       onOpenRun={(runId) => { setError(null); client.verifyRun(id, runId).then(setDetail).catch((e) => setError(e instanceof Error ? e.message : 'That run could not be loaded.')) }}
     />
   )

@@ -119,26 +119,38 @@ def seeded(store, project, library, screens=False):
     seed(store, project, library, "usecase_diagram", uc_list(2))
     for key, text in DESIGN_BODIES.items():
         seed(store, project, library, key, text)
-    if screens:
+    if screens:                                                            # S20f: the design may still HAVE screens; Build Verify does not look for them any more
         seed(store, project, library, "hifi_wireframes", "## Screens\n- HFS-001 Browse rooms: the page. Derives from: FR-001\n")
 
 
-def test_the_design_is_read_as_endpoints_tables_rules_and_screens(store, project, library):
+def test_the_design_is_read_as_endpoints_tables_and_rules_and_a_screen_in_the_design_is_ignored(store, project, library):
     seeded(store, project, library, screens=True)
     design = read_design(store, library, project.id)
     assert [(i.id, i.area) for i in design.items] == [("API-001", "endpoint"), ("API-002", "endpoint"), ("API-003", "endpoint"), ("TBL-001", "table"), ("TBL-002", "table"),
-                                                      ("HFS-001", "screen"), ("RUL-001", "rule"), ("RUL-002", "rule"), ("RUL-003", "rule")]
+                                                      ("RUL-001", "rule"), ("RUL-002", "rule"), ("RUL-003", "rule")]
     api = next(i for i in design.items if i.id == "API-003")
     assert (api.method, api.path, api.title) == ("POST", "/api/reservations", "POST /api/reservations")
     table = next(i for i in design.items if i.id == "TBL-001")
     assert (table.title, table.fields) == ("rooms", ("id", "name"))
-    wire = store.artefacts.list(project.id, artefact_type="hifi_wireframes")[0]
-    assert design.notes == [] and design.versions[wire.id] == 2 and sorted(set(design.versions.values())) == [1, 2]          # the helper seeds the wireframes twice: version 2 is the one read
+    assert design.notes == [] and not [i for i in design.items if i.area == "screen" or i.id.startswith("HFS")]
+    rule = next(i for i in design.items if i.id == "RUL-001")
+    assert rule.derives == ("FR-001",) and api.derives == ("FR-001",) and table.derives == ("FR-001",)            # what each item says it derives from is kept, for linking a rule to its endpoint
+
+
+def test_the_design_is_ordered_endpoints_then_tables_then_rules_then_by_id_whatever_order_the_document_lists_them_in(store, project, library):
+    jumbled = ("## Overview\nx\n## Rules\n- RUL-002 A room can be retired. Derives from: FR-001\n- RUL-001 A booking may not overlap another. Derives from: FR-001\n"
+               "## Tables\n- TBL-002 reservations: id, room. Derives from: FR-001\n- TBL-001 rooms: id, name. Derives from: FR-001\n"
+               "## Endpoints\n- API-002 GET /api/availability. Derives from: FR-001\n- API-001 GET /api/rooms lists rooms. Derives from: FR-001\n"
+               "## Coverage check\nNone\n## Open questions\nNone")
+    seeded(store, project, library)
+    art = store.artefacts.list(project.id, artefact_type="low_level_design")[0]
+    store.artefacts.add_version(project.id, art.id, body=jumbled, author="human:bob")
+    assert [i.id for i in read_design(store, library, project.id).items] == ["API-001", "API-002", "TBL-001", "TBL-002", "RUL-001", "RUL-002"]
 
 
 def test_a_design_not_written_yet_says_so_instead_of_failing(store, project, library):
     design = read_design(store, library, project.id)
-    assert design.items == [] and len(design.notes) == 2 and "low-level design has not been written" in design.notes[0] and "hi-fi wireframes" in design.notes[1]
+    assert design.items == [] and len(design.notes) == 1 and "low-level design has not been written" in design.notes[0] and "endpoints, tables or rules" in design.notes[0]
 
 
 def test_the_latest_version_of_the_design_is_the_one_read_and_its_version_is_recorded(store, project, library):
@@ -171,7 +183,7 @@ def put(root, rel, text):
 def test_a_check_reads_the_design_and_the_folder_and_keeps_the_run(store, project, library, tmp_path):
     seeded(store, project, library)
     put(tmp_path, "app/main.py", CODE); put(tmp_path, ".env", F.AWS_KEY)
-    run, report = S.check(store, library, project.id, backend_path=str(tmp_path), frontend_path=None, actor="human:ann")
+    run, report = S.check(store, library, project.id, backend_path=str(tmp_path), actor="human:ann")
     states = {m.designed: m.state for m in report.matches}
     assert states["API-001"] == "found" and states["API-002"] == "not_found"
     assert states["API-003"] == "not_found"                              # "/api/bookings" shares no word with "reserves a room": a words match needs some overlap
@@ -186,36 +198,37 @@ def test_a_check_changes_nothing_in_the_design_or_the_folder(store, project, lib
     put(tmp_path, "main.py", CODE)
     before = {a.id: a.latest_version for a in store.artefacts.list(project.id)}
     files = sorted(p.name for p in tmp_path.rglob("*"))
-    S.check(store, library, project.id, backend_path=str(tmp_path), frontend_path=None, actor="human:ann")
+    S.check(store, library, project.id, backend_path=str(tmp_path), actor="human:ann")
     assert {a.id: a.latest_version for a in store.artefacts.list(project.id)} == before and sorted(p.name for p in tmp_path.rglob("*")) == files
 
 
 def test_a_folder_with_no_python_says_nothing_could_be_compared_and_a_bad_path_is_a_plain_sentence(store, project, library, tmp_path):
     seeded(store, project, library)
     put(tmp_path, "readme.md", "hello")
-    run, _ = S.check(store, library, project.id, backend_path=str(tmp_path), frontend_path=None, actor="human:ann")
+    run, _ = S.check(store, library, project.id, backend_path=str(tmp_path), actor="human:ann")
     assert any("no Python or SQL file was found" in n for n in run.notes)
     with pytest.raises(S.FolderProblem, match="there is no folder"):
-        S.check(store, library, project.id, backend_path=str(tmp_path / "nope"), frontend_path=None, actor="human:ann")
+        S.check(store, library, project.id, backend_path=str(tmp_path / "nope"), actor="human:ann")
     assert len(store.verify.runs(project.id)) == 1                                  # the refused check kept nothing
 
 
-def test_a_frontend_folder_is_checked_and_said_not_to_be_compared_yet(store, project, library, tmp_path):
-    seeded(store, project, library)
-    back, front = tmp_path / "back", tmp_path / "front"
-    put(back, "main.py", CODE); put(front, "src/App.tsx", "export default function App() {}")
-    run, _ = S.check(store, library, project.id, backend_path=str(back), frontend_path=str(front), actor="human:ann")
-    assert run.frontend_path == str(front) and any(n.startswith("frontend: read 1 files by pattern, not parsed: ") for n in run.notes)
-    with pytest.raises(S.FolderProblem):
-        S.check(store, library, project.id, backend_path=str(back), frontend_path=str(front / "missing"), actor="human:ann")
+def test_a_run_no_longer_takes_a_frontend_folder_and_stores_none(store, project, library, tmp_path):
+    seeded(store, project, library, screens=True)                                  # the design has a screen; the run ignores it
+    put(tmp_path, "main.py", CODE)
+    with pytest.raises(TypeError):
+        S.check(store, library, project.id, backend_path=str(tmp_path), frontend_path=str(tmp_path), actor="human:ann")
+    run, report = S.check(store, library, project.id, backend_path=str(tmp_path), actor="human:ann")
+    assert run.frontend_path is None and {m.area for m in report.matches} == {"endpoint", "table", "rule"} and [c.area for c in report.areas] == ["endpoint", "table", "rule"]
+    stored = store.verify.matches(project.id, run.id)
+    assert {m.area for m in stored} <= {"endpoint", "table", "rule"} and not [m for m in stored if m.designed == "HFS-001"] and not any(n.startswith("frontend:") for n in run.notes)
 
 
 def test_every_check_is_kept_so_the_trend_can_be_drawn(store, project, library, tmp_path):
     seeded(store, project, library)
     put(tmp_path, "main.py", CODE)
-    S.check(store, library, project.id, backend_path=str(tmp_path), frontend_path=None, actor="human:ann")
+    S.check(store, library, project.id, backend_path=str(tmp_path), actor="human:ann")
     put(tmp_path, "more.py", '@app.get("/api/availability")\ndef a(): ...\n')
-    S.check(store, library, project.id, backend_path=str(tmp_path), frontend_path=None, actor="human:ann")
+    S.check(store, library, project.id, backend_path=str(tmp_path), actor="human:ann")
     newest, oldest = store.verify.runs(project.id)
     ep = lambda run: next(c for c in run.counts if c["area"] == "endpoint")          # noqa: E731
     assert ep(newest)["found"] + ep(newest)["differences"] > ep(oldest)["found"] + ep(oldest)["differences"]
@@ -237,7 +250,7 @@ async def test_the_route_runs_a_check_and_answers_with_the_run_and_its_matches(a
     client, base = api
     response = await client.post(base, json={"backend_path": str(tmp_path)})
     body = response.json()
-    assert response.status_code == 200 and body["by"] == "human:Ann" and body["backend_path"] == str(tmp_path) and body["frontend_path"] is None
+    assert response.status_code == 200 and body["by"] == "human:Ann" and body["backend_path"] == str(tmp_path) and "frontend_path" not in body
     assert {m["designed"] for m in body["matches"] if m["state"] != "extra"} >= {"API-001", "API-002", "API-003"}
     assert set(body["matches"][0]) == {"designed", "area", "state", "step", "score", "built", "file", "line", "differences", "note"}
     await client.aclose()
@@ -274,7 +287,7 @@ async def test_the_route_needs_a_name_checks_the_shape_and_refuses_an_archived_p
     client, base = api
     bare = hx.AsyncClient(transport=client._transport, base_url="http://test")
     assert (await bare.post(base, json={"backend_path": str(tmp_path)})).status_code == 400
-    for body in ({}, {"backend_path": ""}, {"backend_path": "/x" * 600}, {"backend_path": str(tmp_path), "extra": 1}, {"backend_path": str(tmp_path), "frontend_path": "y" * 1001}):
+    for body in ({}, {"backend_path": ""}, {"backend_path": "/x" * 600}, {"backend_path": str(tmp_path), "extra": 1}, {"backend_path": str(tmp_path), "frontend_path": str(tmp_path)}):
         assert (await client.post(base, json=body)).status_code == 422, body
     store.projects.archive(project.id, actor="system")
     assert (await client.post(base, json={"backend_path": str(tmp_path)})).status_code == 409
@@ -291,21 +304,21 @@ def test_the_design_notes_a_walk_that_stopped_and_a_file_with_a_syntax_error_all
     from app.verify import walk as W
     monkeypatch.setattr(W, "MAX_FILES", 3)
     monkeypatch.setattr(S, "walk", lambda path, **kw: W.walk(path, max_files=3, **kw))
-    run, _ = S.check(store, library, project.id, backend_path=str(tmp_path), frontend_path=None, actor="human:ann")       # no design written yet: its two notes come first
-    assert run.notes[0].startswith("the low-level design has not been written") and run.notes[1].startswith("the hi-fi wireframes")
+    run, _ = S.check(store, library, project.id, backend_path=str(tmp_path), actor="human:ann")       # no design written yet: its two notes come first
+    assert run.notes[0].startswith("the low-level design has not been written") and not any("wireframes" in n for n in run.notes)
     assert "backend: stopped after 3 files; the rest of the folder was not read" in run.notes
     seeded(store, project, library)
     put(tmp_path, "z.py", "def broken(:\n")
     put(tmp_path, "a.py", "def broken(:\n")
     monkeypatch.undo()
-    run, _ = S.check(store, library, project.id, backend_path=str(tmp_path), frontend_path=None, actor="human:ann")
+    run, _ = S.check(store, library, project.id, backend_path=str(tmp_path), actor="human:ann")
     assert any(n.startswith("backend: a.py: could not be read as Python") for n in run.notes)
 
 
 def test_a_run_stores_the_design_versions_it_was_compared_against_and_the_report_lists_them(store, project, library, tmp_path):
     seeded(store, project, library)
     put(tmp_path, "main.py", CODE)
-    run, _ = S.check(store, library, project.id, backend_path=str(tmp_path), frontend_path=None, actor="human:ann")
+    run, _ = S.check(store, library, project.id, backend_path=str(tmp_path), actor="human:ann")
     assert run.design and all(v >= 1 for v in run.design.values()) and set(run.design) == {a.id for a in store.artefacts.list(project.id)}
 
 
@@ -339,24 +352,23 @@ def test_the_route_downloads_keep_the_extras_and_the_design_versions_and_the_pay
     assert diff is None or isinstance(diff["differences"], list)
 
 
-async def test_the_route_refuses_a_blank_backend_path_and_a_long_frontend_path_at_the_edge(api, store, project, library, tmp_path):
+async def test_the_route_refuses_a_blank_backend_path_and_any_frontend_path_at_the_edge(api, store, project, library, tmp_path):
     client, base = api
     assert (await client.post(base, json={"backend_path": ""})).status_code == 422
     put(tmp_path, "main.py", CODE)
-    ok = await client.post(base, json={"backend_path": str(tmp_path), "frontend_path": None})
-    assert ok.status_code == 200
-    assert (await client.post(base, json={"backend_path": str(tmp_path), "frontend_path": "y" * 1000})).status_code == 422          # 1000 is allowed; this folder does not exist
-    assert (await client.post(base, json={"backend_path": str(tmp_path), "frontend_path": "y" * 1001})).status_code == 422
+    assert (await client.post(base, json={"backend_path": str(tmp_path)})).status_code == 200
+    assert (await client.post(base, json={"backend_path": str(tmp_path), "frontend_path": None})).status_code == 422               # S20f: the field is gone, so even an empty one is refused
+    assert (await client.post(base, json={"backend_path": str(tmp_path), "frontend_path": "y"})).status_code == 422
     await client.aclose()
 
 
 # ---- the last survivors of 20b ----------------------------------------------------------------------------------------------------------------------
 
-def test_the_request_body_refuses_a_blank_backend_path_and_a_path_over_a_thousand_characters_in_either_box():
+def test_the_request_body_refuses_a_blank_backend_path_a_path_over_a_thousand_characters_and_a_frontend_path():
     from pydantic import ValidationError
     from app.routes_verify import VerifyBody
-    assert VerifyBody(backend_path="x" * 1000, frontend_path="y" * 1000).frontend_path == "y" * 1000
-    for bad in ({"backend_path": ""}, {"backend_path": "x" * 1001}, {"backend_path": "x", "frontend_path": "y" * 1001}, {"backend_path": "x", "other": 1}):
+    assert VerifyBody(backend_path="x" * 1000).backend_path == "x" * 1000
+    for bad in ({"backend_path": ""}, {"backend_path": "x" * 1001}, {"backend_path": "x", "frontend_path": "y"}, {"backend_path": "x", "other": 1}):
         with pytest.raises(ValidationError):
             VerifyBody(**bad)
 
@@ -406,30 +418,47 @@ def reserve(): ...
     await client.aclose()
 
 
-# ---- the frontend in a check (S20c mutation survivors) -----------------------------------------------------------------------------------------------
+# ---- runs made before S20f (they hold screens and a frontend folder) ------------------------------------------------------------------------------------
 
-def test_a_check_with_a_frontend_reports_what_was_left_out_what_could_not_be_recognised_and_where_the_walk_stopped(store, project, library, tmp_path, monkeypatch):
+def old_run(store, project):
+    """A run as S20 saved it: a frontend path, a screen count, a screen row, and notes about the frontend."""
+    return add(store, project, frontend_path="/tmp/f", counts=[{"area": "endpoint", "designed": 1, "found": 1}, {"area": "screen", "designed": 1, "found": 0}],
+               notes=["backend: ok", "frontend: read 3 files by pattern, not parsed: 0 pages and 0 API calls found"],
+               matches=[row(), row("HFS-001", "not_found", **{"area": "screen"}), row(None, "extra", area="screen", built="/home")])
+
+
+async def test_a_check_started_through_the_route_does_not_show_a_screen_even_when_the_design_has_one(api, store, project, library, tmp_path):
     seeded(store, project, library, screens=True)
-    back, front = tmp_path / "back", tmp_path / "front"
-    put(back, "main.py", CODE)
-    put(front, ".env", F.AWS_KEY); put(front, "src/plain.ts", "export const x = 1\n")
-    run, _ = S.check(store, library, project.id, backend_path=str(back), frontend_path=str(front), actor="human:ann")
-    assert "frontend: left out .env (it may hold a secret)" in run.notes
-    assert any(n.startswith("frontend: no page route or API call was recognised") for n in run.notes) and F.AWS_KEY not in str(run.notes)
-    from app.verify import walk as W
-    for n in range(4):
-        put(front, f"src/f{n}.ts", "export const y = 2\n")
-    monkeypatch.setattr(S, "walk", lambda path, **kw: W.walk(path, max_files=2, **kw))
-    again, _ = S.check(store, library, project.id, backend_path=str(back), frontend_path=str(front), actor="human:ann")
-    assert "frontend: stopped after 2 files; the rest of the folder was not read" in again.notes
+    put(tmp_path, "main.py", CODE)
+    client, base = api
+    body = (await client.post(base, json={"backend_path": str(tmp_path)})).json()
+    assert {m["area"] for m in body["matches"]} == {"endpoint", "table", "rule"} and [c["area"] for c in body["counts"]] == ["endpoint", "table", "rule"]
+    assert not [m for m in body["matches"] if m["designed"] == "HFS-001"]
+    await client.aclose()
 
 
-def test_a_check_with_a_frontend_looks_for_the_screens_in_its_pages_and_without_one_says_it_could_not(store, project, library, tmp_path):
-    seeded(store, project, library, screens=True)
-    back, front = tmp_path / "back", tmp_path / "front"
-    put(back, "main.py", CODE); put(front, "src/pages/BrowseRooms.tsx", 'fetch("/api/rooms")\n')
-    with_front, _ = S.check(store, library, project.id, backend_path=str(back), frontend_path=str(front), actor="human:ann")
-    without, _ = S.check(store, library, project.id, backend_path=str(back), frontend_path=None, actor="human:ann")
-    screen_of = lambda run: next(m for m in store.verify.matches(project.id, run.id) if m.designed == "HFS-001")          # noqa: E731
-    assert screen_of(with_front).state in ("found", "differences") and screen_of(with_front).file == "src/pages/BrowseRooms.tsx"
-    assert screen_of(without).state == "not_found" and "no frontend folder was given" in screen_of(without).note
+async def test_an_old_run_still_opens_with_its_screens_and_frontend_left_out_and_nothing_in_the_record_changes(api, store, project):
+    client, base = api
+    run = old_run(store, project)
+    one = (await client.get(f"{base}/{run.id}")).json()
+    assert [m["designed"] for m in one["matches"]] == ["API-001"] and [c["area"] for c in one["counts"]] == ["endpoint"] and one["notes"] == ["backend: ok"] and "frontend_path" not in one
+    listing = (await client.get(base)).json()["runs"][0]
+    assert [c["area"] for c in listing["counts"]] == ["endpoint"] and listing["notes"] == ["backend: ok"]
+    kept = store.verify.matches(project.id, run.id)
+    assert [m.designed for m in kept] == ["API-001", "HFS-001", None] and store.verify.run(project.id, run.id).frontend_path == "/tmp/f"            # history is append-only: nothing was removed
+    await client.aclose()
+
+
+async def test_an_old_runs_downloads_leave_the_screens_out_too(api, store, project):
+    client, base = api
+    run = old_run(store, project)
+    md = (await client.get(f"{base}/{run.id}/download")).text
+    assert "Screens" not in md and "HFS-001" not in md and "frontend" not in md and "API-001" in md and "| Screens" not in md
+    js = (await client.get(f"{base}/{run.id}/download?format=json")).json()
+    assert [m["designed"] for m in js["matches"]] == ["API-001"] and [c["area"] for c in js["counts"]] == ["endpoint"] and "frontend_path" not in js
+    await client.aclose()
+
+
+def test_the_report_has_three_areas_and_says_it_is_about_the_backend():
+    from app.verify import report as R
+    assert R.AREAS == ("endpoint", "table", "rule") and "Screens" not in R.AREA_WORDS.values() and "backend" in R.ADVICE

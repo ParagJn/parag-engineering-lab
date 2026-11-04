@@ -1,5 +1,5 @@
 {
-  "advice": "This shows how far the build has drifted from the design. A real build always differs from its design, so this is a highlighter, not a pass or fail, and it never runs your code.",
+  "advice": "This shows how far the backend of the build has drifted from the design: endpoints, tables and rules. A real build always differs from its design, so this is a highlighter, not a pass or fail, and it never runs your code.",
   "runs": [
     {
       "at": "2026-01-01T00:00:00.000Z",
@@ -27,35 +27,22 @@
           "weak": 0
         },
         {
-          "area": "screen",
-          "designed": 1,
-          "differences": 0,
-          "extras": 0,
-          "found": 1,
-          "not_found": 0,
-          "possible": 0,
-          "weak": 0
-        },
-        {
           "area": "rule",
-          "designed": 1,
+          "designed": 3,
           "differences": 0,
           "extras": 0,
           "found": 0,
-          "not_found": 0,
+          "not_found": 1,
           "possible": 0,
-          "weak": 1
+          "weak": 2
         }
       ],
       "design": {
-        "DES-HFS-001": 1,
         "DES-LLD-001": 1
       },
-      "frontend_path": "/projects/build/frontend",
       "id": 1,
       "notes": [
-        "backend: left out .env (it may hold a secret)",
-        "frontend: read 1 files by pattern, not parsed: 1 pages and 1 API calls found"
+        "backend: left out .env (it may hold a secret)"
       ]
     }
   ]

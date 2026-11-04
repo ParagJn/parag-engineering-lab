@@ -11,8 +11,8 @@ export const STATE_LOOK: Record<VerifyState, { word: string; icon: 'check' | 'ch
   extra: { word: 'Built but not designed', icon: 'plus', tile: 'border-violet-400 bg-violet-50 text-violet-900', ring: 'text-violet-500', hint: 'The code has this, but the design never mentioned it.' },
 }
 export const STATE_ORDER: VerifyState[] = ['found', 'differences', 'possible', 'weak', 'not_found', 'extra']
-export const AREA_WORDS: Record<Area, string> = { endpoint: 'Endpoints', table: 'Tables', screen: 'Screens', rule: 'Rules' }
-export const AREA_ONE: Record<Area, string> = { endpoint: 'endpoint', table: 'table', screen: 'screen', rule: 'rule' }
+export const AREA_WORDS: Record<Area, string> = { endpoint: 'Endpoints', table: 'Tables', rule: 'Rules' }
+export const AREA_ONE: Record<Area, string> = { endpoint: 'endpoint', table: 'table', rule: 'rule' }
 
 /** The share of designed items that were found, with or without differences. A possible match does not count. 0 when the design has none. */
 export function shareFound(c: AreaCounts): number {

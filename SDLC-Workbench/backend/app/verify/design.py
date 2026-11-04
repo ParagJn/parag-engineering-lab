@@ -1,7 +1,7 @@
-"""What the design says should exist (S20b): endpoints, tables, screens and rules, as plain data read from the saved design artefacts.
+"""What the design says should exist (S20b, S20f): endpoints, tables and rules, as plain data read from the saved design artefacts. (Screens were removed in S20f.)
 
 Reading only: nothing here writes, and nothing calls a model. The endpoints come from the Build foundation's interface contract when the set has one (it already holds the
-method, path, field names and status codes), and from the low-level design's own endpoint lines otherwise. Tables, rules and screens are items of the design.
+method, path, field names and status codes), and from the low-level design's own endpoint lines otherwise. Tables and rules are items of the design.
 """
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from ..agents.items import parse_items
 from ..build import contract as K
 from ..build import instructions as I
 
-AREAS = ("endpoint", "table", "screen", "rule")
+AREAS = ("endpoint", "table", "rule")
 _ENDPOINT_LINE = re.compile(r"\b(GET|POST|PUT|PATCH|DELETE)\s+(/[A-Za-z0-9_\-./{}:<>%]*)")
 _TABLE_COLUMNS = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*[:(]\s*(.*)$")
 _WORD = re.compile(r"[a-z][a-z0-9]+")
@@ -22,8 +22,8 @@ STOP = frozenset({"page", "screen", "from", "the", "and", "for", "with", "from",
 
 @dataclass(frozen=True)
 class Designed:
-    id: str                                  # API-002, TBL-001, HFS-003, RUL-001
-    area: str                                # endpoint | table | screen | rule
+    id: str                                  # API-002, TBL-001, RUL-001
+    area: str                                # endpoint | table | rule
     title: str                               # a short name for the tile
     text: str                                # the design's own line
     method: str = ""
@@ -32,6 +32,7 @@ class Designed:
     codes: tuple[int, ...] = ()
     artefact_id: str = ""
     version: int = 0
+    derives: tuple[str, ...] = ()            # the IDs the item says it derives from (a rule and an endpoint that share one are close kin)
 
     @property
     def words(self) -> frozenset[str]:
@@ -83,22 +84,13 @@ def read_design(store: Any, skills: Any, project_id: str) -> Design:
         for item in (parsed.items if parsed else []):
             prefix = item.prefix
             if prefix == "API":
-                design.items.append(_endpoint(item.id, item.text, contract, lld))
+                design.items.append(_endpoint(item.id, item.text, contract, lld, item.derives))
             elif prefix == "TBL":
-                design.items.append(_table(item.id, item.text, lld))
+                design.items.append(_table(item.id, item.text, lld, item.derives))
             elif prefix == "RUL":
-                design.items.append(Designed(item.id, "rule", _short(item.text), item.text, artefact_id=lld[0], version=lld[1]))
-    wire = found.get("hifi_wireframes")
-    if wire is not None:
-        skill = skills.get("hifi_wireframes")
-        parsed = parse_items(wire[2], skill.items) if skill is not None else None
-        for item in (parsed.items if parsed else []):
-            if item.prefix == "HFS":
-                design.items.append(Designed(item.id, "screen", _short(item.text), item.text, artefact_id=wire[0], version=wire[1]))
+                design.items.append(Designed(item.id, "rule", _short(item.text), item.text, artefact_id=lld[0], version=lld[1], derives=item.derives))
     if lld is None:
         design.notes.append("the low-level design has not been written, so there are no endpoints, tables or rules to look for")
-    if wire is None:
-        design.notes.append("the hi-fi wireframes have not been written, so there are no screens to look for")
     design.items.sort(key=lambda i: (AREAS.index(i.area), i.id))
     return design
 
@@ -111,7 +103,7 @@ def _contract_from(found: dict[str, tuple[str, int, str]]) -> K.Contract | None:
     return K.parse_contract(files.get(I.FOUNDATION_NAME))
 
 
-def _endpoint(item_id: str, text: str, contract: K.Contract | None, source: tuple[str, int, str]) -> Designed:
+def _endpoint(item_id: str, text: str, contract: K.Contract | None, source: tuple[str, int, str], derives: tuple[str, ...] = ()) -> Designed:
     line = _ENDPOINT_LINE.search(text)
     method, path = (line.group(1), line.group(2).rstrip(".,;:")) if line else ("", "")
     fields: tuple[str, ...] = ()
@@ -123,12 +115,12 @@ def _endpoint(item_id: str, text: str, contract: K.Contract | None, source: tupl
                 fields = tuple(sorted(e.request | e.response))
                 codes = tuple(sorted(e.codes))
                 break
-    return Designed(item_id, "endpoint", f"{method} {path}".strip() or _short(text), text, method=method, path=path, fields=fields, codes=codes, artefact_id=source[0], version=source[1])
+    return Designed(item_id, "endpoint", f"{method} {path}".strip() or _short(text), text, method=method, path=path, fields=fields, codes=codes, artefact_id=source[0], version=source[1], derives=derives)
 
 
-def _table(item_id: str, text: str, source: tuple[str, int, str]) -> Designed:
+def _table(item_id: str, text: str, source: tuple[str, int, str], derives: tuple[str, ...] = ()) -> Designed:
     head = _TABLE_COLUMNS.match(text.strip())
     columns: tuple[str, ...] = ()
     if head:
         columns = tuple(c.strip(" `.").split(" ")[0] for c in re.split(r"[,;]", head.group(2).split(" Derives from")[0]) if re.match(r"^\s*[A-Za-z_][A-Za-z0-9_]*\s*$", c.strip(" `.").split(" ")[0] or ""))
-    return Designed(item_id, "table", _short(text), text, fields=columns, artefact_id=source[0], version=source[1])
+    return Designed(item_id, "table", _short(text), text, fields=columns, artefact_id=source[0], version=source[1], derives=derives)
