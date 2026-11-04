@@ -3,9 +3,12 @@
 > Generated from `backend/app/phases/definitions/*.yaml` by `scripts/render_catalogue.py`. **Do not edit by hand:**
 > change the YAML, then run the script. A test fails if this file and the YAML disagree.
 
-The lifecycle has 7 phases and 28 artefacts, 18 of them required. A **required**
+The lifecycle has 7 phases and 28 artefacts, 17 of them required, 5 of them not enabled, 2 done by hand. A **required**
 artefact cannot be switched off in the wizard and must have content before its phase can be approved. An
 artefact in a later **wave** waits for the ones in earlier waves; everything inside a wave runs in parallel.
+An artefact that is **not enabled** is part of the design but never runs, is never required and is never reviewed; its reason is given
+under its phase, and it can be switched on later by changing its definition and adding its skill.
+An artefact **done by hand** (the deployment verification) has no agent and no skill: a person works through it, it is never run, and approval does not wait for it.
 Deploy and BAU Handover are this prototype's own design; the source material stops at Code & Test.
 
 ## At a glance
@@ -17,8 +20,8 @@ Deploy and BAU Handover are this prototype's own design; the source material sto
 | 2 | Design | business engineer | 3 | 2 | 3 |
 | 3 | Architecture | technical lead | 5 | 3 | 3 |
 | 4 | Build & Test | technical lead | 1 | 1 | 1 |
-| 5 | Deploy | deployment engineer | 5 | 3 | 3 |
-| 6 | BAU handover | BAU lead | 6 | 2 | 2 |
+| 5 | Deploy | deployment engineer | 2 | 2 | 2 |
+| 6 | BAU handover | BAU lead | 2 | 2 | 2 |
 
 ## 0 · Setup
 
@@ -79,27 +82,47 @@ Approved by: **technical lead**.
 
 ## 5 · Deploy
 
-Get the tested product running somewhere, and prove it is running.  
+Plan the release, say what is in it, and check by hand that it worked.  
 Approved by: **deployment engineer**.
 
 | Artefact | Required | Wave | Waits for | Agent role | ID prefix | What it is |
 | --- | --- | --- | --- | --- | --- | --- |
 | Deployment plan | yes | 1 | - | devops_engineer | DEP-PLN | Where it runs, in what order things happen, and how to go back if it goes wrong. |
-| Infrastructure as code | yes | 2 | Deployment plan | devops_engineer | DEP-IAC | The container and infrastructure files that describe the environment. |
 | Release notes | yes | 2 | Deployment plan | devops_engineer | DEP-REL | What is in this release, in words the business can read. |
-| CI/CD pipeline | no | 2 | Deployment plan | devops_engineer | DEP-CI | The automated steps that build, test and release the product. |
-| Deployment verification | no | 3 | Infrastructure as code | devops_engineer | DEP-VER | Checks run against the running product to show the release worked. |
+
+**Done by hand** (no agent, no skill; a person works through it):
+
+| Artefact | ID prefix | What it is |
+| --- | --- | --- |
+| Deployment verification | DEP-VER | Checks a person works through by hand, with a go or no-go for each. No model is used. |
+
+**Not enabled** (part of the design, never run):
+
+| Artefact | Agent role | ID prefix | Why it is not enabled |
+| --- | --- | --- | --- |
+| Infrastructure as code | devops_engineer | DEP-IAC | Not enabled. The product is built and run outside this tool, so there is nothing for it to describe yet. It can be switched on later. |
+| CI/CD pipeline | devops_engineer | DEP-CI | Not enabled. No automated build or release is wanted yet. It can be switched on later. |
 
 ## 6 · BAU handover
 
-Hand the running product to the people who will support it day to day.  
+Hand the running product to the people who will support it day to day, and record that they accept it.  
 Approved by: **BAU lead**.
 
 | Artefact | Required | Wave | Waits for | Agent role | ID prefix | What it is |
 | --- | --- | --- | --- | --- | --- | --- |
 | Runbook | yes | 1 | - | handover_author | HND-RUN | Step-by-step instructions for operating and recovering the product. |
-| Support guide | yes | 1 | - | handover_author | HND-SUP | How to triage and resolve the problems users are likely to report. |
-| SLOs and alerts | no | 2 | Runbook | handover_author | HND-SLO | The service levels promised and the alerts that tell support when they are at risk. |
-| Knowledge-transfer pack | no | 2 | Runbook, Support guide | handover_author | HND-KT | What the support team needs to learn, in the order they need to learn it. |
-| Hypercare plan | no | 2 | Runbook | handover_author | HND-HYP | Extra support in the first weeks after go-live, and when it ends. |
-| Handover sign-off | no | 2 | Runbook, Support guide | handover_author | HND-SGN | The record that support accepts the product, with who signed and when. |
+| Hypercare plan | yes | 2 | Runbook | handover_author | HND-HYP | Extra support in the first weeks after go-live, and when it ends. |
+
+**Done by hand** (no agent, no skill; a person works through it):
+
+| Artefact | ID prefix | What it is |
+| --- | --- | --- |
+| Handover sign-off | HND-SGN | Statements a named person accepts or does not accept, one by one, to record that support takes the product. No model is used. |
+
+**Not enabled** (part of the design, never run):
+
+| Artefact | Agent role | ID prefix | Why it is not enabled |
+| --- | --- | --- | --- |
+| Support guide | handover_author | HND-SUP | Not enabled. Not needed yet; the runbook covers day-to-day problems. It can be switched on later. |
+| SLOs and alerts | handover_author | HND-SLO | Not enabled. No alerting is set up for a product built and run outside this tool. It can be switched on later. |
+| Knowledge-transfer pack | handover_author | HND-KT | Not enabled. Not needed yet; the runbook and the sign-off cover what support must know. It can be switched on later. |

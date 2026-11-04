@@ -29,12 +29,14 @@
         }
       ],
       "blocked_by": null,
+      "by_hand": [],
       "decided_by": null,
       "decision": null,
       "feedback": null,
       "key": "setup",
       "name": "Setup",
       "needs_review": false,
+      "not_enabled": [],
       "order": 0,
       "status": "not_started"
     },
@@ -112,12 +114,14 @@
         }
       ],
       "blocked_by": "Setup",
+      "by_hand": [],
       "decided_by": null,
       "decision": null,
       "feedback": null,
       "key": "requirements",
       "name": "Requirements",
       "needs_review": false,
+      "not_enabled": [],
       "order": 1,
       "status": "not_started"
     },
@@ -155,12 +159,14 @@
         }
       ],
       "blocked_by": "Setup",
+      "by_hand": [],
       "decided_by": null,
       "decision": null,
       "feedback": null,
       "key": "design",
       "name": "Design",
       "needs_review": false,
+      "not_enabled": [],
       "order": 2,
       "status": "not_started"
     },
@@ -218,12 +224,14 @@
         }
       ],
       "blocked_by": "Setup",
+      "by_hand": [],
       "decided_by": null,
       "decision": null,
       "feedback": null,
       "key": "architecture",
       "name": "Architecture",
       "needs_review": false,
+      "not_enabled": [],
       "order": 3,
       "status": "not_started"
     },
@@ -241,12 +249,14 @@
         }
       ],
       "blocked_by": "Setup",
+      "by_hand": [],
       "decided_by": null,
       "decision": null,
       "feedback": null,
       "key": "build",
       "name": "Build & Test",
       "needs_review": false,
+      "not_enabled": [],
       "order": 4,
       "status": "not_started"
     },
@@ -264,16 +274,6 @@
         },
         {
           "has_content": false,
-          "key": "infrastructure_as_code",
-          "name": "Infrastructure as code",
-          "required": true,
-          "waits_for": [
-            "deployment_plan"
-          ],
-          "wave": 2
-        },
-        {
-          "has_content": false,
           "key": "release_notes",
           "name": "Release notes",
           "required": true,
@@ -281,35 +281,34 @@
             "deployment_plan"
           ],
           "wave": 2
-        },
-        {
-          "has_content": false,
-          "key": "cicd_pipeline",
-          "name": "CI/CD pipeline",
-          "required": false,
-          "waits_for": [
-            "deployment_plan"
-          ],
-          "wave": 2
-        },
-        {
-          "has_content": false,
-          "key": "deployment_verification",
-          "name": "Deployment verification",
-          "required": false,
-          "waits_for": [
-            "infrastructure_as_code"
-          ],
-          "wave": 3
         }
       ],
       "blocked_by": "Setup",
+      "by_hand": [
+        {
+          "description": "Checks a person works through by hand, with a go or no-go for each. No model is used.",
+          "key": "deployment_verification",
+          "name": "Deployment verification"
+        }
+      ],
       "decided_by": null,
       "decision": null,
       "feedback": null,
       "key": "deploy",
       "name": "Deploy",
       "needs_review": false,
+      "not_enabled": [
+        {
+          "key": "infrastructure_as_code",
+          "name": "Infrastructure as code",
+          "reason": "Not enabled. The product is built and run outside this tool, so there is nothing for it to describe yet. It can be switched on later."
+        },
+        {
+          "key": "cicd_pipeline",
+          "name": "CI/CD pipeline",
+          "reason": "Not enabled. No automated build or release is wanted yet. It can be switched on later."
+        }
+      ],
       "order": 5,
       "status": "not_started"
     },
@@ -327,62 +326,46 @@
         },
         {
           "has_content": false,
-          "key": "support_guide",
-          "name": "Support guide",
-          "required": true,
-          "waits_for": [],
-          "wave": 1
-        },
-        {
-          "has_content": false,
-          "key": "slos_alerts",
-          "name": "SLOs and alerts",
-          "required": false,
-          "waits_for": [
-            "runbook"
-          ],
-          "wave": 2
-        },
-        {
-          "has_content": false,
-          "key": "kt_pack",
-          "name": "Knowledge-transfer pack",
-          "required": false,
-          "waits_for": [
-            "runbook",
-            "support_guide"
-          ],
-          "wave": 2
-        },
-        {
-          "has_content": false,
           "key": "hypercare_plan",
           "name": "Hypercare plan",
-          "required": false,
+          "required": true,
           "waits_for": [
             "runbook"
-          ],
-          "wave": 2
-        },
-        {
-          "has_content": false,
-          "key": "handover_signoff",
-          "name": "Handover sign-off",
-          "required": false,
-          "waits_for": [
-            "runbook",
-            "support_guide"
           ],
           "wave": 2
         }
       ],
       "blocked_by": "Setup",
+      "by_hand": [
+        {
+          "description": "Statements a named person accepts or does not accept, one by one, to record that support takes the product. No model is used.",
+          "key": "handover_signoff",
+          "name": "Handover sign-off"
+        }
+      ],
       "decided_by": null,
       "decision": null,
       "feedback": null,
       "key": "handover",
       "name": "BAU handover",
       "needs_review": false,
+      "not_enabled": [
+        {
+          "key": "support_guide",
+          "name": "Support guide",
+          "reason": "Not enabled. Not needed yet; the runbook covers day-to-day problems. It can be switched on later."
+        },
+        {
+          "key": "slos_alerts",
+          "name": "SLOs and alerts",
+          "reason": "Not enabled. No alerting is set up for a product built and run outside this tool. It can be switched on later."
+        },
+        {
+          "key": "kt_pack",
+          "name": "Knowledge-transfer pack",
+          "reason": "Not enabled. Not needed yet; the runbook and the sign-off cover what support must know. It can be switched on later."
+        }
+      ],
       "order": 6,
       "status": "not_started"
     }

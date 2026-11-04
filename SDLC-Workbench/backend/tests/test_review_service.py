@@ -274,10 +274,10 @@ async def test_an_artefact_with_no_version_and_one_with_no_skill_cannot_be_revie
     store.artefacts.create(project.id, artefact_type="personas", phase_key="setup", title="Personas", actor="system", prefix="REQ-PER")
     with pytest.raises(NothingToReview, match="no version yet"):
         await service.review(project.id, "REQ-PER-001")
-    store.artefacts.create(project.id, artefact_type="deployment_plan", phase_key="setup", title="X", actor="system", prefix="DEP-PLN")
-    store.artefacts.add_version(project.id, "DEP-PLN-001", body="x", author=PERSON)
-    with pytest.raises(NothingToReview, match="no skill for 'deployment_plan'"):
-        await service.review(project.id, "DEP-PLN-001")
+    store.artefacts.create(project.id, artefact_type="support_guide", phase_key="setup", title="X", actor="system", prefix="HND-SUP")
+    store.artefacts.add_version(project.id, "HND-SUP-001", body="x", author=PERSON)
+    with pytest.raises(NothingToReview, match="no skill for 'support_guide'"):
+        await service.review(project.id, "HND-SUP-001")
     assert provider.calls == []
 
 
@@ -459,12 +459,12 @@ async def test_an_artefact_the_catalogue_no_longer_has_is_retired(rig, store, pr
 
 async def test_an_artefact_still_in_the_catalogue_without_a_skill_yet_is_not_retired(rig, store, project):
     service, *_ = rig()
-    store.artefacts.create(project.id, artefact_type="deployment_plan", phase_key="setup", title="X", actor="system", prefix="DEP-PLN")
-    store.artefacts.add_version(project.id, "DEP-PLN-001", body="x", author=PERSON)
-    assert service.is_retired(project.id, "DEP-PLN-001") is False
-    assert service.status_of(project.id, "DEP-PLN-001").state == "unreviewed"
-    with pytest.raises(NothingToReview, match="no skill for 'deployment_plan'"):
-        await service.review(project.id, "DEP-PLN-001")
+    store.artefacts.create(project.id, artefact_type="support_guide", phase_key="setup", title="X", actor="system", prefix="HND-SUP")
+    store.artefacts.add_version(project.id, "HND-SUP-001", body="x", author=PERSON)
+    assert service.is_retired(project.id, "HND-SUP-001") is False
+    assert service.status_of(project.id, "HND-SUP-001").state == "unreviewed"
+    with pytest.raises(NothingToReview, match="no skill for 'support_guide'"):
+        await service.review(project.id, "HND-SUP-001")
 
 
 async def test_an_artefact_with_no_version_is_never_retired_even_if_its_type_is_gone(rig, store, project):

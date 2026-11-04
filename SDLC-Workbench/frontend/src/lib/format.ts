@@ -85,3 +85,16 @@ export function pricePerMillion(usd: number | null | undefined): string {
   if (usd === null || usd === undefined || !Number.isFinite(usd)) return 'unknown'
   return `$${usd.toFixed(usd < 1 ? 2 : usd < 10 ? 2 : 0)}`
 }
+
+// ---- downloading the plan and the release notes (S21b) ------------------------------------------------------------------------------------
+
+/** The artefacts that can be downloaded as a Markdown file and as a Word file. The server decides; this only says where to show the buttons. */
+export const DOWNLOADABLE_TYPES = ['deployment_plan', 'release_notes', 'runbook', 'hypercare_plan'] as const
+
+export const isDownloadable = (type: string): boolean => (DOWNLOADABLE_TYPES as readonly string[]).includes(type)
+
+/** The address of a file for one version of an artefact. The version is optional (the latest is sent when it is left out). */
+export function downloadPath(projectId: string, artefactId: string, format: 'md' | 'docx', version?: number | null): string {
+  const base = `/api/projects/${encodeURIComponent(projectId)}/artefacts/${encodeURIComponent(artefactId)}/download?format=${format}`
+  return version ? `${base}&version=${version}` : base
+}

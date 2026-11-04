@@ -33,11 +33,11 @@ def test_seven_phases_in_lifecycle_order(catalogue):
 
 
 def test_counts_match_the_reviewed_spec(catalogue):
-    assert (len(catalogue.phases), catalogue.artefact_count, catalogue.required_count) == (7, 28, 18)
+    assert (len(catalogue.phases), catalogue.artefact_count, catalogue.required_count, catalogue.not_enabled_count) == (7, 28, 17, 5)
     per_phase = {p.key: (len(p.artefacts), sum(a.required for a in p.artefacts)) for p in catalogue.phases}
     assert per_phase == {
         "setup": (1, 1), "requirements": (7, 6), "design": (3, 2), "architecture": (5, 3),
-        "build": (1, 1), "deploy": (5, 3), "handover": (6, 2),
+        "build": (1, 1), "deploy": (5, 2), "handover": (6, 2),
     }
 
 
@@ -48,7 +48,7 @@ def test_every_phase_has_a_required_artefact_a_name_and_an_approver(catalogue):
 
 
 def test_every_role_exists_in_routing(catalogue):
-    used = {a.role for p in catalogue.phases for a in p.artefacts}
+    used = {a.role for p in catalogue.phases for a in p.artefacts if not a.by_hand}                      # an artefact done by hand has no role
     assert used <= set(REQUIRED_ROLES)
 
 
@@ -90,9 +90,9 @@ def test_the_demo_critical_path_artefacts_are_required(catalogue):
     required = {a.key for p in catalogue.phases for a in p.artefacts if a.required}
     for key in ("project_charter", "functional_requirements", "non_functional_requirements", "user_journey",
                 "high_level_design", "low_level_design", "build_instructions",
-                "infrastructure_as_code", "release_notes", "runbook", "support_guide"):
+                "deployment_plan", "release_notes", "runbook", "hypercare_plan"):
         assert key in required, key
-    for key in ("handover_signoff", "hypercare_plan", "user_stories", "hifi_wireframes"):
+    for key in ("handover_signoff", "support_guide", "user_stories", "hifi_wireframes"):
         assert key not in required, key
 
 
@@ -280,3 +280,141 @@ def test_the_shipped_folder_has_exactly_the_seven_files():
         "00-setup.yaml", "01-requirements.yaml", "02-design.yaml", "03-architecture.yaml",
         "04-build.yaml", "05-deploy.yaml", "06-handover.yaml",
     ]
+
+
+# ---- S21a: an artefact that is part of the design but not in use ---------------------------------------------------------
+
+def off(data, key="b", reason="Not enabled. Not wanted yet."):
+    data = copy.deepcopy(data)
+    item = next(a for a in data["artefacts"] if a["key"] == key)
+    item["enabled"] = False
+    if reason is not None:
+        item["disabled_reason"] = reason
+    item.pop("required", None)
+    return data
+
+
+def test_the_two_deploy_artefacts_that_are_not_wanted_are_switched_off_with_their_reasons(catalogue):
+    deploy = catalogue.phase("deploy")
+    assert [a.key for a in deploy.artefacts if not a.enabled] == ["infrastructure_as_code", "cicd_pipeline"]
+    assert all(a.disabled_reason.startswith("Not enabled.") and "switched on later" in a.disabled_reason and not a.required for a in deploy.artefacts if not a.enabled)
+    assert [a.key for a in deploy.artefacts if a.enabled] == ["deployment_plan", "release_notes", "deployment_verification"]
+    assert all(a.enabled and a.disabled_reason == "" for p in catalogue.phases if p.key not in ("deploy", "handover") for a in p.artefacts)            # nothing else changes (the Handover phase has its own three, below)
+
+
+def test_an_artefact_is_enabled_by_default_and_a_switched_off_one_keeps_its_reason():
+    phase = parse(good_phase())
+    assert all(a.enabled and a.disabled_reason == "" for a in phase.artefacts)
+    parsed = parse(off(good_phase()))
+    assert [(a.key, a.enabled, a.disabled_reason) for a in parsed.artefacts] == [("a", True, ""), ("b", False, "Not enabled. Not wanted yet.")]
+
+
+@pytest.mark.parametrize("change,words", [
+    (lambda d: off(d, reason=None), "needs a 'disabled_reason'"),
+    (lambda d: off(d, reason="   "), "non-blank"),
+    (lambda d: {**d, "artefacts": [d["artefacts"][0], {**d["artefacts"][1], "disabled_reason": "why"}]}, "only for an artefact with 'enabled: false'"),
+    (lambda d: {**d, "artefacts": [d["artefacts"][0], {**d["artefacts"][1], "enabled": "no"}]}, "'enabled' must be true or false"),
+    (lambda d: {**d, "artefacts": [d["artefacts"][0], {**d["artefacts"][1], "enabled": False, "disabled_reason": "x", "required": True}]}, "cannot also be 'required: true'"),
+])
+def test_a_badly_switched_off_artefact_is_an_error_that_names_the_artefact(change, words):
+    with pytest.raises(CatalogueError, match=words) as caught:
+        parse(change(good_phase()))
+    assert "demo.yaml" in str(caught.value)
+
+
+def test_a_phase_whose_only_required_artefact_is_switched_off_is_refused_and_so_is_waiting_for_one_that_never_runs():
+    data = good_phase()
+    data["artefacts"][0] = {**data["artefacts"][0], "required": False, "enabled": False, "disabled_reason": "x"}
+    with pytest.raises(CatalogueError, match="needs at least one required artefact"):
+        parse(data)
+    waits = good_phase()
+    waits["artefacts"][0] = {"key": "a", "name": "A", "id_prefix": "DEM-A", "role": "orchestrator", "enabled": False, "disabled_reason": "x", "description": "d"}
+    waits["artefacts"].append({"key": "c", "name": "C", "id_prefix": "DEM-C", "role": "orchestrator", "required": True, "after": ["a"], "description": "d"})
+    with pytest.raises(CatalogueError, match="which is not enabled; an enabled artefact cannot wait for one that never runs"):
+        parse(waits)
+
+
+def test_a_switched_off_artefact_may_wait_for_an_enabled_one():
+    data = good_phase()
+    data["artefacts"][1] = {**data["artefacts"][1], "enabled": False, "disabled_reason": "x", "after": ["a"]}
+    assert parse(data).artefacts[1].after == ("a",)
+
+
+
+def test_a_switched_off_artefact_may_wait_for_another_switched_off_one_but_a_working_one_may_not_wait_for_either():
+    data = good_phase()
+    data["artefacts"].append({"key": "c", "name": "C", "id_prefix": "DEM-C", "role": "orchestrator", "enabled": False, "disabled_reason": "x", "after": ["b"], "description": "d"})
+    data["artefacts"][1] = {**data["artefacts"][1], "enabled": False, "disabled_reason": "x"}
+    assert [(a.key, a.enabled, a.after) for a in parse(data).artefacts] == [("a", True, ()), ("b", False, ("a",)), ("c", False, ("b",))]
+    data["artefacts"].append({"key": "d", "name": "D", "id_prefix": "DEM-D", "role": "orchestrator", "required": True, "after": ["c"], "description": "d"})
+    with pytest.raises(CatalogueError, match="'d' comes after 'c', which is not enabled"):
+        parse(data)
+
+
+# ---- S21: an artefact a person does by hand (kind: checklist) ----------------------------------------------------------------------------------
+
+def hand(**extra):
+    data = good_phase()
+    data["artefacts"].append({"key": "c", "name": "C", "id_prefix": "DEM-C", "kind": "checklist", "description": "d", **extra})
+    return data
+
+
+def test_an_artefact_done_by_hand_has_no_role_is_never_required_and_defaults_to_written_for_the_others():
+    parsed = parse(hand())
+    c = next(a for a in parsed.artefacts if a.key == "c")
+    assert (c.kind, c.by_hand, c.role, c.required, c.after, c.enabled) == ("checklist", True, "", False, (), True)
+    assert all(a.kind == "written" and not a.by_hand for a in parsed.artefacts if a.key != "c")
+
+
+@pytest.mark.parametrize("extra,word", [
+    ({"role": "orchestrator"}, "has no 'role'"), ({"required": True}, "has no 'required'"), ({"after": ["a"]}, "has no 'after'"),
+    ({"enabled": False, "disabled_reason": "x"}, "has no 'disabled_reason'"),
+])
+def test_a_by_hand_artefact_with_a_role_a_requirement_a_wait_or_a_switch_off_is_refused_naming_the_artefact(extra, word):
+    with pytest.raises(CatalogueError, match=word) as caught:
+        parse(hand(**extra))
+    assert "demo.yaml" in str(caught.value) and "'c'" in str(caught.value) and "done by hand" in str(caught.value)
+
+
+def test_a_by_hand_artefact_cannot_be_switched_off_by_any_route():
+    for extra in ({"enabled": False}, {"enabled": False, "disabled_reason": "x"}):
+        with pytest.raises(CatalogueError):
+            parse(hand(**extra))
+
+
+def test_a_kind_other_than_written_or_checklist_is_refused_with_the_choices():
+    with pytest.raises(CatalogueError, match=r"'kind' must be one of \['written', 'checklist'\], got 'other'"):
+        parse(hand(kind="other"))
+    with pytest.raises(CatalogueError, match="'kind' must be one of"):
+        parse(hand(kind=""))
+
+
+def test_nothing_can_wait_for_an_artefact_done_by_hand():
+    data = hand()
+    data["artefacts"].append({"key": "e", "name": "E", "id_prefix": "DEM-E", "role": "orchestrator", "required": True, "after": ["c"], "description": "d"})
+    with pytest.raises(CatalogueError, match="'e' comes after 'c', which is done by hand and never runs; nothing can wait for it"):
+        parse(data)
+
+
+def test_a_role_is_still_needed_and_checked_for_every_artefact_that_is_written():
+    data = good_phase()
+    data["artefacts"][1] = {k: v for k, v in data["artefacts"][1].items() if k != "role"}
+    with pytest.raises(CatalogueError, match="missing 'role'"):
+        parse(data)
+    data = good_phase()
+    data["artefacts"][1]["role"] = "no_such_role"
+    with pytest.raises(CatalogueError, match="uses role 'no_such_role', which is not in routing.yaml"):
+        parse(data)
+
+
+def test_the_three_handover_artefacts_that_are_parked_are_switched_off_with_their_reasons(catalogue):
+    handover = catalogue.phase("handover")
+    assert [a.key for a in handover.artefacts if not a.enabled] == ["support_guide", "slos_alerts", "kt_pack"]
+    assert all(a.disabled_reason.startswith("Not enabled.") and "switched on later" in a.disabled_reason and not a.required and not a.after for a in handover.artefacts if not a.enabled)
+    assert [(a.key, a.required, a.after) for a in handover.artefacts if a.enabled] == [("runbook", True, ()), ("hypercare_plan", True, ("runbook",)), ("handover_signoff", False, ())]
+    assert [a.key for a in handover.artefacts if a.by_hand] == ["handover_signoff"] and handover.artefact("handover_signoff").role in ("", None)
+
+
+def test_the_shipped_catalogue_has_exactly_two_artefacts_done_by_hand(catalogue):
+    assert [(p.key, a.key) for p in catalogue.phases for a in p.artefacts if a.by_hand] == [("deploy", "deployment_verification"), ("handover", "handover_signoff")] and catalogue.by_hand_count == 2
+

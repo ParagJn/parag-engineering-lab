@@ -23,6 +23,8 @@ from ..workflow.engine import WorkflowEngine
 from ..trace.gather import gaps_for_phase
 from .errors import EditRefused, PersonRequired, ReviewError, WrongPhaseState
 from .service import ReviewService
+from ..deploy import checklist as deploy_checklist
+from ..deploy import checks as deploy_checks
 
 EDITABLE_PHASE_STATES = ("running", "awaiting_review")
 
@@ -337,13 +339,19 @@ class HumanActions:
                 highs += status.high_findings
                 if status.state == "stale":
                     stale_reviews.append(artefact.id)
-        return {
+        items = {
             "open_high_findings": highs, "unreviewed": unreviewed, "review_out_of_date": stale_reviews,
             "built_on_changed": [s.artefact_id for s in self.stale(project_id, phase_key)],
             "guardrail_flags": self._flagged(project_id, phase_key),
             # S15: links that should exist and do not. From the same computation as the Traceability tab, so the two cannot disagree.
             "traceability_gaps": gaps_for_phase(self.store, self.runtime.skills, self.engine.catalogue, project_id, phase_key),
         }
+        if phase_key in deploy_checks.LISTS:
+            # S21c, S22a: the manual checks of a phase that has a checklist (Deploy's verification; BAU handover's sign-off). A phase without one has no such entry, so its
+            # list (and its audit row) is exactly what it was.
+            spec = deploy_checks.definition_of(phase_key)
+            items[spec.open_items_key] = deploy_checklist.build(self.store, project_id, phase_key).open_items()
+        return items
 
     def approve(self, project_id: str, phase_key: str, *, actor: str):
         """Approve a phase under review, recording in the audit row what was still open when the person approved."""

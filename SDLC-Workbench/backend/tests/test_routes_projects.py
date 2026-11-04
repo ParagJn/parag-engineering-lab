@@ -36,7 +36,7 @@ def test_the_catalogue_lists_every_phase_and_artefact_the_wizard_can_offer(clien
     assert sum(len(p["artefacts"]) for p in body["phases"]) == 28
     reqs = next(p for p in body["phases"] if p["key"] == "requirements")
     assert {a["key"]: a["required"] for a in reqs["artefacts"]}["user_stories"] is False
-    assert set(reqs["artefacts"][0]) == {"key", "name", "required", "description", "waits_for"}
+    assert set(reqs["artefacts"][0]) == {"key", "name", "required", "description", "waits_for", "enabled", "disabled_reason", "by_hand"}
 
 
 @pytest.mark.parametrize("mode, fragment", [("replay", "recordings"), ("live", "real models")])
@@ -402,3 +402,59 @@ def test_rewrite_is_offered_when_only_some_of_a_phases_artefacts_have_been_writt
     phase = next(p for p in client.get(f"/api/projects/{pid}").json()["phases"] if p["key"] == "requirements")
     assert sum(a["has_content"] for a in phase["artefacts"]) == 1 and len(phase["artefacts"]) > 1          # one of several
     assert actions() == ["run", "rewrite", "finish"]
+
+
+# ---- S21a: artefacts that are part of the design but not in use ----------------------------------------------------------
+
+def test_the_catalogue_says_which_artefacts_are_not_enabled_and_why(client):
+    body = client.get("/api/catalogue").json()
+    deploy = next(p for p in body["phases"] if p["key"] == "deploy")
+    by = {a["key"]: a for a in deploy["artefacts"]}
+    assert [k for k, a in by.items() if not a["enabled"]] == ["infrastructure_as_code", "cicd_pipeline"]
+    assert by["infrastructure_as_code"]["disabled_reason"].startswith("Not enabled. The product is built and run outside this tool")
+    assert by["cicd_pipeline"]["disabled_reason"].startswith("Not enabled. No automated build or release is wanted yet")
+    assert all(a["enabled"] and a["disabled_reason"] == "" for p in body["phases"] if p["key"] not in ("deploy", "handover") for a in p["artefacts"])
+    assert all(a["enabled"] and a["disabled_reason"] == "" for k, a in by.items() if k not in ("infrastructure_as_code", "cicd_pipeline"))
+
+
+def test_a_plan_lists_what_it_will_run_and_apart_from_it_what_is_not_enabled(client):
+    plan = client.post("/api/plan/preview", json={"selection": {}}).json()
+    deploy = next(p for p in plan["phases"] if p["key"] == "deploy")
+    assert [a["key"] for a in deploy["artefacts"]] == ["deployment_plan", "release_notes"] and [b["key"] for b in deploy["by_hand"]] == ["deployment_verification"]
+    assert [(n["key"], n["name"]) for n in deploy["not_enabled"]] == [("infrastructure_as_code", "Infrastructure as code"), ("cicd_pipeline", "CI/CD pipeline")]
+    assert all(set(n) == {"key", "name", "reason"} and n["reason"].startswith("Not enabled.") for n in deploy["not_enabled"])
+    assert all(p["not_enabled"] == [] for p in plan["phases"] if p["key"] not in ("deploy", "handover"))
+    assert [[a for a in w] for w in deploy["waves"]] == [["deployment_plan"], ["release_notes"]]
+    handover = next(p for p in plan["phases"] if p["key"] == "handover")           # S22b
+    assert [a["key"] for a in handover["artefacts"]] == ["runbook", "hypercare_plan"] and [b["key"] for b in handover["by_hand"]] == ["handover_signoff"]
+    assert [n["key"] for n in handover["not_enabled"]] == ["support_guide", "slos_alerts", "kt_pack"] and all(n["reason"].startswith("Not enabled.") for n in handover["not_enabled"])
+
+
+def test_asking_for_a_switched_off_artefact_is_refused_in_plain_words(client):
+    response = client.post("/api/plan/preview", json={"selection": {"deploy": ["deployment_plan", "release_notes", "cicd_pipeline"]}})
+    assert response.status_code == 422 and "'CI/CD pipeline' is not enabled" in response.json()["detail"]
+
+
+def test_a_project_lists_its_not_enabled_artefacts_on_the_phase_and_never_among_its_artefacts(client):
+    made = client.post("/api/projects", headers={"X-Actor": "Ann"}, json={"name": "P", "brief": "b"}).json()
+    detail = client.get(f"/api/projects/{made['id']}").json()
+    deploy = next(p for p in detail["phases"] if p["key"] == "deploy")
+    assert [a["key"] for a in deploy["artefacts"]] == ["deployment_plan", "release_notes"]
+    assert [n["key"] for n in deploy["not_enabled"]] == ["infrastructure_as_code", "cicd_pipeline"] and [b["key"] for b in deploy["by_hand"]] == ["deployment_verification"]
+    assert [n["name"] for n in deploy["not_enabled"]] == ["Infrastructure as code", "CI/CD pipeline"]
+    assert all(set(n) == {"key", "name", "reason"} and n["reason"].startswith("Not enabled.") and "switched on later" in n["reason"] for n in deploy["not_enabled"])
+    assert all(p["not_enabled"] == [] for p in detail["phases"] if p["key"] not in ("deploy", "handover"))
+    handover = next(p for p in detail["phases"] if p["key"] == "handover")          # S22b
+    assert [a["key"] for a in handover["artefacts"]] == ["runbook", "hypercare_plan"] and [n["key"] for n in handover["not_enabled"]] == ["support_guide", "slos_alerts", "kt_pack"] and [b["key"] for b in handover["by_hand"]] == ["handover_signoff"]
+
+
+def test_the_status_counts_the_artefacts_that_are_not_enabled_apart(client):
+    body = client.get("/api/status").json()
+    assert body["skills"]["artefacts"] == 28 and body["skills"]["not_enabled"] == 5 and body["skills"]["by_hand"] == 2
+
+
+def test_the_catalogue_says_which_artefact_is_done_by_hand_and_the_flag_is_false_for_every_other(client):
+    body = client.get("/api/catalogue").json()
+    flags = {a["key"]: a["by_hand"] for p in body["phases"] for a in p["artefacts"]}
+    assert [k for k, v in flags.items() if v] == ["deployment_verification", "handover_signoff"] and len(flags) == 28 and all(isinstance(v, bool) for v in flags.values())
+

@@ -7,6 +7,7 @@ import {
 } from '../api'
 import { pastedFilename } from '../lib/documents'
 import { saveBytes, saveText } from '../lib/download'
+import type { Answer, Checklist } from '../api/deploy'
 import { planDownload } from '../lib/instructionSet'
 import { makeZip } from '../lib/zip'
 import { applyEvent, idle, isLive, shouldClearFailures, shouldLoadFailures, type Progress } from './runProgress'
@@ -43,6 +44,42 @@ export async function downloadSetFiles(
   if (plan.kind === 'file') save.text(plan.name, plan.text)
   else save.zip(plan.name, makeZip(plan.entries))
   return null
+}
+
+/** Save one answer to a check and show the checklist the server sends back. The busy mark covers one check; a failure's sentence is kept for the page; the phase page is
+ *  refreshed after, because the open items it shows (and records at approval) have changed. Plain, so a test can follow every step. */
+/** The phases that have a checklist a person answers: Deploy's verification and hand-over's sign-off. The server decides what each list says. */
+export const CHECKLIST_PHASES: readonly string[] = ['deploy', 'handover']
+/** Does this phase have a checklist to load? */
+export const checklistWanted = (phaseKey: string): boolean => CHECKLIST_PHASES.includes(phaseKey)
+
+/** Load the checklist of the phase being shown, or nothing when that phase has none. Plain, so a test can see which phase was asked for. */
+export function loadChecklistWith(client: Pick<Client, 'checklist'>, projectId: string, phaseKey: string): Promise<Checklist> | null {
+  return checklistWanted(phaseKey) ? client.checklist(projectId, phaseKey) : null
+}
+
+/** The function the page calls with one answer: it saves into the phase being shown. */
+export function answerForPhase(
+  client: Pick<Client, 'answerCheck'>, ui: Parameters<typeof answerCheckWith>[1], projectId: string, phaseKey: string, actorName: string,
+): (checkId: string, answer: Answer, note: string) => Promise<void> {
+  return (checkId, answer, note) => answerCheckWith(client, ui, projectId, checkId, actorName, answer, note, phaseKey)
+}
+
+export async function answerCheckWith(
+  client: Pick<Client, 'answerCheck'>,
+  ui: { setBusy: (id: string | null) => void; setError: (message: string | null) => void; setList: (list: Checklist) => void; refresh: () => Promise<unknown> },
+  projectId: string, checkId: string, actorName: string, answer: Answer, note: string, phase = 'deploy',
+): Promise<void> {
+  ui.setBusy(checkId)
+  ui.setError(null)
+  try {
+    ui.setList(await client.answerCheck(projectId, checkId, actorName, answer, note, phase))
+    await ui.refresh()
+  } catch (e) {
+    ui.setError(message(e, 'That answer could not be saved.'))
+  } finally {
+    ui.setBusy(null)
+  }
 }
 
 /** The note about a download: cleared when one starts, and set again only if that download did not work. Plain, so a test can see every step. */
@@ -159,6 +196,18 @@ export function useProjectScreen(client: Client, initial: ProjectDetail, phaseKe
   useEffect(() => { void refresh(); openStream() }, [refresh, openStream])
 
   const [downloadNote, setDownloadNote] = useState<string | null>(null)
+  // S21c / S22a: the manual checklist of the phase being shown, loaded only for a phase that has one.
+  const [checklist, setChecklist] = useState<Checklist | null>(null)
+  const [checkBusy, setCheckBusy] = useState<string | null>(null)
+  const [checkError, setCheckError] = useState<string | null>(null)
+  useEffect(() => {
+    const wanted = loadChecklistWith(client, projectId, phaseKey)
+    if (!wanted) { setChecklist(null); return }
+    wanted.then((c) => { if (live.current) setChecklist(c) }).catch((e) => { if (live.current) setCheckError(message(e, 'The checklist could not be loaded.')) })
+  }, [client, projectId, phaseKey])
+  const answerCheck = useCallback(async (checkId: string, answer: Answer, note: string) => {
+    await answerForPhase(client, { setBusy: setCheckBusy, setError: setCheckError, setList: (c) => { if (live.current) setChecklist(c) }, refresh }, projectId, phaseKey, actorName)(checkId, answer, note)
+  }, [client, projectId, actorName, refresh, phaseKey])
   const downloadFiles = useCallback(async (artefactId: string, version: number | null, file: string | null) => {
     await downloadFilesWith((note) => { if (live.current) setDownloadNote(note) }, () => downloadSetFiles(client, { text: saveText, zip: saveBytes }, projectId, artefactId, version, file))
   }, [client, projectId])
@@ -301,7 +350,7 @@ export function useProjectScreen(client: Client, initial: ProjectDetail, phaseKe
     reviewsAvailable, reviewState, reviewBusy, reviewError, paused, chosenFamily, setChosenFamily, reviewOne, reviewAll, reviewWithChosen, reviewRun, stopReviews, dismissReviews,
     sendingBack, setSendingBack, changesBusy, changesError, sendBack, rerunNotes, rerunStale,
     reopening, setReopening: (on: boolean) => { setReopening(on); setReopenError(null) }, reopenBusy, reopenError, reopen,
-    downloadFiles, downloadNote,
+    downloadFiles, downloadNote, checklist, checkBusy, checkError, answerCheck,
     editing, editingFile, setEditing: (on: boolean) => { setEditing(on); setEditingFile(null); setEditRefusal(null); setEditError(null) },
     startEditFile: (name: string) => { setEditingFile(name); setEditing(true); setEditRefusal(null); setEditError(null) }, editBusy, editRefusal, editError, saveEdit,
   }

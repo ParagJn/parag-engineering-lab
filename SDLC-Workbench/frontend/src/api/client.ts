@@ -2,6 +2,7 @@
 // three plain things a person can act on: the backend is not running, the server said no (in its own words), or the two disagree.
 import { ContractError, type Json } from './decode'
 import { decodeTraceItem, decodeTraceability, type TraceItem, type Traceability } from './trace'
+import { decodeChecklist, type Answer, type Checklist } from './deploy'
 import { decodeVerifyDetail, decodeVerifyList, type VerifyDetail, type VerifyList } from './verify'
 import { decodeChangesRequested, decodeEditFileSaved, decodeEditRefusal, decodeEditSaved, decodePhaseReview, decodeReviewAnswer, decodeReviewState, decodeRerun, type ChangesRequested, type EditFileSaved, type EditSaved, type RerunStarted, type ReviewAnswer, type ReviewState_ } from './review'
 import {
@@ -66,6 +67,9 @@ export interface Client {
   traceItem(projectId: string, itemId: string): Promise<TraceItem>
   /** S20: Build Verify. Compare the real build, in folders on this computer, with the design. */
   verifyRuns(projectId: string): Promise<VerifyList>
+  /** S21c: the deployment checklist. Reading needs no name; answering a check is saved in the person's name. */
+  checklist(projectId: string, phase?: string): Promise<Checklist>
+  answerCheck(projectId: string, checkId: string, actorName: string, answer: Answer, note: string, phase?: string): Promise<Checklist>
   verifyRun(projectId: string, runId: number): Promise<VerifyDetail>
   runVerify(projectId: string, actorName: string, backendPath: string, frontendPath: string | null): Promise<VerifyDetail>
   requestChanges(projectId: string, phase: string, actorName: string, input: ChangeRequest): Promise<ChangesRequested>
@@ -126,6 +130,11 @@ export function makeClient(fetcher: Fetcher = (...args) => fetch(...args), base 
       decodeProject(await post('/api/projects', { ...input }, { 'X-Actor': actorName })),
 
     traceability: async (projectId) => decodeTraceability(await call(`/api/projects/${id(projectId)}/traceability`)),
+    checklist: async (projectId, phase = 'deploy') => decodeChecklist(await call(`/api/projects/${id(projectId)}/${id(phase)}/checklist`)),
+    answerCheck: async (projectId, checkId, actorName, answer, note, phase = 'deploy') =>
+      decodeChecklist(await call(`/api/projects/${id(projectId)}/${id(phase)}/checklist/${id(checkId)}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json', ...who(actorName) }, body: JSON.stringify({ answer, note }),
+      })),
     verifyRuns: async (projectId) => decodeVerifyList(await call(`/api/projects/${id(projectId)}/verify`)),
     verifyRun: async (projectId, runId) => decodeVerifyDetail(await call(`/api/projects/${id(projectId)}/verify/${id(String(runId))}`)),
     runVerify: async (projectId, actorName, backendPath, frontendPath) =>

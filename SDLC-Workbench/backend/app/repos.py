@@ -34,6 +34,7 @@ from .models import (
     Project,
     RollupRow,
     Trace,
+    CheckAnswer,
     VerifyMatch,
     VerifyRun,
 )
@@ -1491,6 +1492,49 @@ class VerifyRepo(_Repo):
         return [_verify_match(r) for r in rows]
 
 
+# ---- the deployment checklist ----------------------------------------------
+
+CHECK_ANSWERS = ("go", "no_go", "not_applicable")
+MAX_CHECK_NOTE = 1000
+
+
+def _check_answer(r: sqlite3.Row) -> CheckAnswer:
+    return CheckAnswer(id=r["id"], project_id=r["project_id"], check_id=r["check_id"], answer=r["answer"], note=r["note"], actor=r["actor"], at=r["at"], phase=r["phase"])
+
+
+class DeployCheckRepo(_Repo):
+    """The permanent record of the answers to the deployment checklist. Append-only: changing an answer adds a line, and the latest line counts."""
+
+    def answer(self, project_id: str, check_id: str, answer: str, *, actor: str, note: str = "", phase: str = "deploy") -> CheckAnswer:
+        check_actor(actor)
+        phase = _text(phase, "phase")
+        if answer not in CHECK_ANSWERS:
+            raise InvalidInput(f"answer must be one of {CHECK_ANSWERS}, got {answer!r}")
+        check_id = _text(check_id, "check_id")
+        note = (note or "").strip()
+        if len(note) > MAX_CHECK_NOTE:
+            raise InvalidInput(f"a note is at most {MAX_CHECK_NOTE} characters")
+        with self.db.write() as conn:
+            _require_project(conn, project_id)
+            cursor = conn.execute("INSERT INTO deploy_checks (project_id, phase, check_id, answer, note, actor, at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                                  (project_id, phase, check_id, answer, note, actor, self._clock()))
+            return _check_answer(conn.execute("SELECT * FROM deploy_checks WHERE id = ?", (cursor.lastrowid,)).fetchone())
+
+    def history(self, project_id: str, phase: str = "deploy") -> list[CheckAnswer]:
+        """Every answer ever given to one phase's checklist, oldest first. Another phase's answers are never in it."""
+        with self.db.read() as conn:
+            _require_project(conn, project_id)
+            rows = conn.execute("SELECT * FROM deploy_checks WHERE project_id = ? AND phase = ? ORDER BY id", (project_id, phase)).fetchall()
+        return [_check_answer(r) for r in rows]
+
+    def latest(self, project_id: str, phase: str = "deploy") -> dict[str, CheckAnswer]:
+        """The current answer of each check of one phase that has been answered: the newest line for it."""
+        out: dict[str, CheckAnswer] = {}
+        for row in self.history(project_id, phase):
+            out[row.check_id] = row
+        return out
+
+
 # ---- the store -------------------------------------------------------------
 
 class Store:
@@ -1517,6 +1561,7 @@ class Store:
         self.run_events = RunEventRepo(db, clock, id_factory)
         self.build_rounds = BuildRoundRepo(db, clock, id_factory)
         self.verify = VerifyRepo(db, clock, id_factory)
+        self.deploy_checks = DeployCheckRepo(db, clock, id_factory)
         # Imported here, not at the top: the context store builds on this module's helpers.
         from .context.store import ContextStore
 

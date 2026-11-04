@@ -1,0 +1,3 @@
+{
+  "detail": "a check can be answered only while the phase is running or awaiting_review; deploy is 'not_started'"
+}

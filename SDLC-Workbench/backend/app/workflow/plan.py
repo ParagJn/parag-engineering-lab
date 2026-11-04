@@ -22,6 +22,16 @@ class PhasePlan:
     pulled_in: tuple[str, ...]  # artefact keys added because something enabled needs them
 
     @property
+    def by_hand(self) -> tuple[ArtefactDef, ...]:
+        """The artefacts of this phase that a person does by hand (S21): never in `artefacts`, so they are never run or required."""
+        return tuple(a for a in self.phase.artefacts if a.by_hand)
+
+    @property
+    def not_enabled(self) -> tuple[ArtefactDef, ...]:
+        """The artefacts of this phase that are switched off in their definition (S21a), in catalogue order. They are never in `artefacts`, so they never run."""
+        return tuple(a for a in self.phase.artefacts if not a.enabled)
+
+    @property
     def key(self) -> str:
         return self.phase.key
 
@@ -81,9 +91,9 @@ def _enabled_keys(phase: PhaseDef, choice: Any) -> tuple[set[str], set[str]]:
     artefacts must be in that list: leaving one out is an error, not a silent re-add, so what the
     user asked for and what they get can never differ without being told.
     """
+    usable = {a.key for a in phase.artefacts if a.enabled and not a.by_hand}      # an artefact switched off, or done by hand, can never be chosen
     if choice is None:
-        enabled = {a.key for a in phase.artefacts}
-        return enabled, set()
+        return set(usable), set()
 
     if not isinstance(choice, (list, tuple, set)) or not all(isinstance(k, str) for k in choice):
         raise PlanError(f"selection for '{phase.key}' must be a list of artefact keys or null")
@@ -92,6 +102,12 @@ def _enabled_keys(phase: PhaseDef, choice: Any) -> tuple[set[str], set[str]]:
     unknown = sorted(enabled - known)
     if unknown:
         raise PlanError(f"phase '{phase.key}' has no artefact(s) {unknown}")
+    hand = [a for a in phase.artefacts if a.key in enabled and a.by_hand]
+    if hand:
+        raise PlanError(f"{phase.name}: {', '.join(repr(a.name) for a in hand)} {'is' if len(hand) == 1 else 'are'} done by hand and cannot be chosen as something to produce")
+    off = [a for a in phase.artefacts if a.key in enabled and not a.enabled]
+    if off:
+        raise PlanError(f"{phase.name}: {', '.join(repr(a.name) for a in off)} {'is' if len(off) == 1 else 'are'} not enabled ({off[0].disabled_reason})")
     left_out = [a.name for a in phase.artefacts if a.required and a.key not in enabled]
     if left_out:
         raise PlanError(

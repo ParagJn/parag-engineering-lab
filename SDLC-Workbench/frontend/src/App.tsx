@@ -114,7 +114,7 @@ function LoadedProject({ initial, phase, actorName, mode, reviewsAvailable, flas
           documents: screen.documents, cards: screen.cards, open: screen.open, progress: screen.progress, connected: screen.connected, streamProblem: screen.streamProblem,
           actionError: screen.actionError, busy: screen.busy, uploadError: screen.uploadError, lastUpload: screen.lastUpload, cancelNote: screen.cancelNote, query: screen.query,
           result: screen.result, searchError: screen.searchError, searching: screen.searching, runLive: screen.runLive, onQuery: screen.setQuery, onSearch: screen.search,
-          onAct: screen.act, onCancel: screen.cancel, onUpload: screen.upload, onPaste: screen.paste, onRemove: screen.remove, onOpen: (a) => screen.openArtefact(a), onDownload: screen.downloadFiles, downloadNote: screen.downloadNote,
+          onAct: screen.act, onCancel: screen.cancel, onUpload: screen.upload, onPaste: screen.paste, onRemove: screen.remove, onOpen: (a) => screen.openArtefact(a), onDownload: screen.downloadFiles, downloadNote: screen.downloadNote, checklist: screen.checklist, checkBusy: screen.checkBusy, checkError: screen.checkError, onAnswerCheck: screen.answerCheck,
           onVersion: (n) => screen.open && screen.openArtefact(screen.open.id, n), onClose: screen.close,
           review: {
             state: screen.reviewState, available: screen.reviewsAvailable, busy: screen.reviewBusy, error: screen.reviewError, paused: screen.paused, chosenFamily: screen.chosenFamily,

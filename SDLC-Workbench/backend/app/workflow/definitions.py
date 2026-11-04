@@ -18,7 +18,8 @@ KEY_RE = re.compile(r"[a-z][a-z0-9_]*")
 PREFIX_RE = re.compile(r"[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+")  # needs at least one dash, like REQ-F
 
 PHASE_FIELDS = {"key", "order", "name", "summary", "approver", "artefacts"}
-ARTEFACT_FIELDS = {"key", "name", "id_prefix", "role", "required", "description", "after"}
+ARTEFACT_FIELDS = {"key", "name", "id_prefix", "role", "required", "description", "after", "enabled", "disabled_reason", "kind"}
+KINDS = ("written", "checklist")
 
 
 class CatalogueError(ValueError):
@@ -35,6 +36,17 @@ class ArtefactDef:
     description: str
     after: tuple[str, ...]
     phase_key: str
+    # S21a: an artefact that is part of the design of the product but not in use. It is never run, never required and never reviewed, and it is shown with its reason
+    # (not hidden, not failed). Switching it on later is a change to its definition, plus its skill.
+    enabled: bool = True
+    disabled_reason: str = ""
+    # S21: "written" is an artefact an agent writes. "checklist" is done BY HAND by a person (the deployment verification): it has no role and no skill, is never run, is never
+    # required, and is shown as a card that points at the checklist. Its answers are kept in their own record, not as an artefact version.
+    kind: str = "written"
+
+    @property
+    def by_hand(self) -> bool:
+        return self.kind == "checklist"
 
 
 @dataclass(frozen=True)
@@ -77,6 +89,14 @@ class Catalogue:
     @property
     def required_count(self) -> int:
         return sum(1 for p in self.phases for a in p.artefacts if a.required)
+
+    @property
+    def by_hand_count(self) -> int:
+        return sum(1 for p in self.phases for a in p.artefacts if a.by_hand)
+
+    @property
+    def not_enabled_count(self) -> int:
+        return sum(1 for p in self.phases for a in p.artefacts if not a.enabled)
 
 
 # ---- loading ----------------------------------------------------------------
@@ -128,6 +148,9 @@ def _parse_artefact(raw: Any, phase_key: str, file: str, index: int) -> Artefact
     key = _text(raw, "key", where)
     if not KEY_RE.fullmatch(key):
         raise CatalogueError(f"{where}: key must be lower_snake_case")
+    kind = raw.get("kind", "written")
+    if kind not in KINDS:
+        raise CatalogueError(f"{where}: 'kind' must be one of {list(KINDS)}, got {kind!r}")
     prefix = _text(raw, "id_prefix", where)
     if not PREFIX_RE.fullmatch(prefix):
         raise CatalogueError(f"{where}: id_prefix {prefix!r} must look like 'REQ-F' (capitals, with a dash)")
@@ -141,15 +164,35 @@ def _parse_artefact(raw: Any, phase_key: str, file: str, index: int) -> Artefact
         raise CatalogueError(f"{where}: 'after' must be a list of artefact keys")
     if len(set(after)) != len(after):
         raise CatalogueError(f"{where}: 'after' lists the same artefact twice")
+    enabled = raw.get("enabled", True)
+    if not isinstance(enabled, bool):
+        raise CatalogueError(f"{where}: 'enabled' must be true or false")
+    reason = _text(raw, "disabled_reason", where, required=False)
+    if not enabled and not reason:
+        raise CatalogueError(f"{where}: an artefact that is not enabled needs a 'disabled_reason', so the screen can say why")
+    if enabled and "disabled_reason" in raw:
+        raise CatalogueError(f"{where}: 'disabled_reason' is only for an artefact with 'enabled: false'")
+    if not enabled and required:
+        raise CatalogueError(f"{where}: an artefact that is not enabled cannot also be 'required: true'")
+    if kind == "checklist":
+        # Done by hand: nothing an agent could be asked to write, and nothing approval should wait for.
+        # (Switching one off needs `enabled: false` and a reason; the reason is refused here, so it cannot be switched off.)
+        for name, bad in (("role", "role" in raw), ("required", required), ("after", bool(after)), ("disabled_reason", "disabled_reason" in raw)):
+            if bad:
+                raise CatalogueError(f"{where}: a 'kind: checklist' artefact is done by hand, so it has no '{name}'")
+    role = "" if kind == "checklist" else _text(raw, "role", where)
     return ArtefactDef(
         key=key,
         name=_text(raw, "name", where),
         id_prefix=prefix,
-        role=_text(raw, "role", where),
+        role=role,
         required=required,
         description=_text(raw, "description", where, required=False),
         after=tuple(after),
         phase_key=phase_key,
+        enabled=enabled,
+        disabled_reason=reason,
+        kind=kind,
     )
 
 
@@ -198,7 +241,7 @@ def parse_phase(data: Any, file: str, valid_roles: Iterable[str]) -> PhaseDef:
         if item.key in seen:
             raise CatalogueError(f"{file}: artefact '{item.key}' appears twice")
         seen.add(item.key)
-        if item.role not in roles:
+        if not item.by_hand and item.role not in roles:
             raise CatalogueError(
                 f"{file}: artefact '{item.key}' uses role '{item.role}', which is not in routing.yaml"
             )
@@ -215,6 +258,13 @@ def parse_phase(data: Any, file: str, valid_roles: Iterable[str]) -> PhaseDef:
         raise CatalogueError(f"{file}: the 'after' rules form a loop: {' -> '.join(cycle)}")
     if not any(a.required for a in artefacts):
         raise CatalogueError(f"{file}: a phase needs at least one required artefact, or it could be approved empty")
+    for item in artefacts:
+        if item.enabled:
+            for dependency in item.after:
+                if next(a for a in artefacts if a.key == dependency).by_hand:
+                    raise CatalogueError(f"{file}: artefact '{item.key}' comes after '{dependency}', which is done by hand and never runs; nothing can wait for it")
+                if not next(a for a in artefacts if a.key == dependency).enabled:
+                    raise CatalogueError(f"{file}: artefact '{item.key}' comes after '{dependency}', which is not enabled; an enabled artefact cannot wait for one that never runs")
 
     return PhaseDef(
         key=key, order=order, name=_text(data, "name", file), summary=_text(data, "summary", file, required=False),

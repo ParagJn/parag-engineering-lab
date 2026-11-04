@@ -31,6 +31,8 @@ def test_every_route_the_screen_calls_has_a_fixture():
         "gate_reopen", "error_422_reopen_blank", "error_409_reopen_not_approved",
         # S20
         "verify_run", "verify_list", "error_422_verify", "error_404_verify",
+        # S21c
+        "checklist_empty", "checklist_answered", "error_409_checklist_closed", "error_404_check", "signoff_empty", "signoff_answered",
     }
 
 
@@ -65,7 +67,7 @@ def test_writing_then_checking_agrees(tmp_path, monkeypatch, capsys):
     assert contract.main(["--check"]) == 0
     capsys.readouterr()
     written = sorted(p.name for p in (tmp_path / "out").glob("*.json"))
-    assert len(written) == 52 and all(json.loads((tmp_path / "out" / n).read_text(encoding="utf-8")) is not None for n in written)
+    assert len(written) == 58 and all(json.loads((tmp_path / "out" / n).read_text(encoding="utf-8")) is not None for n in written)
 
 
 def test_a_fixture_holds_no_machine_specific_detail():

@@ -1,6 +1,6 @@
-import { ChevronRight, X } from 'lucide-react'
+import { ChevronRight, Download, X } from 'lucide-react'
 import type { ArtefactDetail, LinkRef } from '../api'
-import { authorLabel, count, money, shortDate } from '../lib/format'
+import { authorLabel, count, downloadPath, isDownloadable, money, shortDate } from '../lib/format'
 import { buildMarks } from '../lib/reviewMarks'
 import { isCodeArtefact } from '../lib/codeFiles'
 import { isInstructionSet } from '../lib/instructionSet'
@@ -27,6 +27,8 @@ export interface ArtefactReaderProps {
   onEdit?: () => void
   /** S19f: edit ONE file of a Build instruction set. Offered only where `canEdit` is, and only on the latest version. */
   onEditFile?: (name: string) => void
+  /** The project the artefact belongs to, so the download links can be built. Absent: no download links. */
+  projectId?: string
 }
 
 /** A list of links between this artefact and others, folded until opened (a set can have dozens), with how many there are in the heading. */
@@ -45,7 +47,7 @@ function Links({ title, links, empty }: { title: string; links: LinkRef[]; empty
   )
 }
 
-export function ArtefactReader({ artefact: a, onClose, onVersion, canReview = false, reviewNote = null, reviewBusy = false, onReview, canEdit = false, onEdit, onEditFile }: ArtefactReaderProps) {
+export function ArtefactReader({ artefact: a, onClose, onVersion, canReview = false, reviewNote = null, reviewBusy = false, onReview, canEdit = false, onEdit, onEditFile, projectId }: ArtefactReaderProps) {
   const g = a.generation
   const isCode = isCodeArtefact(a.type)
   // Colour the text only while the review is OF this text. A review of an older version would mark lines that may no longer say what it meant.
@@ -85,6 +87,14 @@ export function ArtefactReader({ artefact: a, onClose, onVersion, canReview = fa
           {canReview && <button type="button" onClick={onReview} disabled={reviewBusy} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold disabled:opacity-40">{reviewBusy ? 'Reviewing…' : a.review ? 'Review again' : 'Review this artefact'}</button>}
           {canEdit && <button type="button" onClick={onEdit} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold">{isSet ? 'Edit the whole set' : 'Edit by hand'}</button>}
           {reviewNote && <span className="text-xs text-slate-500">{reviewNote}</span>}
+        </div>
+      )}
+
+      {isDownloadable(a.type) && projectId && (
+        <div className="mt-3 flex flex-wrap items-center gap-2" aria-label="Download this version">
+          <span className="text-xs text-slate-500">Version {a.version}:</span>
+          <a href={downloadPath(projectId, a.id, 'md', a.version)} download className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold no-underline text-slate-800 hover:bg-slate-50"><Download size={14} aria-hidden /> Download .md</a>
+          <a href={downloadPath(projectId, a.id, 'docx', a.version)} download className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold no-underline text-slate-800 hover:bg-slate-50"><Download size={14} aria-hidden /> Download .docx</a>
         </div>
       )}
 

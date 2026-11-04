@@ -226,7 +226,7 @@ describe('the wizard page', () => {
   it('produce: required artefacts are ticked and disabled, optional ones can be changed', () => {
     const out = html(<WizardPage {...props(at('produce'))} />)
     const boxes = [...out.matchAll(/<input type="checkbox"([^>]*)>/g)].map((m) => m[1])
-    expect(boxes.length).toBe(catalogue.phases.flatMap((p) => p.artefacts).length)
+    expect(boxes.length).toBe(catalogue.phases.flatMap((p) => p.artefacts).filter((a) => a.enabled && !a.by_hand).length)          // an artefact switched off, or done by hand, gets no box
     expect(boxes.some((b) => b.includes('disabled'))).toBe(true)
     expect(boxes.some((b) => !b.includes('disabled'))).toBe(true)
     expect(out).toContain('(required)')

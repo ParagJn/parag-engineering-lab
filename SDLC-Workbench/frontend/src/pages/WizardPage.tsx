@@ -89,7 +89,7 @@ export function WizardPage(props: WizardProps) {
                 <fieldset key={phase.key} className="rounded-lg border border-slate-200 p-3">
                   <legend className="px-1 text-sm font-bold">{phase.name}</legend>
                   <div className="grid gap-1 sm:grid-cols-2">
-                    {phase.artefacts.map((a) => {
+                    {phase.artefacts.filter((a) => a.enabled && !a.by_hand).map((a) => {
                       const on = (state.ticked[phase.key] ?? []).includes(a.key)
                       const wave = planned?.artefacts.find((x) => x.key === a.key)?.wave
                       return (
@@ -103,6 +103,16 @@ export function WizardPage(props: WizardProps) {
                       )
                     })}
                   </div>
+                  {phase.artefacts.some((a) => a.by_hand) && (
+                    <ul aria-label={`Done by hand in ${phase.name}`} className="mt-2 list-none space-y-0.5 p-0 text-xs text-slate-500">
+                      {phase.artefacts.filter((a) => a.by_hand).map((a) => <li key={a.key}><span className="font-semibold">{a.name}</span>: you work through it by hand. {a.description}</li>)}
+                    </ul>
+                  )}
+                  {phase.artefacts.some((a) => !a.enabled) && (
+                    <ul aria-label={`Not enabled in ${phase.name}`} className="mt-2 list-none space-y-0.5 p-0 text-xs text-slate-500">
+                      {phase.artefacts.filter((a) => !a.enabled).map((a) => <li key={a.key}><span className="font-semibold">{a.name}</span>: {a.disabled_reason}</li>)}
+                    </ul>
+                  )}
                 </fieldset>
               )
             })}

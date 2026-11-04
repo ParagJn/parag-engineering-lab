@@ -20,7 +20,7 @@ export const NOT_STARTED_CELL = 'not started'
 /** The columns' headings: the kind of item, with a plain word beneath. */
 export const LAYER_NAME: Record<string, string> = {
   EPIC: 'Epics', FEAT: 'Features', US: 'Stories', JS: 'Journey steps', LFS: 'Low-fi screens', HFS: 'Hi-fi screens', COMP: 'Components', DEC: 'Decisions', IFC: 'Interfaces',
-  API: 'Endpoints', TBL: 'Tables', RUL: 'Rules', UC: 'Use cases', FLOW: 'Calls',
+  API: 'Endpoints', TBL: 'Tables', RUL: 'Rules', UC: 'Use cases', FLOW: 'Calls', INS: 'Instruction files', DPL: 'Release steps', REL: 'Release notes', RUN: 'Runbook entries', HYP: 'Hypercare items',
 }
 export const layerName = (prefix: string): string => LAYER_NAME[prefix] ?? prefix
 

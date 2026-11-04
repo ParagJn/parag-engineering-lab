@@ -30,6 +30,22 @@ class ArtefactState:
 
 
 @dataclass(frozen=True)
+class NotEnabledState:
+    """An artefact of the phase that is part of the design but switched off (S21a): shown with its reason, never run, never required."""
+    key: str
+    name: str
+    reason: str
+
+
+@dataclass(frozen=True)
+class ByHandState:
+    """An artefact of the phase that a person does by hand (S21): it is never run or required, and the screen shows a card that points at the checklist."""
+    key: str
+    name: str
+    description: str
+
+
+@dataclass(frozen=True)
 class PhaseState:
     key: str
     order: int
@@ -43,6 +59,8 @@ class PhaseState:
     needs_review: bool  # approved, but an earlier phase has been reopened since
     blocked_by: str | None  # name of the earlier phase that must be approved first
     allowed_actions: tuple[str, ...] = ()  # what a person may do now; the screen shows these and decides nothing itself
+    not_enabled: tuple[NotEnabledState, ...] = ()  # S21a: switched off in the definition, with the reason
+    by_hand: tuple[ByHandState, ...] = ()  # S21: done by a person, not written by an agent
 
 
 @dataclass(frozen=True)
@@ -230,6 +248,8 @@ class WorkflowEngine:
                     needs_review=self._needs_review(plan, rows, reopened_at, phase),
                     blocked_by=self._blocked_by(plan, list(rows.values()), phase),
                     allowed_actions=allowed_actions(status, bool(phase.artefacts), self._blocked_by(plan, list(rows.values()), phase), any(a.has_content for a in artefacts)),
+                    not_enabled=tuple(NotEnabledState(a.key, a.name, a.disabled_reason) for a in phase.not_enabled),
+                    by_hand=tuple(ByHandState(a.key, a.name, a.description) for a in phase.by_hand),
                 )
             )
         return Snapshot(project_id, tuple(states), plan.notes, self._next_action(states))

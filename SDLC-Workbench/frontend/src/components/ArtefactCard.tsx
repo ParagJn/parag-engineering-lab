@@ -1,4 +1,4 @@
-import { AlertTriangle, Circle, FileCheck2 } from 'lucide-react'
+import { AlertTriangle, Circle, ClipboardCheck, FileCheck2, PowerOff } from 'lucide-react'
 import type { ArtefactCard as Card } from '../api'
 import type { ReviewStatus } from '../api'
 import { authorLabel, count, money } from '../lib/format'
@@ -13,6 +13,33 @@ export interface ArtefactCardProps {
   onOpen: (artefactId: string) => void
   /** Where its review stands, as the server computed it. Omitted when not loaded. */
   review?: ReviewStatus | null
+}
+
+/** An artefact a person does by hand (the deployment verification, the handover sign-off). A card that says so and points at the checklist, with the progress when it is known: never a failure, never "not written yet". */
+export function ByHandCard({ name, description, progress }: { name: string; description: string; progress?: string | null }) {
+  return (
+    <li aria-label={`${name}: done by hand`} className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900">
+      <span className="flex flex-wrap items-center gap-2">
+        <ClipboardCheck size={14} aria-hidden /> <span className="font-semibold">{name}</span>
+        <span className="rounded-full border border-sky-300 bg-white px-2 py-0.5 text-[11px] font-semibold text-sky-800">Done by hand</span>
+        {progress && <span className="text-xs">{progress}</span>}
+      </span>
+      <span className="mt-1 block text-xs">{description} Use the checklist below; no model is involved.</span>
+    </li>
+  )
+}
+
+/** An artefact that is part of the design but switched off. A grey card with the server's reason: nothing to press, nothing to run, and not a failure. */
+export function NotEnabledCard({ name, reason }: { name: string; reason: string }) {
+  return (
+    <li aria-label={`${name}: not enabled`} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
+      <span className="flex flex-wrap items-center gap-2">
+        <PowerOff size={14} aria-hidden /> <span className="font-semibold">{name}</span>
+        <span className="rounded-full border border-slate-300 bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-600">Not enabled</span>
+      </span>
+      <span className="mt-1 block text-xs">{reason}</span>
+    </li>
+  )
 }
 
 export function ArtefactCardView({ name, card, selected, onOpen, review }: ArtefactCardProps) {

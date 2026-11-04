@@ -1,6 +1,10 @@
 import { ArrowLeft } from 'lucide-react'
 import type { ArtefactCard, ArtefactDetail, ChangeRequest, DocumentInfo, PhaseAction, ReviewPaused, ReviewState_, SearchResult, UploadResult } from '../api'
-import { ArtefactCardView } from '../components/ArtefactCard'
+import type { Answer, Checklist } from '../api/deploy'
+import { ChecklistPanel } from '../components/ChecklistPanel'
+import { ArtefactCardView, ByHandCard, NotEnabledCard } from '../components/ArtefactCard'
+import { headline } from '../lib/checklist'
+import { checklistWanted } from '../state/useProjectScreen'
 import { ArtefactReader } from '../components/ArtefactReader'
 import { EditArtefact } from '../components/EditArtefact'
 import { FamilyPicker } from '../components/FamilyPicker'
@@ -54,6 +58,11 @@ export interface ProjectScreen {
   /** Save the files of a Build instruction set from the run panel: one file (by name) or all of them (null) as a zip. */
   onDownload?: (artefactId: string, version: number | null, file: string | null) => void
   downloadNote?: string | null
+  /** S21c: the manual checklist of a phase that has one (Deploy today), absent for every other phase. */
+  checklist?: Checklist | null
+  checkBusy?: string | null
+  checkError?: string | null
+  onAnswerCheck?: (checkId: string, answer: Answer, note: string) => void
   onVersion: (number: number) => void
   onClose: () => void
   // S12c
@@ -160,13 +169,15 @@ export function ProjectPage({ project, phaseKey, screen = emptyScreen, canChange
             {phase.feedback && <div className="mt-3"><Notice tone="warn" title="Sent back">{phase.feedback}</Notice></div>}
             {phase.status === 'approved' && phase.decided_by && <p className="mt-2 text-xs text-slate-500">Approved by {phase.decided_by.replace(/^human:/, '')}.</p>}
             <p className="mt-3 text-sm text-slate-700">
-              {count(phase.artefacts.length, 'artefact')}{waiting > 0 ? ` · ${waiting} waiting on others` : ''} · approved by the {phase.approver}.
+              {count(phase.artefacts.length, 'artefact')}{waiting > 0 ? ` · ${waiting} waiting on others` : ''}{phase.by_hand.length > 0 ? ` · ${phase.by_hand.length} done by hand` : ''}{phase.not_enabled.length > 0 ? ` · ${phase.not_enabled.length} not enabled` : ''} · approved by the {phase.approver}.
             </p>
             <ul className="mt-2 list-none space-y-2 p-0">
               {phase.artefacts.map((a) => (
                 <ArtefactCardView key={a.key} name={a.name} card={cardOf(a.key)} selected={screen.open?.type === a.key} onOpen={screen.onOpen}
                   review={cardOf(a.key) && rv.state ? statusOf(cardOf(a.key)!.id) : undefined} />
               ))}
+              {phase.by_hand.map((b) => <ByHandCard key={b.key} name={b.name} description={b.description} progress={screen.checklist ? headline(screen.checklist) : null} />)}
+              {phase.not_enabled.map((n) => <NotEnabledCard key={n.key} name={n.name} reason={n.reason} />)}
             </ul>
 
             {rv.state && rv.state.stale.length > 0 && phase.status !== 'approved' && (
@@ -210,9 +221,14 @@ export function ProjectPage({ project, phaseKey, screen = emptyScreen, canChange
             )}
           </div>
 
+          {checklistWanted(phase.key) && screen.checklist && (
+            <ChecklistPanel checklist={screen.checklist} canAnswer={canChange && (phase.status === 'running' || phase.status === 'awaiting_review')} busy={screen.checkBusy ?? null}
+              error={screen.checkError ?? null} onAnswer={screen.onAnswerCheck ?? (() => {})} projectId={project.id} />
+          )}
+
           {showingThisPhase && (
             <RunPanel progress={screen.progress} failures={screen.failures} names={names} connected={screen.connected} cancelling={screen.busy === 'cancel'} cancelNote={screen.cancelNote}
-              problem={screen.streamProblem} onCancel={screen.onCancel} onOpen={screen.onOpen} onDownload={screen.onDownload} downloadNote={screen.downloadNote ?? null} />
+              problem={screen.streamProblem} onCancel={screen.onCancel} onOpen={screen.onOpen} onDownload={screen.onDownload} downloadNote={screen.downloadNote ?? null} projectId={project.id} />
           )}
 
           {rv.reopening && (
@@ -229,7 +245,7 @@ export function ProjectPage({ project, phaseKey, screen = emptyScreen, canChange
           )}
 
           {screen.open && !rv.editing && (
-            <ArtefactReader artefact={screen.open} onClose={screen.onClose} onVersion={screen.onVersion}
+            <ArtefactReader artefact={screen.open} projectId={project.id} onClose={screen.onClose} onVersion={screen.onVersion}
               canReview={rv.available && reviewable && canChange} reviewBusy={rv.busy === screen.open.id} onReview={() => rv.onReviewOne(screen.open!.id)}
               reviewNote={!rv.available && reviewable ? rv.state?.replay_sentence ?? null : null}
               canEdit={(phase.status === 'running' || phase.status === 'awaiting_review') && canChange && !screen.runLive} onEdit={rv.onStartEdit} onEditFile={rv.onStartEditFile} />

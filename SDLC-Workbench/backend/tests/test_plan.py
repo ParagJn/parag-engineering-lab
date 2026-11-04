@@ -31,7 +31,7 @@ def required_of(catalogue, phase_key: str) -> list[str]:
 
 def test_no_selection_means_everything(catalogue):
     plan = build_plan(catalogue, None)
-    assert [len(p.artefacts) for p in plan.phases] == [len(p.artefacts) for p in catalogue.phases]
+    assert [len(p.artefacts) for p in plan.phases] == [len([a for a in p.artefacts if a.enabled and not a.by_hand]) for p in catalogue.phases]          # an artefact switched off, or done by hand, is not in a plan
     assert plan.notes == ()
     assert build_plan(catalogue, {}).phase("build").artefacts == plan.phase("build").artefacts
 
@@ -194,5 +194,62 @@ def test_switching_an_artefact_off_changes_the_waves(catalogue):
 def test_the_widest_wave_in_the_default_plan_shows_what_parallelism_buys(catalogue):
     plan = build_plan(catalogue, None)
     widest = max((len(w), p.key) for p in plan.phases for w in p.waves)
-    assert widest == (4, "handover")  # slos_alerts, kt_pack, hypercare_plan, handover_signoff
-    assert max(len(w) for p in plan.phases for w in p.waves) <= 4
+    assert widest == (3, "requirements")  # S22b: Handover now runs only the runbook and then the hypercare plan, so it is no longer the widest
+    assert max(len(w) for p in plan.phases for w in p.waves) <= 3
+
+
+# ---- S21a: an artefact switched off in its definition is never in a plan --------------------------------------------------
+
+def test_a_switched_off_artefact_is_never_run_never_required_and_is_listed_apart(catalogue):
+    deploy = build_plan(catalogue, None).phase("deploy")
+    assert [a.key for a in deploy.artefacts] == ["deployment_plan", "release_notes"]
+    assert [a.key for a in deploy.not_enabled] == ["infrastructure_as_code", "cicd_pipeline"] and [a.key for a in deploy.by_hand] == ["deployment_verification"]
+    assert [a.key for a in deploy.required] == ["deployment_plan", "release_notes"]
+    assert [[a.key for a in w] for w in deploy.waves] == [["deployment_plan"], ["release_notes"]]
+    assert build_plan(catalogue, None).phase("build").not_enabled == ()
+
+
+def test_asking_for_a_switched_off_artefact_is_refused_with_its_reason(catalogue):
+    with pytest.raises(PlanError, match="'Infrastructure as code' is not enabled \\(Not enabled. The product is built and run outside this tool"):
+        build_plan(catalogue, {"deploy": ["deployment_plan", "release_notes", "infrastructure_as_code"]})
+    with pytest.raises(PlanError, match="not enabled"):
+        build_plan(catalogue, {"deploy": ["deployment_plan", "release_notes", "cicd_pipeline"]})
+
+
+def test_the_three_that_run_can_be_chosen_exactly_and_the_other_phases_are_unchanged(catalogue):
+    chosen = build_plan(catalogue, {"deploy": ["deployment_plan", "release_notes"]}).phase("deploy")
+    assert [a.key for a in chosen.artefacts] == ["deployment_plan", "release_notes"] and chosen.pulled_in == ()
+    assert [len(p.artefacts) for p in build_plan(catalogue, None).phases] == [1, 7, 3, 5, 1, 2, 2]
+
+
+def test_a_switched_off_artefact_that_waits_for_a_working_one_is_accepted_but_never_planned(tmp_path):
+    from tests.test_catalogue import good_phase, write_phase, ROLES
+    data = good_phase()
+    data["artefacts"][1] = {**data["artefacts"][1], "enabled": False, "disabled_reason": "Not enabled. later.", "after": ["a"]}
+    write_phase(tmp_path, "00.yaml", data)
+    plan = build_plan(load_catalogue(ROLES, tmp_path), None).phase("demo")
+    assert [a.key for a in plan.artefacts] == ["a"] and [a.key for a in plan.not_enabled] == ["b"] and plan.pulled_in == ()
+
+
+def test_an_artefact_done_by_hand_cannot_be_chosen_as_something_to_produce_and_the_refusal_says_why(catalogue):
+    with pytest.raises(PlanError, match="Deploy: 'Deployment verification' is done by hand and cannot be chosen as something to produce"):
+        build_plan(catalogue, {"deploy": ["deployment_plan", "release_notes", "deployment_verification"]})
+    chosen = build_plan(catalogue, {"deploy": ["deployment_plan", "release_notes"]}).phase("deploy")
+    assert [a.key for a in chosen.by_hand] == ["deployment_verification"] and [a.key for a in chosen.artefacts] == ["deployment_plan", "release_notes"]
+
+
+def test_the_by_hand_list_holds_only_the_by_hand_artefacts(catalogue):
+    plan = build_plan(catalogue, None)
+    assert [a.key for a in plan.phase("deploy").by_hand] == ["deployment_verification"] and [a.key for a in plan.phase("handover").by_hand] == ["handover_signoff"]
+    assert all(p.by_hand == () for p in plan.phases if p.key not in ("deploy", "handover"))
+
+
+def test_the_handover_plan_runs_the_runbook_then_the_hypercare_plan_and_lists_the_rest_apart(catalogue):
+    handover = build_plan(catalogue, None).phase("handover")
+    assert [[a.key for a in w] for w in handover.waves] == [["runbook"], ["hypercare_plan"]] and [a.key for a in handover.required] == ["runbook", "hypercare_plan"]
+    assert [a.key for a in handover.not_enabled] == ["support_guide", "slos_alerts", "kt_pack"] and [a.key for a in handover.by_hand] == ["handover_signoff"]
+    with pytest.raises(PlanError, match="'Support guide' is not enabled"):
+        build_plan(catalogue, {"handover": ["runbook", "hypercare_plan", "support_guide"]})
+    with pytest.raises(PlanError, match="Handover sign-off' is done by hand"):
+        build_plan(catalogue, {"handover": ["runbook", "hypercare_plan", "handover_signoff"]})
+

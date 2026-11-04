@@ -109,6 +109,8 @@ def plan_payload(plan: Plan) -> dict[str, Any]:
                     for a in p.artefacts
                 ],
                 "waves": [[a.key for a in wave] for wave in p.waves],
+                "not_enabled": [{"key": a.key, "name": a.name, "reason": a.disabled_reason} for a in p.not_enabled],
+                "by_hand": [{"key": a.key, "name": a.name, "description": a.description} for a in p.by_hand],
             }
             for p in plan.phases
         ],
@@ -122,7 +124,8 @@ def catalogue_payload(request: Request) -> dict[str, Any]:
     return {
         "phases": [
             {"key": p.key, "order": p.order, "name": p.name, "summary": p.summary, "approver": p.approver,
-             "artefacts": [{"key": a.key, "name": a.name, "required": a.required, "description": a.description, "waits_for": list(a.after)}
+             "artefacts": [{"key": a.key, "name": a.name, "required": a.required, "description": a.description, "waits_for": list(a.after),
+                            "enabled": a.enabled, "disabled_reason": a.disabled_reason, "by_hand": a.by_hand}
                            for a in p.artefacts]}
             for p in catalogue.phases
         ]
@@ -158,6 +161,8 @@ def project_detail(project: Project, snapshot, connectors: list[str]) -> dict[st
                 "allowed_actions": list(p.allowed_actions),
                 "artefacts": [{"key": a.key, "name": a.name, "required": a.required, "has_content": a.has_content, "wave": a.wave,
                                "waits_for": list(a.waits_for)} for a in p.artefacts],
+                "not_enabled": [{"key": a.key, "name": a.name, "reason": a.reason} for a in p.not_enabled],
+                "by_hand": [{"key": a.key, "name": a.name, "description": a.description} for a in p.by_hand],
             }
             for p in snapshot.phases
         ],

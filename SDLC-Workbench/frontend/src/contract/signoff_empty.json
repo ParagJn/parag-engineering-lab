@@ -1,0 +1,95 @@
+{
+  "answer_words": {
+    "go": "Accept",
+    "no_go": "Not accepted",
+    "not_applicable": "Not applicable"
+  },
+  "complete": false,
+  "decision": null,
+  "decision_check": "SGN-008",
+  "groups": [
+    {
+      "checks": [
+        {
+          "from": "the runbook",
+          "history": [],
+          "id": "SGN-001",
+          "latest": null,
+          "question": "The support team has read the runbook and finds it usable for looking after the product."
+        },
+        {
+          "from": "the hypercare plan",
+          "history": [],
+          "id": "SGN-002",
+          "latest": null,
+          "question": "The support team has read the hypercare plan and agrees with it: who is on hand, for how long, and when it ends."
+        },
+        {
+          "from": "the contacts in the runbook",
+          "history": [],
+          "id": "SGN-003",
+          "latest": null,
+          "question": "The support team knows who to ask, and how to reach the people who built the product."
+        }
+      ],
+      "key": "given",
+      "title": "What support has been given"
+    },
+    {
+      "checks": [
+        {
+          "from": "the runbook",
+          "history": [],
+          "id": "SGN-004",
+          "latest": null,
+          "question": "The support team can start, stop and check the product by following the runbook."
+        },
+        {
+          "from": "the runbook and the hypercare plan",
+          "history": [],
+          "id": "SGN-005",
+          "latest": null,
+          "question": "The support team knows what to do first when something goes wrong, and when to ask for help."
+        },
+        {
+          "from": "the deployment plan",
+          "history": [],
+          "id": "SGN-006",
+          "latest": null,
+          "question": "The support team can go back to the earlier release by following the rollback in the deployment plan."
+        },
+        {
+          "from": "",
+          "history": [],
+          "id": "SGN-007",
+          "latest": null,
+          "question": "The support team has the access it needs to the product, its settings and its logs."
+        }
+      ],
+      "key": "can",
+      "title": "What support can do"
+    },
+    {
+      "checks": [
+        {
+          "from": "",
+          "history": [],
+          "id": "SGN-008",
+          "latest": null,
+          "question": "Overall: accept. Support accepts the product and takes over its day-to-day care. Write your role in the note."
+        }
+      ],
+      "key": "decision",
+      "title": "The decision"
+    }
+  ],
+  "phase": "handover",
+  "title": "Handover sign-off",
+  "totals": {
+    "go": 0,
+    "no_go": 0,
+    "not_applicable": 0,
+    "total": 8,
+    "unanswered": 8
+  }
+}

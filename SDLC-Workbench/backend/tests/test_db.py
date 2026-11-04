@@ -13,6 +13,7 @@ TABLES = {
     "runs", "run_events",  # S09
     "build_rounds",  # S17b
     "verify_runs", "verify_matches",  # S20b
+    "deploy_checks",  # S21c
 }
 
 

@@ -18,7 +18,7 @@ def block(make_settings) -> dict:
 
 def test_the_workflow_block_has_the_counts_and_one_row_per_phase(make_settings):
     wf, _ = block(make_settings)
-    assert (wf["phase_count"], wf["artefact_count"], wf["required_count"]) == (7, 28, 18)
+    assert (wf["phase_count"], wf["artefact_count"], wf["required_count"]) == (7, 28, 17)          # the deployment verification is done by hand, so it is no longer required
     assert [p["key"] for p in wf["phases"]] == ["setup", "requirements", "design", "architecture", "build", "deploy", "handover"]
     assert all(set(p) == {"key", "order", "name", "approver", "artefacts", "required"} for p in wf["phases"])
     build = next(p for p in wf["phases"] if p["key"] == "build")

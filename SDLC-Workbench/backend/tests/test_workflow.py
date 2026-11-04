@@ -468,3 +468,44 @@ def test_ensure_does_not_resurrect_or_reset_an_existing_phase(engine, store, sta
     approve_phase(store, engine, started, "setup")
     engine.open_project(started.id)
     assert store.phases.get(started.id, "setup").status == "approved"
+
+
+# ---- S21a: an artefact switched off in its definition -------------------------------------------------------------------------------------------
+
+def test_the_deploy_phase_can_be_approved_without_the_artefacts_that_are_not_enabled(catalogue, store, engine, started):
+    for key in ("setup", "requirements", "design", "architecture", "build"):
+        approve_phase(store, engine, started, key)
+    engine.start(started.id, "deploy", actor="system")
+    fill(store, engine, started, "deploy", only_required=False)
+    names = {a.type for a in store.artefacts.list(started.id, phase_key="deploy")}
+    assert names == {"deployment_plan", "release_notes"}                  # the two that are not enabled, and the one done by hand, were not even created
+    engine.finish(started.id, "deploy", actor="system")
+    engine.approve(started.id, "deploy", actor=PERSON)
+    assert next(p for p in engine.snapshot(started.id).phases if p.key == "deploy").status == "approved"
+
+
+def test_the_deploy_phase_still_needs_its_two_required_artefacts_and_never_the_one_done_by_hand(catalogue, store, engine, started):
+    for key in ("setup", "requirements", "design", "architecture", "build"):
+        approve_phase(store, engine, started, key)
+    engine.start(started.id, "deploy", actor="system")
+    plan = engine.plan_for(store.projects.get(started.id)).phase("deploy")
+    first = plan.artefacts[0]
+    artefact = store.artefacts.create(started.id, artefact_type=first.key, phase_key="deploy", title=first.name, actor="system", prefix=first.id_prefix)
+    store.artefacts.add_version(started.id, artefact.id, body="x", author="agent:t@m")
+    with pytest.raises(GateNotMet) as caught:
+        engine.finish(started.id, "deploy", actor="system")
+        engine.approve(started.id, "deploy", actor=PERSON)
+    assert "Release notes" in str(caught.value)
+    for never in ("Deployment verification", "Infrastructure as code", "CI/CD pipeline"):
+        assert never not in str(caught.value), never                              # none of these can ever be what approval is waiting for
+
+
+def test_the_snapshot_lists_the_artefacts_that_are_not_enabled_apart_from_those_that_run(catalogue, store, engine, started):
+    deploy = next(p for p in engine.snapshot(started.id).phases if p.key == "deploy")
+    assert [a.key for a in deploy.artefacts] == ["deployment_plan", "release_notes"] and [(b.key, b.name) for b in deploy.by_hand] == [("deployment_verification", "Deployment verification")]
+    assert [(n.key, n.name) for n in deploy.not_enabled] == [("infrastructure_as_code", "Infrastructure as code"), ("cicd_pipeline", "CI/CD pipeline")]
+    assert all(n.reason.startswith("Not enabled.") for n in deploy.not_enabled)
+    assert all(p.not_enabled == () for p in engine.snapshot(started.id).phases if p.key not in ("deploy", "handover"))
+    handover = next(p for p in engine.snapshot(started.id).phases if p.key == "handover")          # S22b
+    assert [a.key for a in handover.artefacts] == ["runbook", "hypercare_plan"] and [b.key for b in handover.by_hand] == ["handover_signoff"]
+    assert [n.key for n in handover.not_enabled] == ["support_guide", "slos_alerts", "kt_pack"]

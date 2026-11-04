@@ -336,7 +336,32 @@ CREATE TRIGGER verify_matches_no_update BEFORE UPDATE ON verify_matches BEGIN SE
 CREATE TRIGGER verify_matches_no_delete BEFORE DELETE ON verify_matches BEGIN SELECT RAISE(ABORT, 'verify matches are append-only'); END;
 """
 
-MIGRATIONS = [SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5, SCHEMA_V6, SCHEMA_V7, SCHEMA_V8]
+# v9 (S21c): the answers a person gives to the deployment checklist. Append-only like the audit trail: changing your mind adds a line, and the latest line for a check is its
+# current answer, so the history shows the change. A row holds the check's ID, the answer, a short note and who answered; never anything else.
+SCHEMA_V9 = """
+CREATE TABLE deploy_checks (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id TEXT NOT NULL REFERENCES projects(id),
+  check_id   TEXT NOT NULL,
+  answer     TEXT NOT NULL CHECK (answer IN ('go', 'no_go', 'not_applicable')),
+  note       TEXT NOT NULL DEFAULT '',
+  actor      TEXT NOT NULL,
+  at         TEXT NOT NULL
+);
+CREATE INDEX idx_deploy_checks_project ON deploy_checks (project_id, check_id, id);
+
+CREATE TRIGGER deploy_checks_no_update BEFORE UPDATE ON deploy_checks BEGIN SELECT RAISE(ABORT, 'deployment check answers are append-only'); END;
+CREATE TRIGGER deploy_checks_no_delete BEFORE DELETE ON deploy_checks BEGIN SELECT RAISE(ABORT, 'deployment check answers are append-only'); END;
+"""
+
+# v10 (S22a): a checklist belongs to a phase (Deploy's verification, and BAU handover's sign-off). Every answer given before this was a Deploy answer, so existing rows
+# become 'deploy'. The append-only triggers already stop an UPDATE, so the column is added with its value fixed in the definition (SQLite fills existing rows with the default).
+SCHEMA_V10 = """
+ALTER TABLE deploy_checks ADD COLUMN phase TEXT NOT NULL DEFAULT 'deploy';
+CREATE INDEX idx_deploy_checks_phase ON deploy_checks (project_id, phase, check_id, id);
+"""
+
+MIGRATIONS = [SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5, SCHEMA_V6, SCHEMA_V7, SCHEMA_V8, SCHEMA_V9, SCHEMA_V10]
 
 
 def split_statements(script: str) -> list[str]:

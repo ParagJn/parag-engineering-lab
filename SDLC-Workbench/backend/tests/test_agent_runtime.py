@@ -272,7 +272,7 @@ async def test_refusals_make_no_call_no_trace_and_save_nothing(rig, store, proje
     runtime, provider, _ = rig()
     for key, error, fragment in [
         ("gadgets", ArtefactNotInPlan, "not an artefact in the workflow catalogue"),
-        ("deployment_plan", NoSkill, "no skill for 'deployment_plan'"),
+        ("support_guide", NoSkill, "no skill for 'support_guide'"),
         ("personas", PhaseNotRunning, "requirements is 'not_started'"),
         ("problem_statement", PhaseNotRunning, "requirements is 'not_started'"),
     ]:

@@ -218,6 +218,19 @@ class VerifyMatch:
 
 
 @dataclass(frozen=True)
+class CheckAnswer:
+    """One answer a person gave to one check of the deployment checklist (S21c). The latest for a check is its current answer; the earlier ones are its history."""
+    id: int
+    project_id: str
+    check_id: str
+    answer: str                      # go | no_go | not_applicable
+    note: str
+    actor: str
+    at: str
+    phase: str = "deploy"            # the phase whose checklist this answer belongs to (S22a); every answer before then was Deploy's
+
+
+@dataclass(frozen=True)
 class RollupRow:
     """Totals for one model, phase, agent or slot. cost_usd is None when nothing in the group was priced."""
 

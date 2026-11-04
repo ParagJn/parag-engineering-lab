@@ -14,8 +14,10 @@
           "wave": 1
         }
       ],
+      "by_hand": [],
       "key": "setup",
       "name": "Setup",
+      "not_enabled": [],
       "order": 0,
       "summary": "Agree what is being built, for whom, and how the project will run.",
       "waves": [
@@ -92,8 +94,10 @@
           "wave": 3
         }
       ],
+      "by_hand": [],
       "key": "requirements",
       "name": "Requirements",
+      "not_enabled": [],
       "order": 1,
       "summary": "Capture who the product is for and what it must do.",
       "waves": [
@@ -146,8 +150,10 @@
           "wave": 3
         }
       ],
+      "by_hand": [],
       "key": "design",
       "name": "Design",
+      "not_enabled": [],
       "order": 2,
       "summary": "Work out how people will use the product, before deciding how it is built.",
       "waves": [
@@ -219,8 +225,10 @@
           "wave": 2
         }
       ],
+      "by_hand": [],
       "key": "architecture",
       "name": "Architecture",
+      "not_enabled": [],
       "order": 3,
       "summary": "Decide the parts of the system, how they fit together, and the detail needed to build them.",
       "waves": [
@@ -250,8 +258,10 @@
           "wave": 1
         }
       ],
+      "by_hand": [],
       "key": "build",
       "name": "Build & Test",
+      "not_enabled": [],
       "order": 4,
       "summary": "Write the instruction files a person gives to a coding tool (Copilot, Claude, GPT or Gemini) so that tool builds the application. This system does not write the application.",
       "waves": [
@@ -274,17 +284,6 @@
         },
         {
           "added_because_needed": false,
-          "description": "The container and infrastructure files that describe the environment.",
-          "key": "infrastructure_as_code",
-          "name": "Infrastructure as code",
-          "required": true,
-          "waits_for": [
-            "deployment_plan"
-          ],
-          "wave": 2
-        },
-        {
-          "added_because_needed": false,
           "description": "What is in this release, in words the business can read.",
           "key": "release_notes",
           "name": "Release notes",
@@ -293,45 +292,37 @@
             "deployment_plan"
           ],
           "wave": 2
-        },
+        }
+      ],
+      "by_hand": [
         {
-          "added_because_needed": false,
-          "description": "The automated steps that build, test and release the product.",
-          "key": "cicd_pipeline",
-          "name": "CI/CD pipeline",
-          "required": false,
-          "waits_for": [
-            "deployment_plan"
-          ],
-          "wave": 2
-        },
-        {
-          "added_because_needed": false,
-          "description": "Checks run against the running product to show the release worked.",
+          "description": "Checks a person works through by hand, with a go or no-go for each. No model is used.",
           "key": "deployment_verification",
-          "name": "Deployment verification",
-          "required": false,
-          "waits_for": [
-            "infrastructure_as_code"
-          ],
-          "wave": 3
+          "name": "Deployment verification"
         }
       ],
       "key": "deploy",
       "name": "Deploy",
+      "not_enabled": [
+        {
+          "key": "infrastructure_as_code",
+          "name": "Infrastructure as code",
+          "reason": "Not enabled. The product is built and run outside this tool, so there is nothing for it to describe yet. It can be switched on later."
+        },
+        {
+          "key": "cicd_pipeline",
+          "name": "CI/CD pipeline",
+          "reason": "Not enabled. No automated build or release is wanted yet. It can be switched on later."
+        }
+      ],
       "order": 5,
-      "summary": "Get the tested product running somewhere, and prove it is running.",
+      "summary": "Plan the release, say what is in it, and check by hand that it worked.",
       "waves": [
         [
           "deployment_plan"
         ],
         [
-          "infrastructure_as_code",
-          "release_notes",
-          "cicd_pipeline"
-        ],
-        [
-          "deployment_verification"
+          "release_notes"
         ]
       ]
     },
@@ -349,74 +340,50 @@
         },
         {
           "added_because_needed": false,
-          "description": "How to triage and resolve the problems users are likely to report.",
-          "key": "support_guide",
-          "name": "Support guide",
-          "required": true,
-          "waits_for": [],
-          "wave": 1
-        },
-        {
-          "added_because_needed": false,
-          "description": "The service levels promised and the alerts that tell support when they are at risk.",
-          "key": "slos_alerts",
-          "name": "SLOs and alerts",
-          "required": false,
-          "waits_for": [
-            "runbook"
-          ],
-          "wave": 2
-        },
-        {
-          "added_because_needed": false,
-          "description": "What the support team needs to learn, in the order they need to learn it.",
-          "key": "kt_pack",
-          "name": "Knowledge-transfer pack",
-          "required": false,
-          "waits_for": [
-            "runbook",
-            "support_guide"
-          ],
-          "wave": 2
-        },
-        {
-          "added_because_needed": false,
           "description": "Extra support in the first weeks after go-live, and when it ends.",
           "key": "hypercare_plan",
           "name": "Hypercare plan",
-          "required": false,
+          "required": true,
           "waits_for": [
             "runbook"
-          ],
-          "wave": 2
-        },
-        {
-          "added_because_needed": false,
-          "description": "The record that support accepts the product, with who signed and when.",
-          "key": "handover_signoff",
-          "name": "Handover sign-off",
-          "required": false,
-          "waits_for": [
-            "runbook",
-            "support_guide"
           ],
           "wave": 2
         }
       ],
+      "by_hand": [
+        {
+          "description": "Statements a named person accepts or does not accept, one by one, to record that support takes the product. No model is used.",
+          "key": "handover_signoff",
+          "name": "Handover sign-off"
+        }
+      ],
       "key": "handover",
       "name": "BAU handover",
+      "not_enabled": [
+        {
+          "key": "support_guide",
+          "name": "Support guide",
+          "reason": "Not enabled. Not needed yet; the runbook covers day-to-day problems. It can be switched on later."
+        },
+        {
+          "key": "slos_alerts",
+          "name": "SLOs and alerts",
+          "reason": "Not enabled. No alerting is set up for a product built and run outside this tool. It can be switched on later."
+        },
+        {
+          "key": "kt_pack",
+          "name": "Knowledge-transfer pack",
+          "reason": "Not enabled. Not needed yet; the runbook and the sign-off cover what support must know. It can be switched on later."
+        }
+      ],
       "order": 6,
-      "summary": "Hand the running product to the people who will support it day to day.",
+      "summary": "Hand the running product to the people who will support it day to day, and record that they accept it.",
       "waves": [
         [
-          "runbook",
-          "support_guide"
+          "runbook"
         ],
         [
-          "slos_alerts",
-          "kt_pack",
-          "hypercare_plan",
-          "handover_signoff"
+          "hypercare_plan"
         ]
       ]
     }

@@ -156,6 +156,26 @@
           "items": [],
           "layer": "INS",
           "state": "not_started"
+        },
+        {
+          "items": [],
+          "layer": "DPL",
+          "state": "not_started"
+        },
+        {
+          "items": [],
+          "layer": "REL",
+          "state": "not_started"
+        },
+        {
+          "items": [],
+          "layer": "HYP",
+          "state": "not_started"
+        },
+        {
+          "items": [],
+          "layer": "RUN",
+          "state": "not_started"
         }
       ],
       "item": "FR-001",
@@ -266,6 +286,26 @@
           "items": [],
           "layer": "INS",
           "state": "not_started"
+        },
+        {
+          "items": [],
+          "layer": "DPL",
+          "state": "not_started"
+        },
+        {
+          "items": [],
+          "layer": "REL",
+          "state": "not_started"
+        },
+        {
+          "items": [],
+          "layer": "HYP",
+          "state": "not_started"
+        },
+        {
+          "items": [],
+          "layer": "RUN",
+          "state": "not_started"
         }
       ],
       "item": "FR-002",
@@ -372,6 +412,26 @@
           "items": [],
           "layer": "INS",
           "state": "not_started"
+        },
+        {
+          "items": [],
+          "layer": "DPL",
+          "state": "not_started"
+        },
+        {
+          "items": [],
+          "layer": "REL",
+          "state": "not_started"
+        },
+        {
+          "items": [],
+          "layer": "HYP",
+          "state": "not_started"
+        },
+        {
+          "items": [],
+          "layer": "RUN",
+          "state": "not_started"
         }
       ],
       "item": "NFR-001",
@@ -475,6 +535,26 @@
           "items": [],
           "layer": "INS",
           "state": "not_started"
+        },
+        {
+          "items": [],
+          "layer": "DPL",
+          "state": "not_started"
+        },
+        {
+          "items": [],
+          "layer": "REL",
+          "state": "not_started"
+        },
+        {
+          "items": [],
+          "layer": "HYP",
+          "state": "not_started"
+        },
+        {
+          "items": [],
+          "layer": "RUN",
+          "state": "not_started"
         }
       ],
       "item": "NFR-002",
@@ -518,7 +598,11 @@
     "RUL",
     "UC",
     "FLOW",
-    "INS"
+    "INS",
+    "DPL",
+    "REL",
+    "HYP",
+    "RUN"
   ],
   "names": {
     "API-001": "POST /bookings reserves a room for a slot, or answers that…",

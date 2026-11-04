@@ -9,5 +9,7 @@ def skills_status(catalogue: Catalogue, library: SkillLibrary) -> dict:
     return {
         "with_skill": len(library),
         "artefacts": catalogue.artefact_count,
+        "not_enabled": catalogue.not_enabled_count,
+        "by_hand": catalogue.by_hand_count,
         "keys": sorted(library.keys),
     }

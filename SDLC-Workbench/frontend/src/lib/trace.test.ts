@@ -21,7 +21,7 @@ describe('the words on the tab', () => {
   })
   it('a layer is named in plain words and an unknown one by its prefix', () => {
     expect(layerName('COMP')).toBe('Components'); expect(layerName('API')).toBe('Endpoints'); expect(layerName('FLOW')).toBe('Calls'); expect(layerName('MOD')).toBe('MOD')
-    expect(Object.keys(LAYER_NAME)).toHaveLength(14)
+    expect(Object.keys(LAYER_NAME)).toHaveLength(19)
   })
   it('an empty cell is a dash and a layer in a phase that has not started says so', () => {
     expect(EMPTY_CELL).toBe('-'); expect(NOT_STARTED_CELL).toBe('not started')
@@ -88,3 +88,16 @@ describe('the address of the tab', () => {
     expect(parseHash('#/projects/p1/phases/design')).toEqual({ name: 'project', id: 'p1', phase: 'design' }); expect(parseHash('#/projects/p1')).toEqual({ name: 'project', id: 'p1', phase: null })
   })
 })
+
+describe('every column the traceability screen can show has a name in words', () => {
+  it('names the Build and Deploy kinds, not only their codes', async () => {
+    const { layerName } = await import('./trace')
+    expect(layerName('INS')).toBe('Instruction files'); expect(layerName('DPL')).toBe('Release steps'); expect(layerName('REL')).toBe('Release notes'); expect(layerName('RUN')).toBe('Runbook entries'); expect(layerName('HYP')).toBe('Hypercare items')
+  })
+  it('names every column the server sends in its own traceability answer', async () => {
+    const { layerName } = await import('./trace')
+    const trace = (await import('../contract/traceability.json')).default as { layers: string[] }
+    for (const layer of trace.layers) expect(layerName(layer), layer).not.toBe(layer)
+  })
+})
+

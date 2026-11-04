@@ -17,8 +17,8 @@ def build_rows(catalogue: Catalogue, library: SkillLibrary) -> list[tuple[str, s
     rows = []
     for phase in catalogue.phases:
         for item in phase.artefacts:
-            rows.append((phase.name, item.name, "required" if item.required else "optional",
-                         "skill" if library.has(item.key) else "no skill yet"))
+            state = "not enabled" if not item.enabled else "by hand" if item.by_hand else "skill" if library.has(item.key) else "no skill yet"      # neither a switched-off one nor one done by hand is waiting for a skill
+            rows.append((phase.name, item.name, "required" if item.required else "optional", state))
     return rows
 
 
@@ -29,8 +29,9 @@ def render(rows: Sequence[tuple[str, str, str, str]]) -> str:
              "  ".join("-" * w for w in widths)]
     lines += ["  ".join(str(c).ljust(w) for c, w in zip(row, widths)).rstrip() for row in rows]
     have = sum(1 for r in rows if r[3] == "skill")
-    required_missing = sum(1 for r in rows if r[2] == "required" and r[3] != "skill")
-    lines += ["", f"{have} of {len(rows)} artefacts have a skill; {required_missing} required artefacts still need one"]
+    required_missing = sum(1 for r in rows if r[2] == "required" and r[3] == "no skill yet")
+    off, hand = sum(1 for r in rows if r[3] == "not enabled"), sum(1 for r in rows if r[3] == "by hand")
+    lines += ["", f"{have} of {len(rows)} artefacts have a skill; {required_missing} required artefacts still need one" + (f"; {off} not enabled" if off else "") + (f"; {hand} done by hand" if hand else "")]
     return "\n".join(lines)
 
 

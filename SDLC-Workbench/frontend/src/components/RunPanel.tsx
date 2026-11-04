@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { ROW_STATES, capUsed, counts, isLive, type Progress, type Row } from '../state/runProgress'
 import { RUN_STATUS_LABEL, STOP_REASON_LABEL, ROW_STATE_LABEL, count, money, seconds } from '../lib/format'
 import type { ArtefactFailure } from '../api'
+import { downloadPath, isDownloadable } from '../lib/format'
 import { Notice } from './Notice'
 
 const ICON: Record<Row['state'], ReactNode> = {
@@ -30,6 +31,8 @@ export interface RunPanelProps {
   onDownload?: (artefactId: string, version: number | null, file: string | null) => void
   /** Why the last download could not be made, or null. */
   downloadNote?: string | null
+  /** The project, so a downloadable document's links can be built. Absent: no such links. */
+  projectId?: string
 }
 
 const PIECE_ICON: Record<'writing' | 'done' | 'failed', ReactNode> = {
@@ -64,7 +67,7 @@ function Pieces({ pieces, open, onSave }: { pieces: Row['pieces']; open: boolean
   )
 }
 
-export function RunPanel({ progress: p, failures = {}, names, connected, cancelling, cancelNote, problem, onCancel, onOpen, onDownload, downloadNote = null }: RunPanelProps) {
+export function RunPanel({ progress: p, failures = {}, names, connected, cancelling, cancelNote, problem, onCancel, onOpen, onDownload, downloadNote = null, projectId }: RunPanelProps) {
   if (p.status === 'idle') return null
   const used = capUsed(p)
   const tally = counts(p)
@@ -106,7 +109,13 @@ export function RunPanel({ progress: p, failures = {}, names, connected, cancell
                       <Download size={12} aria-hidden /> Download all (zip)
                     </button>
                   )}
-                  <button type="button" onClick={() => onOpen(r.artefactId!)} className={`${onDownload && r.pieces.length > 0 ? '' : 'ml-auto '}text-xs underline`}>Read it</button>
+                  {projectId && isDownloadable(r.key) && (
+                    <span className="ml-auto inline-flex items-center gap-1">
+                      <a href={downloadPath(projectId, r.artefactId!, 'md', r.version)} download aria-label={`Download ${names[r.key] ?? r.key} as Markdown`} title="Download .md" className="inline-flex items-center gap-0.5 rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] font-semibold text-slate-700 no-underline hover:bg-slate-50"><Download size={12} aria-hidden /> md</a>
+                      <a href={downloadPath(projectId, r.artefactId!, 'docx', r.version)} download aria-label={`Download ${names[r.key] ?? r.key} as Word`} title="Download .docx" className="inline-flex items-center gap-0.5 rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] font-semibold text-slate-700 no-underline hover:bg-slate-50"><Download size={12} aria-hidden /> docx</a>
+                    </span>
+                  )}
+                  <button type="button" onClick={() => onOpen(r.artefactId!)} className={`${(onDownload && r.pieces.length > 0) || (projectId && isDownloadable(r.key)) ? '' : 'ml-auto '}text-xs underline`}>Read it</button>
                 </>
               )}
               {r.review !== 'none' && <span className="text-xs text-slate-500">review: {r.review === 'running' ? 'in progress' : r.reviewNote ?? r.review}</span>}

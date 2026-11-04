@@ -15,14 +15,17 @@ export type Connector = (typeof CONNECTORS)[number]
 
 // ---- catalogue and plan ------------------------------------------------------------------------------------------
 
-export interface CatalogueArtefact { key: string; name: string; required: boolean; description: string; waits_for: string[] }
+export interface CatalogueArtefact { key: string; name: string; required: boolean; description: string; waits_for: string[]; enabled: boolean; disabled_reason: string; by_hand: boolean }
 export interface CataloguePhase { key: string; order: number; name: string; summary: string; approver: string; artefacts: CatalogueArtefact[] }
 export interface Catalogue { phases: CataloguePhase[] }
 
+const planArtefactFields = (o: Json, w: string) => ({
+  key: str(o.key, `${w}.key`), name: str(o.name, `${w}.name`), required: bool(o.required, `${w}.required`),
+  description: str(o.description, `${w}.description`), waits_for: strings(o.waits_for, `${w}.waits_for`),
+})
 const catalogueArtefact = (v: unknown, w: string): CatalogueArtefact => {
   const o = obj(v, w)
-  return { key: str(o.key, `${w}.key`), name: str(o.name, `${w}.name`), required: bool(o.required, `${w}.required`),
-    description: str(o.description, `${w}.description`), waits_for: strings(o.waits_for, `${w}.waits_for`) }
+  return { ...planArtefactFields(o, w), enabled: bool(o.enabled, `${w}.enabled`), disabled_reason: str(o.disabled_reason, `${w}.disabled_reason`), by_hand: bool(o.by_hand, `${w}.by_hand`) }
 }
 
 export function decodeCatalogue(value: unknown): Catalogue {
@@ -35,8 +38,16 @@ export function decodeCatalogue(value: unknown): Catalogue {
   }) }
 }
 
+/** An artefact a person does by hand (S21): never run or required. */
+export interface ByHand { key: string; name: string; description: string }
+const byHand = (value: unknown, w: string): ByHand[] => arr(value, w).map((n, i) => { const o = obj(n, `${w}[${i}]`); return { key: str(o.key, `${w}[${i}].key`), name: str(o.name, `${w}[${i}].name`), description: str(o.description, `${w}[${i}].description`) } })
+
+/** An artefact switched off in its definition (S21a): part of the design, never run. The server gives the reason in its own words. */
+export interface NotEnabled { key: string; name: string; reason: string }
+const notEnabled = (value: unknown, w: string): NotEnabled[] => arr(value, w).map((n, i) => { const o = obj(n, `${w}[${i}]`); return { key: str(o.key, `${w}[${i}].key`), name: str(o.name, `${w}[${i}].name`), reason: str(o.reason, `${w}[${i}].reason`) } })
+
 export interface PlanArtefact { key: string; name: string; required: boolean; description: string; waits_for: string[]; wave: number; added_because_needed: boolean }
-export interface PlanPhase { key: string; order: number; name: string; summary: string; approver: string; artefacts: PlanArtefact[]; waves: string[][] }
+export interface PlanPhase { key: string; order: number; name: string; summary: string; approver: string; artefacts: PlanArtefact[]; waves: string[][]; not_enabled: NotEnabled[]; by_hand: ByHand[] }
 export interface Plan { phases: PlanPhase[]; notes: string[] }
 
 export function decodePlan(value: unknown): Plan {
@@ -49,10 +60,12 @@ export function decodePlan(value: unknown): Plan {
       approver: str(po.approver, `${w}.approver`),
       artefacts: arr(po.artefacts, `${w}.artefacts`).map((a, j) => {
         const ao = obj(a, `${w}.artefacts[${j}]`)
-        return { ...catalogueArtefact(ao, `${w}.artefacts[${j}]`), wave: num(ao.wave, `${w}.artefacts[${j}].wave`),
+        return { ...planArtefactFields(ao, `${w}.artefacts[${j}]`), wave: num(ao.wave, `${w}.artefacts[${j}].wave`),
           added_because_needed: bool(ao.added_because_needed, `${w}.artefacts[${j}].added_because_needed`) }
       }),
       waves: arr(po.waves, `${w}.waves`).map((wave, k) => strings(wave, `${w}.waves[${k}]`)),
+      not_enabled: notEnabled(po.not_enabled, `${w}.not_enabled`),
+      by_hand: byHand(po.by_hand, `${w}.by_hand`),
     }
   }) }
 }
@@ -87,6 +100,10 @@ export interface PhaseArtefact { key: string; name: string; required: boolean; h
 export interface PhaseDetail {
   key: string; order: number; name: string; approver: string; status: PhaseStatus; decision: string | null; decided_by: string | null
   feedback: string | null; needs_review: boolean; blocked_by: string | null; allowed_actions: PhaseAction[]; artefacts: PhaseArtefact[]
+  /** Artefacts of the phase that are switched off, each with its reason. Empty for every phase but Deploy today. */
+  not_enabled: NotEnabled[]
+  /** Artefacts a person does by hand (the deployment verification): a card that points at the checklist, never run. */
+  by_hand: ByHand[]
 }
 export interface ProjectDetail {
   id: string; name: string; brief: string; mode: Mode; created_at: string; updated_at: string
@@ -117,6 +134,8 @@ export function decodeProject(value: unknown): ProjectDetail {
             required: bool(ao.required, `${w}.artefacts[${j}].required`), has_content: bool(ao.has_content, `${w}.artefacts[${j}].has_content`),
             wave: num(ao.wave, `${w}.artefacts[${j}].wave`), waits_for: strings(ao.waits_for, `${w}.artefacts[${j}].waits_for`) }
         }),
+        not_enabled: notEnabled(po.not_enabled, `${w}.not_enabled`),
+        by_hand: byHand(po.by_hand, `${w}.by_hand`),
       }
     }),
   }

@@ -23,9 +23,12 @@ HEADER = """\
 > Generated from `backend/app/phases/definitions/*.yaml` by `scripts/render_catalogue.py`. **Do not edit by hand:**
 > change the YAML, then run the script. A test fails if this file and the YAML disagree.
 
-The lifecycle has {phases} phases and {artefacts} artefacts, {required} of them required. A **required**
+The lifecycle has {phases} phases and {artefacts} artefacts, {required} of them required{off}{hand}. A **required**
 artefact cannot be switched off in the wizard and must have content before its phase can be approved. An
 artefact in a later **wave** waits for the ones in earlier waves; everything inside a wave runs in parallel.
+An artefact that is **not enabled** is part of the design but never runs, is never required and is never reviewed; its reason is given
+under its phase, and it can be switched on later by changing its definition and adding its skill.
+An artefact **done by hand** (the deployment verification) has no agent and no skill: a person works through it, it is never run, and approval does not wait for it.
 Deploy and BAU Handover are this prototype's own design; the source material stops at Code & Test.
 """
 
@@ -36,7 +39,9 @@ def _row(cells: Sequence[str]) -> str:
 
 def render(catalogue: Catalogue) -> str:
     plan = build_plan(catalogue, None)
-    out = [HEADER.format(phases=len(catalogue.phases), artefacts=catalogue.artefact_count, required=catalogue.required_count)]
+    off, hand = catalogue.not_enabled_count, catalogue.by_hand_count
+    out = [HEADER.format(phases=len(catalogue.phases), artefacts=catalogue.artefact_count, required=catalogue.required_count,
+                         off=f", {off} of them not enabled" if off else "", hand=f", {hand} done by hand" if hand else "")]
     out.append("## At a glance\n")
     out.append(_row(["#", "Phase", "Approver", "Artefacts", "Required", "Parallel waves"]))
     out.append(_row(["---"] * 6))
@@ -58,6 +63,18 @@ def render(catalogue: Catalogue) -> str:
                 item.name, "yes" if item.required else "no", str(wave_of[item.key]),
                 ", ".join(names[d] for d in item.after) or "-", item.role, item.id_prefix, item.description,
             ]))
+        if phase.by_hand:
+            out.append("\n**Done by hand** (no agent, no skill; a person works through it):\n")
+            out.append(_row(["Artefact", "ID prefix", "What it is"]))
+            out.append(_row(["---"] * 3))
+            for item in phase.by_hand:
+                out.append(_row([item.name, item.id_prefix, item.description]))
+        if phase.not_enabled:
+            out.append("\n**Not enabled** (part of the design, never run):\n")
+            out.append(_row(["Artefact", "Agent role", "ID prefix", "Why it is not enabled"]))
+            out.append(_row(["---"] * 4))
+            for item in phase.not_enabled:
+                out.append(_row([item.name, item.role, item.id_prefix, item.disabled_reason]))
     out.append("")
     return "\n".join(out)
 

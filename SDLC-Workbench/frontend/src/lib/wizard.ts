@@ -27,7 +27,7 @@ export interface WizardState {
 export function initialWizard(catalogue: Catalogue): WizardState {
   return {
     step: 'basics', name: '', brief: '', connectors: [], documents: [],
-    ticked: Object.fromEntries(catalogue.phases.map((p) => [p.key, p.artefacts.map((a) => a.key)])),
+    ticked: Object.fromEntries(catalogue.phases.map((p) => [p.key, p.artefacts.filter((a) => a.enabled && !a.by_hand).map((a) => a.key)])),            // an artefact switched off, or done by hand, is never ticked
   }
 }
 
@@ -57,7 +57,7 @@ export function previousStep(state: WizardState): WizardState {
 /** Tick or untick one artefact. A REQUIRED artefact cannot be unticked: the request is ignored and the state is returned as it was. */
 export function toggleArtefact(state: WizardState, catalogue: Catalogue, phaseKey: string, artefactKey: string): WizardState {
   const artefact = catalogue.phases.find((p) => p.key === phaseKey)?.artefacts.find((a) => a.key === artefactKey)
-  if (!artefact || artefact.required) return state
+  if (!artefact || artefact.required || !artefact.enabled || artefact.by_hand) return state
   const current = state.ticked[phaseKey] ?? []
   const next = current.includes(artefactKey) ? current.filter((k) => k !== artefactKey) : [...current, artefactKey]
   return { ...state, ticked: { ...state.ticked, [phaseKey]: next } }
@@ -74,7 +74,7 @@ export function selectionOf(state: WizardState, catalogue: Catalogue): Record<st
   const out: Record<string, string[]> = {}
   for (const phase of catalogue.phases) {
     const ticked = state.ticked[phase.key] ?? []
-    const all = phase.artefacts.map((a) => a.key)
+    const all = phase.artefacts.filter((a) => a.enabled && !a.by_hand).map((a) => a.key)               // a switched-off artefact, or one done by hand, is not part of "everything", so it is never asked for
     if (all.some((k) => !ticked.includes(k))) out[phase.key] = all.filter((k) => ticked.includes(k))
   }
   return out

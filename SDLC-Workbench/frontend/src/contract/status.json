@@ -14,7 +14,7 @@
   },
   "db": {
     "projects": 0,
-    "schema_version": 8
+    "schema_version": 10
   },
   "endpoint_set": false,
   "gateway": {
@@ -153,26 +153,32 @@
   },
   "skills": {
     "artefacts": 28,
+    "by_hand": 2,
     "keys": [
       "build_instructions",
       "component_overview",
+      "deployment_plan",
       "epics_features",
       "flow_diagram",
       "functional_requirements",
       "hifi_wireframes",
       "high_level_design",
+      "hypercare_plan",
       "low_level_design",
       "lowfi_wireframes",
       "non_functional_requirements",
       "personas",
       "problem_statement",
       "project_charter",
+      "release_notes",
+      "runbook",
       "usecase_diagram",
       "user_journey",
       "user_stories",
       "vision_objectives"
     ],
-    "with_skill": 17
+    "not_enabled": 5,
+    "with_skill": 21
   },
   "slots": [
     {
@@ -258,7 +264,7 @@
         "key": "deploy",
         "name": "Deploy",
         "order": 5,
-        "required": 3
+        "required": 2
       },
       {
         "approver": "BAU lead",
@@ -269,6 +275,6 @@
         "required": 2
       }
     ],
-    "required_count": 18
+    "required_count": 17
   }
 }

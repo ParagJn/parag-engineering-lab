@@ -23,6 +23,8 @@ SHIPPED = {
     "component_overview", "high_level_design", "low_level_design",  # S14a
     "flow_diagram", "usecase_diagram",                              # S14b
     "build_instructions",                                           # S19a (replaced the four code skills of S17a)
+    "deployment_plan", "release_notes",                             # S21b (the verification is a manual checklist and has no skill)
+    "runbook", "hypercare_plan",                                    # S22b (the sign-off is a manual checklist; the other three Handover artefacts are switched off)
 }
 
 
@@ -63,7 +65,7 @@ def parse(text: str, name="personas.md", catalogue_=None):
 
 def test_exactly_the_planned_skills_are_shipped(library):
     """Eight for the first two phases (S07, S11), three for Design (S13), three for Architecture (S14a), two diagrams (S14b) and one for Build (S19a; it replaced the four code skills of S17a). Each step that adds one updates SHIPPED."""
-    assert set(library.keys) == SHIPPED and len(library) == 17
+    assert set(library.keys) == SHIPPED and len(library) == 21
 
 
 def test_every_shipped_skill_names_a_catalogue_key_and_takes_its_role_and_prefix_from_the_catalogue(library, catalogue):
@@ -103,7 +105,7 @@ def test_every_markdown_file_in_the_skills_folder_loads_and_none_is_misnamed(cat
 
 
 def test_a_missing_skill_is_simply_absent_not_an_error(library):
-    assert library.get("deployment_plan") is None and not library.has("deployment_plan") and library.has("personas")      # Deploy has none yet
+    assert library.get("support_guide") is None and not library.has("support_guide") and library.has("personas")      # the support guide is switched off and has none
 
 
 # ---- parsing --------------------------------------------------------------------------------------------
@@ -348,7 +350,7 @@ def test_a_whole_artefact_prefix_with_its_hyphen_is_refused_as_not_a_plain_item_
 
 def test_every_shipped_item_prefix_is_unique_and_each_covered_prefix_is_held_by_an_input(library):
     prefixes = [spec.prefix for key in library.keys for spec in library.get(key).items]
-    assert sorted(prefixes) == sorted(["PER", "OBJ", "FR", "NFR", "EPIC", "FEAT", "US", "JS", "LFS", "HFS", "COMP", "DEC", "IFC", "API", "TBL", "RUL", "FLOW", "UC", "INS"])
+    assert sorted(prefixes) == sorted(["PER", "OBJ", "FR", "NFR", "EPIC", "FEAT", "US", "JS", "LFS", "HFS", "COMP", "DEC", "IFC", "API", "TBL", "RUL", "FLOW", "UC", "INS", "DPL", "REL", "RUN", "HYP"])
     for key in library.keys:
         skill = library.get(key)
         for prefix in skill.covers:

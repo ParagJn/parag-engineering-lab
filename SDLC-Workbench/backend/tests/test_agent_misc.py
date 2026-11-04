@@ -234,9 +234,9 @@ def test_a_generation_record_must_be_json_serialisable(store, project):
 def test_the_skills_status_block_has_counts_and_names_but_no_paths_or_text(make_settings):
     response = TestClient(create_app(make_settings())).get("/api/status")
     block = response.json()["skills"]
-    assert block == {"with_skill": 17, "artefacts": 28, "keys": [       # S13 added the three Design skills (8 before), S14a three Architecture ones, S14b two diagrams; S19a replaced the four code skills with one instruction skill
-        "build_instructions", "component_overview", "epics_features", "flow_diagram", "functional_requirements", "hifi_wireframes", "high_level_design",
-        "low_level_design", "lowfi_wireframes", "non_functional_requirements", "personas", "problem_statement", "project_charter", "usecase_diagram", "user_journey", "user_stories",
+    assert block == {"with_skill": 21, "artefacts": 28, "not_enabled": 5, "by_hand": 2, "keys": [       # S13 added the three Design skills (8 before), S14a three Architecture ones, S14b two diagrams; S19a replaced the four code skills with one instruction skill
+        "build_instructions", "component_overview", "deployment_plan", "epics_features", "flow_diagram", "functional_requirements", "hifi_wireframes", "high_level_design", "hypercare_plan",
+        "low_level_design", "lowfi_wireframes", "non_functional_requirements", "personas", "problem_statement", "project_charter", "release_notes", "runbook", "usecase_diagram", "user_journey", "user_stories",
         "vision_objectives"]}
     assert "/Users" not in response.text and "You are a" not in response.text and ".md" not in response.text
 
@@ -266,7 +266,7 @@ def test_the_app_exposes_a_ready_runtime(make_settings):
 def test_skills_report_lists_every_artefact_and_the_right_counts(capsys):
     assert skills_report.main([]) == 0
     out = capsys.readouterr().out
-    assert "17 of 28 artefacts have a skill; 5 required artefacts still need one" in out         # S19a: one Build skill (the instructions), required
+    assert "21 of 28 artefacts have a skill; 0 required artefacts still need one; 5 not enabled; 2 done by hand" in out         # S21b: the plan and the notes have skills; the verification is a manual checklist (21c) and is still counted here
     def line_for(name: str) -> str:
         return next(l for l in out.splitlines() if f"  {name} " in l).rstrip()
 
@@ -274,9 +274,15 @@ def test_skills_report_lists_every_artefact_and_the_right_counts(capsys):
                  "Non-functional requirements", "Epics and features", "User stories", "User journey", "Low-fidelity wireframes", "High-fidelity wireframes",
                  "Component overview", "High-level design", "Low-level design", "Flow diagram", "Use-case diagram"):
         assert line_for(name).endswith("  skill"), name
-    for name in ("Deployment plan", "Runbook", "Handover sign-off"):
-        assert line_for(name).endswith("no skill yet"), name
-    assert out.count("no skill yet") == 11          # 28 artefacts, 17 with a skill (S19a: one Build one)
+    for name in ("Deployment plan", "Release notes"):
+        assert line_for(name).endswith("  skill"), name
+    for name in ("Runbook", "Hypercare plan"):
+        assert line_for(name).endswith("  skill"), name                    # S22b
+    for name in ("Infrastructure as code", "CI/CD pipeline", "Support guide", "SLOs and alerts", "Knowledge-transfer pack"):
+        assert line_for(name).endswith("not enabled"), name              # switched off, so not "waiting for a skill"
+    for name in ("Deployment verification", "Handover sign-off"):
+        assert line_for(name).endswith("by hand"), name                  # done by a person: not waiting for a skill, and not switched off
+    assert out.count("no skill yet") == 0 and out.count("not enabled") == 6 and out.count("by hand") == 3          # the summary line says "not enabled" and "by hand" once more each; 28 artefacts: 21 with a skill, 5 switched off, 2 by hand
 
 
 def test_the_offline_demo_runs_the_chain_catches_the_invented_citation_and_says_it_is_scripted(capsys):

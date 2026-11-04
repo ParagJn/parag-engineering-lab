@@ -1,7 +1,7 @@
 key: handover
 order: 6
 name: BAU handover
-summary: Hand the running product to the people who will support it day to day.
+summary: Hand the running product to the people who will support it day to day, and record that they accept it.
 approver: BAU lead
 artefacts:
   - key: runbook
@@ -10,33 +10,36 @@ artefacts:
     role: handover_author
     required: true
     description: Step-by-step instructions for operating and recovering the product.
-  - key: support_guide
-    name: Support guide
-    id_prefix: HND-SUP
-    role: handover_author
-    required: true
-    description: How to triage and resolve the problems users are likely to report.
-  - key: slos_alerts
-    name: SLOs and alerts
-    id_prefix: HND-SLO
-    role: handover_author
-    after: [runbook]
-    description: The service levels promised and the alerts that tell support when they are at risk.
-  - key: kt_pack
-    name: Knowledge-transfer pack
-    id_prefix: HND-KT
-    role: handover_author
-    after: [runbook, support_guide]
-    description: What the support team needs to learn, in the order they need to learn it.
   - key: hypercare_plan
     name: Hypercare plan
     id_prefix: HND-HYP
     role: handover_author
+    required: true
     after: [runbook]
     description: Extra support in the first weeks after go-live, and when it ends.
   - key: handover_signoff
     name: Handover sign-off
     id_prefix: HND-SGN
+    kind: checklist
+    description: Statements a named person accepts or does not accept, one by one, to record that support takes the product. No model is used.
+  - key: support_guide
+    name: Support guide
+    id_prefix: HND-SUP
     role: handover_author
-    after: [runbook, support_guide]
-    description: The record that support accepts the product, with who signed and when.
+    enabled: false
+    disabled_reason: Not enabled. Not needed yet; the runbook covers day-to-day problems. It can be switched on later.
+    description: How to triage and resolve the problems users are likely to report.
+  - key: slos_alerts
+    name: SLOs and alerts
+    id_prefix: HND-SLO
+    role: handover_author
+    enabled: false
+    disabled_reason: Not enabled. No alerting is set up for a product built and run outside this tool. It can be switched on later.
+    description: The service levels promised and the alerts that tell support when they are at risk.
+  - key: kt_pack
+    name: Knowledge-transfer pack
+    id_prefix: HND-KT
+    role: handover_author
+    enabled: false
+    disabled_reason: Not enabled. Not needed yet; the runbook and the sign-off cover what support must know. It can be switched on later.
+    description: What the support team needs to learn, in the order they need to learn it.

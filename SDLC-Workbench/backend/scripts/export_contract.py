@@ -178,6 +178,37 @@ async def _scripted_runs(workdir: Path) -> tuple[dict[str, Any], Any]:
     return events, app
 
 
+def _checklist_examples() -> dict[str, Any]:
+    """The deployment checklist (S21c) as the server answers it: untouched, and after a few answers, one changed (so a history shows), and the refusals a person meets."""
+    with tempfile.TemporaryDirectory(prefix="sdlc_contract_checklist_") as tmp:
+        settings = Settings(_env_file=None, data_dir=str(Path(tmp) / "data"), recordings_dir=str(Path(tmp) / "rec"), app_mode="replay")
+        app = create_app(settings)
+        client = TestClient(app, headers=ACTOR)
+        pid = client.post("/api/projects", json={"name": "Checklist", "brief": BRIEF}).json()["id"]
+        base = f"/api/projects/{pid}/deploy/checklist"
+        out: dict[str, Any] = {"checklist_empty": client.get(base).json()}
+        out["error_409_checklist_closed"] = client.put(f"{base}/CHK-001", json={"answer": "go"}).json()          # Deploy has not started, so no check can be answered yet
+        app.state.store.phases.ensure(pid, "deploy", actor="system")
+        app.state.store.phases.set_status(pid, "deploy", "running", actor="system")
+        client.put(f"{base}/CHK-001", json={"answer": "go", "note": "Read it with the team."})
+        client.put(f"{base}/CHK-002", json={"answer": "no_go", "note": "Missing the upgrade section."})
+        client.put(f"{base}/CHK-002", json={"answer": "go", "note": "Fixed."})
+        client.put(f"{base}/CHK-003", json={"answer": "not_applicable"})
+        out["checklist_answered"] = client.put(f"{base}/CHK-016", json={"answer": "go"}).json()
+        out["error_404_check"] = client.put(f"{base}/CHK-099", json={"answer": "go"}).json()
+        # BAU handover's sign-off (S22c): the same record under its own address, with its own title, groups and words for the answers
+        sign = f"/api/projects/{pid}/handover/checklist"
+        out["signoff_empty"] = client.get(sign).json()
+        app.state.store.phases.ensure(pid, "handover", actor="system")
+        app.state.store.phases.set_status(pid, "handover", "running", actor="system")
+        client.put(f"{sign}/SGN-001", json={"answer": "go", "note": "Read it with the team."})
+        client.put(f"{sign}/SGN-002", json={"answer": "no_go", "note": "Two weeks is too short."})
+        client.put(f"{sign}/SGN-002", json={"answer": "go", "note": "Agreed at three weeks."})
+        client.put(f"{sign}/SGN-007", json={"answer": "not_applicable"})
+        out["signoff_answered"] = client.put(f"{sign}/SGN-008", json={"answer": "go", "note": "Support lead"}).json()
+        return out
+
+
 def _verify_examples() -> dict[str, Any]:
     """Build Verify (S20): a real check of a small FastAPI project written to a temporary folder, as the server answers it. The folder is a random name, so it is
     replaced with a fixed one before the fixture is kept."""
@@ -420,6 +451,7 @@ def build_examples() -> dict[str, Any]:
         out.update(_design_examples())
         out.update(_architecture_examples())
         out.update(_verify_examples())
+        out.update(_checklist_examples())
         return {name: normalise(body) for name, body in out.items()}
 
 

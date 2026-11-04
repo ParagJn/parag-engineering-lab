@@ -28,6 +28,7 @@ from .routes_projects import router as projects_router
 from .routes_review import router as review_router
 from .routes_trace import router as trace_router
 from .routes_verify import router as verify_router
+from .routes_deploy import router as deploy_router
 from .run.events import EventBus
 from .run.runner import PhaseRunner
 from .run.status import run_status
@@ -117,6 +118,7 @@ def create_app(settings: Settings | None = None, provider: Provider | None = Non
     app.include_router(review_router)
     app.include_router(trace_router)
     app.include_router(verify_router)
+    app.include_router(deploy_router)
 
     app.add_middleware(
         CORSMiddleware,

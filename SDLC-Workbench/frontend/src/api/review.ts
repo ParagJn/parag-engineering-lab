@@ -96,7 +96,12 @@ export interface OpenItems {
   open_high_findings: number; unreviewed: string[]; review_out_of_date: string[]; built_on_changed: string[]; guardrail_flags: Record<string, Record<string, number>>
   /** Links that should exist and do not (S15), from the same computation as the Traceability tab. */
   traceability_gaps: TraceGapSummary
+  /** Only the Deploy phase has these (S21c): the manual go / no-go checks that were No-go or not yet answered, and the overall decision if one was recorded. Advice, never a gate. */
+  deployment_checks?: DeploymentChecks
+  /** Only the BAU handover phase has this (S22c): the sign-off statements that were Not accepted or not yet answered, and the overall decision if one was recorded. Advice, never a gate. */
+  handover_signoff?: DeploymentChecks
 }
+export interface DeploymentChecks { no_go: string[]; unanswered: string[]; decision: 'go' | 'no_go' | 'not_applicable' | null }
 export interface ReviewState_ {
   reviews_available: boolean; replay_sentence: string | null; statuses: ReviewStatus[]; stale: StaleItem[]; open: OpenItems; artefacts_with_notes: string[]
 }
@@ -112,7 +117,15 @@ export function decodeOpenItems(value: unknown, w = 'open'): OpenItems {
     review_out_of_date: strings(o.review_out_of_date, `${w}.review_out_of_date`), built_on_changed: strings(o.built_on_changed, `${w}.built_on_changed`),
     guardrail_flags: Object.fromEntries(Object.entries(obj(o.guardrail_flags, `${w}.guardrail_flags`)).map(([k, v]) => [k, numbers(v, `${w}.guardrail_flags.${k}`)])),
     traceability_gaps: decodeTraceGapSummary(o.traceability_gaps, `${w}.traceability_gaps`),
+    ...('deployment_checks' in o ? { deployment_checks: decodeDeploymentChecks(o.deployment_checks, `${w}.deployment_checks`) } : {}),
+    ...('handover_signoff' in o ? { handover_signoff: decodeDeploymentChecks(o.handover_signoff, `${w}.handover_signoff`) } : {}),
   }
+}
+
+export function decodeDeploymentChecks(value: unknown, w = 'deployment checks'): DeploymentChecks {
+  const o = obj(value, w)
+  return { no_go: strings(o.no_go, `${w}.no_go`), unanswered: strings(o.unanswered, `${w}.unanswered`),
+    decision: nullable(o.decision, `${w}.decision`, (v, vw) => oneOf(v, vw, ['go', 'no_go', 'not_applicable'] as const)) }
 }
 
 export function decodeReviewState(value: unknown): ReviewState_ {

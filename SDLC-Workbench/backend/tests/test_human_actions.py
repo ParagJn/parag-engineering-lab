@@ -414,10 +414,10 @@ async def test_an_edit_of_an_artefact_with_no_version_or_no_skill_is_refused(wor
     store.artefacts.create(project.id, artefact_type="vision_objectives", phase_key="requirements", title="V", actor="system", prefix="REQ-VIS")
     with pytest.raises(ReviewError, match="has no version yet"):
         human.edit(project.id, "REQ-VIS-001", "x", actor=PERSON)
-    store.artefacts.create(project.id, artefact_type="deployment_plan", phase_key="requirements", title="H", actor="system", prefix="DEP-PLN")
-    store.artefacts.add_version(project.id, "DEP-PLN-001", body="x", author=PERSON)
-    with pytest.raises(ReviewError, match="no skill for 'deployment_plan'"):
-        human.edit(project.id, "DEP-PLN-001", "x", actor=PERSON)
+    store.artefacts.create(project.id, artefact_type="support_guide", phase_key="requirements", title="H", actor="system", prefix="HND-SUP")
+    store.artefacts.add_version(project.id, "HND-SUP-001", body="x", author=PERSON)
+    with pytest.raises(ReviewError, match="no skill for 'support_guide'"):
+        human.edit(project.id, "HND-SUP-001", "x", actor=PERSON)
 
 
 async def test_an_edit_makes_an_earlier_review_stale(world, store, project):
@@ -561,11 +561,11 @@ async def test_a_retired_artefact_is_not_listed_as_never_reviewed_and_does_not_b
     service, runtime, provider, engine, human = await world()
     store.artefacts.create(project.id, artefact_type="backend_code", phase_key="requirements", title="Backend code", actor="system", prefix="BLD-BE")
     store.artefacts.add_version(project.id, "BLD-BE-001", body="old", author=PERSON)
-    store.artefacts.create(project.id, artefact_type="deployment_plan", phase_key="requirements", title="H", actor="system", prefix="DEP-PLN")
-    store.artefacts.add_version(project.id, "DEP-PLN-001", body="x", author=PERSON)
+    store.artefacts.create(project.id, artefact_type="support_guide", phase_key="requirements", title="H", actor="system", prefix="HND-SUP")
+    store.artefacts.add_version(project.id, "HND-SUP-001", body="x", author=PERSON)
     open_ = human.open_items(project.id, "requirements")
     assert "BLD-BE-001" not in open_["unreviewed"]                  # retired: not part of the phase's work any more
-    assert "DEP-PLN-001" in open_["unreviewed"]                      # in the catalogue, just not reviewable yet: still counted as never reviewed
+    assert "HND-SUP-001" in open_["unreviewed"]                      # in the catalogue, just not reviewable yet: still counted as never reviewed
 
 
 async def test_a_retired_artefact_with_findings_or_a_stale_review_adds_nothing_to_what_is_open(world, store, project):
