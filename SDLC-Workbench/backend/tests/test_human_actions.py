@@ -553,3 +553,29 @@ async def test_an_edit_may_not_cite_its_own_artefact(world, store, project):
     body = reply(FR_SECTIONS, items=FR_ITEMS, extra="See [REQ-F-001].").replace("<artefact>\n", "").replace("\n</artefact>", "")
     with pytest.raises(EditRefused, match=r"\[REQ-F-001\]"):
         human.edit(project.id, "REQ-F-001", body, actor=PERSON)
+
+
+# ---- S19e-1: a retired artefact is not 'never reviewed' ----------------------------------------------------------------------------------------
+
+async def test_a_retired_artefact_is_not_listed_as_never_reviewed_and_does_not_block_or_change_the_open_list(world, store, project):
+    service, runtime, provider, engine, human = await world()
+    store.artefacts.create(project.id, artefact_type="backend_code", phase_key="requirements", title="Backend code", actor="system", prefix="BLD-BE")
+    store.artefacts.add_version(project.id, "BLD-BE-001", body="old", author=PERSON)
+    store.artefacts.create(project.id, artefact_type="deployment_plan", phase_key="requirements", title="H", actor="system", prefix="DEP-PLN")
+    store.artefacts.add_version(project.id, "DEP-PLN-001", body="x", author=PERSON)
+    open_ = human.open_items(project.id, "requirements")
+    assert "BLD-BE-001" not in open_["unreviewed"]                  # retired: not part of the phase's work any more
+    assert "DEP-PLN-001" in open_["unreviewed"]                      # in the catalogue, just not reviewable yet: still counted as never reviewed
+
+
+async def test_a_retired_artefact_with_findings_or_a_stale_review_adds_nothing_to_what_is_open(world, store, project):
+    service, runtime, provider, engine, human = await world()
+    before = human.open_items(project.id, "requirements")
+    store.artefacts.create(project.id, artefact_type="backend_code", phase_key="requirements", title="Backend code", actor="system", prefix="BLD-BE")
+    store.artefacts.add_version(project.id, "BLD-BE-001", body="old", author=PERSON)
+    store.artefacts.set_review_findings(project.id, "BLD-BE-001", 1, {"version_reviewed": 1, "verdict": "revise", "summary": "s", "findings": [
+        {"severity": "high", "target": "General", "problem": "p", "fix": "f"}, {"severity": "high", "target": "General", "problem": "q", "fix": "g"}]}, actor="system")
+    store.artefacts.add_version(project.id, "BLD-BE-001", body="older edit", author=PERSON)           # the review is now of an older version: it would be 'stale'
+    open_ = human.open_items(project.id, "requirements")
+    for key in ("open_high_findings", "unreviewed", "review_out_of_date"):
+        assert open_[key] == before[key], key                       # exactly what it was before the retired artefact was added

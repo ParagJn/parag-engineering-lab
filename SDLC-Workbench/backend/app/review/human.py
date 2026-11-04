@@ -15,6 +15,7 @@ from ..agents.errors import AgentError
 from ..agents.items import ItemContext, history_of, parse_items
 from ..agents.notes import unacted_notes
 from ..agents.reply import cited_ids
+from ..build import instructions as I
 from ..agents.runtime import AgentResult, AgentRuntime
 from ..models import InvalidInput, NotFoundError
 from ..repos import Store
@@ -24,6 +25,18 @@ from .errors import EditRefused, PersonRequired, ReviewError, WrongPhaseState
 from .service import ReviewService
 
 EDITABLE_PHASE_STATES = ("running", "awaiting_review")
+
+
+def _design_text(upstream, library) -> dict[str, str]:
+    """ID -> the design's own text for every item in the saved design the set was built on (for the titles in the design index)."""
+    found: dict[str, str] = {}
+    for u in upstream:
+        skill = library.get(u.key)
+        if skill is None or not skill.items:
+            continue
+        for item in parse_items(u.text, skill.items).items:
+            found.setdefault(item.id, item.text)
+    return found
 MAX_NOTE_CHARS = 4000
 
 
@@ -220,6 +233,66 @@ class HumanActions:
         )
         return saved.number
 
+    def edit_file(self, project_id: str, artefact_id: str, file_name: str, text: str, *, based_on: int, actor: str, note: str = "") -> int:
+        """Change ONE file of the Build instruction set and save the set as a new version (S19f-1). Returns the new version number.
+
+        Only the named file's text changes; every other file is kept as it was, every file keeps its item number, and the design index, file list and coverage check are rebuilt
+        (no model is called). The file must pass its own checks, and the edit may not introduce a problem into the set; a problem that was already there does not block it.
+        `based_on` is the version the person was looking at: if the set has moved on since, nothing is saved. Raises EditRefused with the reasons."""
+        require_person(actor, "editing a file")
+        artefact = self.store.artefacts.get(project_id, artefact_id)
+        if artefact.type != I.INSTRUCTIONS_KEY:
+            raise ReviewError(f"{artefact_id} is not a set of instruction files, so it has no files to edit one at a time")
+        if artefact.latest_version is None:
+            raise ReviewError(f"{artefact_id} has no version yet; let an agent write the first one")
+        self._require_phase_state(project_id, artefact.phase_key, EDITABLE_PHASE_STATES, "a file can be edited")
+        previous = self.store.artefacts.get_version(project_id, artefact_id)
+        if based_on != previous.number:
+            raise EditRefused(
+                f"the edit was not saved: the set is at version {previous.number} now and you were editing version {based_on}; reload the page and make the change again",
+                [f"the set is at version {previous.number} now and you were editing version {based_on}; reload the page and make the change again"],
+            )
+        skill = self.runtime.skills.get(artefact.type)
+        if skill is None:
+            raise ReviewError(f"there is no skill for '{artefact.type}', so its structure cannot be checked and it cannot be edited here yet")
+        upstream, item_ctx = self.runtime.inputs_for(project_id, skill)
+        design = I.DesignIds(frozenset(item_ctx.known), tuple(sorted((i, I.design_title(t)) for i, t in _design_text(upstream, self.runtime.skills).items())))
+        files, _ = I.split_set(previous.body)
+        if file_name not in files:
+            raise NotFoundError(f"{artefact_id} version {previous.number} has no file '{file_name}'; the files are: {', '.join(sorted(files)[:10])}")
+        highest = int(item_ctx.highest.get(I.ITEM_PREFIX, 0)) if item_ctx is not None else 0
+        try:
+            body, _ = I.splice_file(previous.body, file_name, text, design, require_ui=I.ui_expected(files, design), highest=highest)
+        except I.FileEditRefused as exc:
+            raise EditRefused(str(exc), list(exc.problems)) from exc
+        # The artefact's own checks over the whole saved text. A problem the set ALREADY had (in another file) does not block this edit; only one the edit adds does.
+        already = set(check_body(previous.body, skill, set(), item_ctx, scanner=self.runtime.scanner))
+        problems = [p for p in check_body(body, skill, set(), item_ctx, scanner=self.runtime.scanner) if p not in already]
+        if problems:
+            raise EditRefused(f"the edit was not saved: {'; '.join(problems)}", problems)
+
+        parsed = parse_items(body, skill.items)
+        links = [(item.id, target, "derives") for item in parsed.items for target in item.link_targets]
+        generation = {
+            "human_edit": True, "edited_file": file_name, "based_on": previous.number, "note": (note or "").strip()[:1000] or None,
+            "built_on": {u.artefact_id: u.version for u in upstream}, "items": list(parsed.ids),
+            "guardrails": [f.as_dict() for f in self.runtime.scanner.scan(body)],
+        }
+
+        def still_open(conn: sqlite3.Connection) -> None:
+            row = conn.execute("SELECT status FROM phase_runs WHERE project_id = ? AND phase_key = ?", (project_id, artefact.phase_key)).fetchone()
+            status = row["status"] if row is not None else "not_started"
+            if status not in EDITABLE_PHASE_STATES:
+                raise WrongPhaseState(f"the edit was not saved: its phase became '{status}' while it was being checked")
+            latest = conn.execute("SELECT MAX(number) AS n FROM artefact_versions WHERE project_id = ? AND artefact_id = ?", (project_id, artefact_id)).fetchone()["n"]
+            if latest != previous.number:
+                raise EditRefused("the edit was not saved: the set changed while it was being checked; reload the page and make the change again", ["the set changed while it was being checked"])
+
+        saved = self.store.artefacts.add_version(
+            project_id, artefact_id, body=body, author=actor, source_chunks=cited_ids(body), generation=generation, links=links, guard=still_open,
+        )
+        return saved.number
+
     def _resolvable_citations(self, project_id: str, upstream_ids: set[str], body: str) -> set[str]:
         """The citations in a person's text that point at a real source in THIS project (a document or memory chunk).
 
@@ -257,6 +330,7 @@ class HumanActions:
             if artefact.latest_version is None:
                 continue
             status = self.reviews.status_of(project_id, artefact.id)
+            # A retired artefact's status is "retired" with no verdict and no findings, so it falls into neither list below: it is not "never reviewed" and adds no findings.
             if status.state == "unreviewed":
                 unreviewed.append(artefact.id)
             else:

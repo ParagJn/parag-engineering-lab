@@ -269,7 +269,74 @@ SCHEMA_V6 = """
 ALTER TABLE projects ADD COLUMN archived_at TEXT;
 """
 
-MIGRATIONS = [SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5, SCHEMA_V6]
+# v7 (S17b): one row per round of the write -> test -> fix loop, so a report can say what each round found. Append-only like `run_events`:
+# a round is a fact about what happened and is never edited. Rows hold counts and short failure lines, never file contents or a command's full output.
+SCHEMA_V7 = """
+CREATE TABLE build_rounds (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id  TEXT NOT NULL REFERENCES projects(id),
+  run_id      TEXT,
+  loop_id     TEXT NOT NULL,
+  round       INTEGER NOT NULL CHECK (round >= 1),
+  artefact    TEXT NOT NULL,
+  version     INTEGER,
+  outcome     TEXT NOT NULL,
+  passed      INTEGER NOT NULL DEFAULT 0 CHECK (passed >= 0),
+  failed      INTEGER NOT NULL DEFAULT 0 CHECK (failed >= 0),
+  errors      INTEGER NOT NULL DEFAULT 0 CHECK (errors >= 0),
+  skipped     INTEGER NOT NULL DEFAULT 0 CHECK (skipped >= 0),
+  fingerprint TEXT NOT NULL,
+  failures    TEXT NOT NULL,
+  seconds     REAL NOT NULL DEFAULT 0,
+  at          TEXT NOT NULL
+);
+CREATE INDEX idx_build_rounds_project ON build_rounds (project_id, id);
+CREATE INDEX idx_build_rounds_loop ON build_rounds (loop_id, round);
+
+CREATE TRIGGER build_rounds_no_update BEFORE UPDATE ON build_rounds BEGIN SELECT RAISE(ABORT, 'build rounds are append-only'); END;
+CREATE TRIGGER build_rounds_no_delete BEFORE DELETE ON build_rounds BEGIN SELECT RAISE(ABORT, 'build rounds are append-only'); END;
+"""
+
+# v8 (S20b): Build Verify. One row per run, one row per designed item compared in it, and one per built thing the design never mentioned. Append-only like the other
+# records of what happened: a run is a fact about a folder at a moment, and is never edited. Rows hold item IDs, short labels, file paths relative to the folder the
+# person named, line numbers and counts; never source text.
+SCHEMA_V8 = """
+CREATE TABLE verify_runs (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id    TEXT NOT NULL REFERENCES projects(id),
+  backend_path  TEXT NOT NULL,
+  frontend_path TEXT,
+  actor         TEXT NOT NULL,
+  design        TEXT NOT NULL,
+  counts        TEXT NOT NULL,
+  notes         TEXT NOT NULL,
+  at            TEXT NOT NULL
+);
+CREATE INDEX idx_verify_runs_project ON verify_runs (project_id, id);
+
+CREATE TABLE verify_matches (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  run_id      INTEGER NOT NULL REFERENCES verify_runs(id),
+  designed    TEXT,
+  area        TEXT NOT NULL,
+  state       TEXT NOT NULL CHECK (state IN ('found', 'differences', 'possible', 'not_found', 'weak', 'extra')),
+  step        TEXT NOT NULL DEFAULT '',
+  score       REAL NOT NULL DEFAULT 0 CHECK (score >= 0 AND score <= 1),
+  built       TEXT NOT NULL DEFAULT '',
+  file        TEXT NOT NULL DEFAULT '',
+  line        INTEGER NOT NULL DEFAULT 0 CHECK (line >= 0),
+  differences TEXT NOT NULL,
+  note        TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX idx_verify_matches_run ON verify_matches (run_id, id);
+
+CREATE TRIGGER verify_runs_no_update BEFORE UPDATE ON verify_runs BEGIN SELECT RAISE(ABORT, 'verify runs are append-only'); END;
+CREATE TRIGGER verify_runs_no_delete BEFORE DELETE ON verify_runs BEGIN SELECT RAISE(ABORT, 'verify runs are append-only'); END;
+CREATE TRIGGER verify_matches_no_update BEFORE UPDATE ON verify_matches BEGIN SELECT RAISE(ABORT, 'verify matches are append-only'); END;
+CREATE TRIGGER verify_matches_no_delete BEFORE DELETE ON verify_matches BEGIN SELECT RAISE(ABORT, 'verify matches are append-only'); END;
+"""
+
+MIGRATIONS = [SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5, SCHEMA_V6, SCHEMA_V7, SCHEMA_V8]
 
 
 def split_statements(script: str) -> list[str]:

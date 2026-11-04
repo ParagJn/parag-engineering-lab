@@ -4,10 +4,12 @@ import { ContractError, arr, bool, nullable, num, obj, oneOf, str, strings, type
 import { RUN_STATUSES, type RunStatus } from './content'
 
 export const EVENT_TYPES = [
-  'run.started', 'gate.changed', 'artefact.started', 'artefact.attempt', 'artefact.finished', 'artefact.failed', 'artefact.skipped',
-  'review.started', 'review.finished', 'review.paused', 'run.finished', 'run.stopped',
+  'run.started', 'gate.changed', 'artefact.started', 'artefact.attempt', 'artefact.finished', 'artefact.failed', 'artefact.skipped', 'build.round',
+  'piece.started', 'piece.finished', 'piece.failed', 'review.started', 'review.finished', 'review.paused', 'run.finished', 'run.stopped',
 ] as const
 export type EventType = (typeof EVENT_TYPES)[number]
+export const PIECE_STAGES = ['foundation', 'ui_guide', 'use_case', 'screen', 'acceptance'] as const
+export type PieceStage = (typeof PIECE_STAGES)[number]
 
 export interface Totals {
   artefacts: { done: number; failed: number; skipped: number; not_started: number }
@@ -23,6 +25,12 @@ export type RunEvent =
   | { id: number; type: 'artefact.finished'; run_id: string; at: string; key: string; artefact_id: string; version: number; attempts: number; cost_usd: number | null; items: number; flags: number; author: string }
   | { id: number; type: 'artefact.failed'; run_id: string; at: string; key: string; reason: string }
   | { id: number; type: 'artefact.skipped'; run_id: string; at: string; key: string; reason: string }
+  // One fix round of the Build phase (S17c): who was asked to fix things, and how many generated tests were failing. Counts and a name only.
+  | { id: number; type: 'build.round'; run_id: string; at: string; round: number; artefact: string; failed: number; errors: number }
+  // One file of the Build instruction set (S19b). `key` is the artefact the file belongs to. A failure's reason is already cleaned (one line, no address).
+  | { id: number; type: 'piece.started'; run_id: string; at: string; key: string; file: string; stage: PieceStage; index: number; of: number }
+  | { id: number; type: 'piece.finished'; run_id: string; at: string; key: string; file: string; attempts: number; tokens_in: number; tokens_out: number; cost_usd: number | null }
+  | { id: number; type: 'piece.failed'; run_id: string; at: string; key: string; file: string; reason: string }
   | { id: number; type: 'review.started'; run_id: string; at: string; artefact_id: string }
   | { id: number; type: 'review.finished'; run_id: string; at: string; artefact_id: string; verdict: string; label: string }
   // Two shapes: the reviewer could not run (the person can pick another family), or the review failed for some other reason.
@@ -66,6 +74,15 @@ export function decodeEvent(id: number, type: string, data: unknown): RunEvent {
       return { ...base, type: 'artefact.failed', key: str(o.key, `${w}.key`), reason: str(o.reason, `${w}.reason`) }
     case 'artefact.skipped':
       return { ...base, type: 'artefact.skipped', key: str(o.key, `${w}.key`), reason: str(o.reason, `${w}.reason`) }
+    case 'build.round':
+      return { ...base, type: 'build.round', round: num(o.round, `${w}.round`), artefact: str(o.artefact, `${w}.artefact`), failed: num(o.failed, `${w}.failed`), errors: num(o.errors, `${w}.errors`) }
+    case 'piece.started':
+      return { ...base, type: 'piece.started', key: str(o.key, `${w}.key`), file: str(o.file, `${w}.file`), stage: oneOf(o.stage, `${w}.stage`, PIECE_STAGES), index: num(o.index, `${w}.index`), of: num(o.of, `${w}.of`) }
+    case 'piece.finished':
+      return { ...base, type: 'piece.finished', key: str(o.key, `${w}.key`), file: str(o.file, `${w}.file`), attempts: num(o.attempts, `${w}.attempts`),
+        tokens_in: num(o.tokens_in, `${w}.tokens_in`), tokens_out: num(o.tokens_out, `${w}.tokens_out`), cost_usd: nullable(o.cost_usd, `${w}.cost_usd`, num) }
+    case 'piece.failed':
+      return { ...base, type: 'piece.failed', key: str(o.key, `${w}.key`), file: str(o.file, `${w}.file`), reason: str(o.reason, `${w}.reason`) }
     case 'review.started':
       return { ...base, type: 'review.started', artefact_id: str(o.artefact_id, `${w}.artefact_id`) }
     case 'review.finished':

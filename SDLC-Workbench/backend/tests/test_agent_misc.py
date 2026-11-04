@@ -234,9 +234,10 @@ def test_a_generation_record_must_be_json_serialisable(store, project):
 def test_the_skills_status_block_has_counts_and_names_but_no_paths_or_text(make_settings):
     response = TestClient(create_app(make_settings())).get("/api/status")
     block = response.json()["skills"]
-    assert block == {"with_skill": 16, "artefacts": 33, "keys": [       # S13 added the three Design skills (8 before), S14a three Architecture ones, S14b two diagrams
-        "component_overview", "epics_features", "flow_diagram", "functional_requirements", "hifi_wireframes", "high_level_design", "low_level_design", "lowfi_wireframes",
-        "non_functional_requirements", "personas", "problem_statement", "project_charter", "usecase_diagram", "user_journey", "user_stories", "vision_objectives"]}
+    assert block == {"with_skill": 17, "artefacts": 28, "keys": [       # S13 added the three Design skills (8 before), S14a three Architecture ones, S14b two diagrams; S19a replaced the four code skills with one instruction skill
+        "build_instructions", "component_overview", "epics_features", "flow_diagram", "functional_requirements", "hifi_wireframes", "high_level_design",
+        "low_level_design", "lowfi_wireframes", "non_functional_requirements", "personas", "problem_statement", "project_charter", "usecase_diagram", "user_journey", "user_stories",
+        "vision_objectives"]}
     assert "/Users" not in response.text and "You are a" not in response.text and ".md" not in response.text
 
 
@@ -265,7 +266,7 @@ def test_the_app_exposes_a_ready_runtime(make_settings):
 def test_skills_report_lists_every_artefact_and_the_right_counts(capsys):
     assert skills_report.main([]) == 0
     out = capsys.readouterr().out
-    assert "16 of 33 artefacts have a skill; 9 required artefacts still need one" in out         # S14b: two more skills, both optional
+    assert "17 of 28 artefacts have a skill; 5 required artefacts still need one" in out         # S19a: one Build skill (the instructions), required
     def line_for(name: str) -> str:
         return next(l for l in out.splitlines() if f"  {name} " in l).rstrip()
 
@@ -275,7 +276,7 @@ def test_skills_report_lists_every_artefact_and_the_right_counts(capsys):
         assert line_for(name).endswith("  skill"), name
     for name in ("Deployment plan", "Runbook", "Handover sign-off"):
         assert line_for(name).endswith("no skill yet"), name
-    assert out.count("no skill yet") == 17
+    assert out.count("no skill yet") == 11          # 28 artefacts, 17 with a skill (S19a: one Build one)
 
 
 def test_the_offline_demo_runs_the_chain_catches_the_invented_citation_and_says_it_is_scripted(capsys):

@@ -58,6 +58,19 @@ function follow(afterId = 0) {
 }
 
 describe('following a project\'s events', () => {
+  it('listens for every event type the decoder knows, and for the dropped marker, and for nothing else', async () => {
+    const { source } = follow()
+    const { EVENT_TYPES } = await import('../api/events')
+    expect([...source.listeners.keys()].sort()).toEqual([...EVENT_TYPES, 'dropped'].sort())
+  })
+  it('each of the Build instruction set\'s file events arrives as an event', () => {
+    const { source, seen } = follow()
+    source.emit('piece.started', 1, { ...(example('piece.started') as object), run_id: 'r', at: 't' })
+    source.emit('piece.finished', 2, { ...(example('piece.finished') as object), run_id: 'r', at: 't' })
+    source.emit('piece.failed', 3, { ...(example('piece.failed') as object), run_id: 'r', at: 't' })
+    expect(seen.map((e) => e.type)).toEqual(['piece.started', 'piece.finished', 'piece.failed'])
+  })
+
   it('opens the stream after the id it already has, with the project id encoded', () => {
     const { source } = follow(41)
     expect(source.url).toBe('/api/projects/p1/events?after=41')

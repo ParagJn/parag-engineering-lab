@@ -21,6 +21,13 @@ export function actionSpecs(phase: PhaseDetail, mode: 'replay' | 'live', openThi
         : mode === 'replay' ? 'Answers come from recordings: free and offline.' : 'Calls real models: this costs money.',
       live: true,
     },
+    rewrite: {
+      label: 'Rewrite everything',
+      hint: mode === 'replay'
+        ? 'Writes every artefact in this phase again, even those already written, as a new version; the old versions are kept. Answers come from recordings: free and offline.'
+        : 'Writes every artefact in this phase again, even those already written, as a new version; the old versions are kept. Calls real models: this costs money.',
+      live: true,
+    },
     finish: { label: 'Hand to review', hint: 'Moves the phase to review. Nothing is written after this unless it is sent back.', live: true },
     approve: {
       label: openThings > 0 ? 'Approve anyway' : 'Approve',

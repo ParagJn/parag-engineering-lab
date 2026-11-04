@@ -15,10 +15,10 @@ import projectsList from './projects_list.json'
 import status from './status.json'
 
 describe('the backend fixtures decode', () => {
-  it('catalogue: 7 phases and 33 artefacts', () => {
+  it('catalogue: 7 phases and 28 artefacts', () => {
     const c = decodeCatalogue(catalogue)
     expect(c.phases).toHaveLength(7)
-    expect(c.phases.flatMap((p) => p.artefacts)).toHaveLength(33)
+    expect(c.phases.flatMap((p) => p.artefacts)).toHaveLength(28)
     expect(c.phases[0].key).toBe('setup')
   })
 

@@ -25,8 +25,8 @@ def types(events):
 
 def test_the_event_vocabulary_is_exactly_the_one_the_screen_will_rely_on():
     assert EVENT_TYPES == (
-        "run.started", "artefact.started", "artefact.attempt", "artefact.finished", "artefact.failed", "artefact.skipped",
-        "review.started", "review.finished", "review.paused", "gate.changed", "run.stopped", "run.finished",
+        "run.started", "artefact.started", "artefact.attempt", "artefact.finished", "artefact.failed", "artefact.skipped", "build.round",
+        "piece.started", "piece.finished", "piece.failed", "review.started", "review.finished", "review.paused", "gate.changed", "run.stopped", "run.finished",
     )
     assert len(set(EVENT_TYPES)) == len(EVENT_TYPES)
 

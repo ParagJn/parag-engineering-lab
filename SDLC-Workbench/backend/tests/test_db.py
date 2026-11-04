@@ -11,6 +11,8 @@ TABLES = {
     "links", "traces", "audit", "memory",
     "context_documents", "context_chunks",  # S06
     "runs", "run_events",  # S09
+    "build_rounds",  # S17b
+    "verify_runs", "verify_matches",  # S20b
 }
 
 

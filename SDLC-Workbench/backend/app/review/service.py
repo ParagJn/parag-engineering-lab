@@ -24,6 +24,9 @@ from ..repos import Store
 from ..workflow.engine import WorkflowEngine
 from .errors import NothingToReview, ReviewOutputInvalid, WrongPhaseState
 from .prompt import CitedSource, Rubric, build_review_prompt, repair_message, select_cited
+from . import review_set as RS
+from ..build import contract as K
+from ..build import instructions as I
 from .reply import Finding, ParsedReview, parse_review, validate_review, verdict_of
 from ..agents.reply import MAX_PROBLEMS
 
@@ -61,7 +64,7 @@ class PausedReview:
 @dataclass(frozen=True)
 class ReviewStatus:
     artefact_id: str
-    state: str  # "unreviewed" | "reviewed" | "stale"
+    state: str  # "unreviewed" | "reviewed" | "stale" | "retired" (S19e: an artefact whose skill was withdrawn; there is nothing to review it against)
     verdict: str | None = None
     reviewed_version: int | None = None
     latest_version: int | None = None
@@ -96,6 +99,8 @@ class ReviewService:
         Raises ReviewerUnavailable (with the options) if the reviewer cannot run; nothing is stored then. Pass the
         person's choice back as `slot`, and the slots that already failed as `exclude`.
         """
+        if await asyncio.to_thread(self._is_set, project_id, artefact_id):
+            return await self._review_set(project_id, artefact_id, slot=slot, exclude=exclude, run_id=run_id, actor=actor)
         prepared = await asyncio.to_thread(self._prepare, project_id, artefact_id)
         version, prompt, author_model = prepared
 
@@ -134,6 +139,135 @@ class ReviewService:
             self._store, project_id, artefact_id, version, parsed, independence, calls, actor, author_model, repair_log
         )
 
+    # ---- the Build instruction set: one small review per file, joined into one (S19e-2) -------------------------------------------------
+
+    def _is_set(self, project_id: str, artefact_id: str) -> bool:
+        return self.store.artefacts.get(project_id, artefact_id).type == I.INSTRUCTIONS_KEY
+
+    def _prepare_set(self, project_id: str, artefact_id: str):
+        artefact = self.store.artefacts.get(project_id, artefact_id)
+        if artefact.latest_version is None:
+            raise NothingToReview(f"{artefact_id} has no version yet, so there is nothing to review")
+        skill = self.runtime.skills.get(artefact.type)
+        if skill is None:
+            raise NothingToReview(f"there is no skill for '{artefact.type}', so its quality bar is unknown and it cannot be reviewed yet")
+        try:
+            status = self.store.phases.get(project_id, artefact.phase_key).status
+        except NotFoundError:
+            status = "not_started"
+        if status not in REVIEWABLE_PHASE_STATES:
+            raise WrongPhaseState(f"{artefact_id} can be reviewed while its phase is running or awaiting review; {artefact.phase_key} is '{status}'")
+        version = self.store.artefacts.get_version(project_id, artefact_id)
+        upstream, item_ctx = self.runtime.inputs_for(project_id, skill)
+        total = sum(len(u.text) for u in upstream)
+        if total > self.settings.agent_upstream_max_chars:
+            raise NothingToReview(f"the design the set was built on totals {total} characters, over the {self.settings.agent_upstream_max_chars} limit. Nothing is cut silently")
+        items = RS.design_items({u.key: u.text for u in upstream}, self.runtime.skills)
+        design = I.DesignIds(frozenset(item_ctx.known), tuple(sorted((i, I.design_title(t)) for i, t in items.items())))
+        files, problems = I.split_set(version.body)
+        if not files:
+            raise NothingToReview("the saved set holds no files, so there is nothing to read file by file; " + "; ".join(problems))
+        order = sorted(files, key=I.order_key)
+        reviewed = [n for n in order if I.kind_of(n) not in (None, I.INDEX)]
+        project = self.store.projects.get(project_id)
+        if not hasattr(self, "_set_rubric"):
+            self._set_rubric = RS.load_set_rubric()
+        return {
+            "version": version, "author_model": author_model_of(version) or HUMAN, "files": files, "order": order, "reviewed": reviewed, "design": design, "items": items,
+            "contract": K.parse_contract(files.get(I.FOUNDATION_NAME)), "foundation": files.get(I.FOUNDATION_NAME, ""), "index": files.get(I.INDEX_NAME, ""), "brief": project.brief,
+            "phase_key": artefact.phase_key,
+        }
+
+    async def _review_set(self, project_id: str, artefact_id: str, *, slot, exclude, run_id, actor) -> ReviewResult:
+        plan = await asyncio.to_thread(self._prepare_set, project_id, artefact_id)
+        files, design, contract = plan["files"], plan["design"], plan["contract"]
+        line_counts = {n: len(t.rstrip("\n").split("\n")) for n, t in files.items()}
+        by_file: dict[str, list[Finding]] = {}
+        summaries: dict[str, str] = {}
+        all_calls: list[LLMResult] = []
+        repair_log: list[dict] = []
+        independence_box: list = []
+        sem = asyncio.Semaphore(max(1, int(self.settings.run_max_concurrency)))
+
+        async def one(name: str) -> None:
+            text = I.strip_tool(files[name])
+            system_found = RS.system_findings(name, I.kind_of(name), text, design, contract, files)
+            prompt = RS.build_file_prompt(
+                name, text, rubric=self._set_rubric, foundation=plan["foundation"], index=plan["index"], file_list=plan["order"], items=plan["items"], already=system_found,
+                brief=plan["brief"],
+            )
+            async with sem:
+                parsed, calls, log, independence = await self._converse_file(project_id, plan, prompt, line_counts, slot=slot, exclude=exclude, run_id=run_id)
+            all_calls.extend(calls)
+            repair_log.extend({**entry, "file": name} for entry in log)
+            independence_box.append(independence)
+            summaries[name] = parsed.summary
+            by_file[name] = [*system_found, *parsed.findings]
+
+        tasks = [asyncio.create_task(one(n)) for n in plan["reviewed"]]
+        try:
+            await asyncio.gather(*tasks)
+        except BaseException:
+            for t in tasks:
+                t.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+            raise
+        merged = RS.merge(plan["order"], by_file, summaries, RS.set_findings(files, design))
+        extra = {
+            "files": [{"file": n, "findings": len(by_file.get(n, [])), "summary": summaries.get(n, "")} for n in plan["reviewed"]],
+            "by_file_calls": True,
+        }
+        return await asyncio.to_thread(
+            self._store, project_id, artefact_id, plan["version"], merged, independence_box[-1], all_calls, actor, plan["author_model"], repair_log, extra,
+        )
+
+    async def _converse_file(self, project_id: str, plan: dict, prompt, line_counts: dict, *, slot, exclude, run_id):
+        """One file's review: call, check, send the problems back, up to the repair budget. Returns (parsed, calls, repair log, independence). Raises with the file named."""
+        messages = [Message("user", prompt.user)]
+        calls: list[LLMResult] = []
+        log: list[dict] = []
+        independence = None
+        problems: list[str] = []
+        parsed = None
+        max_attempts = self.settings.review_max_repairs + 1
+        limit = self.settings.review_file_max_output_tokens
+        for attempt in range(1, max_attempts + 1):
+            outcome = await self.gateway.review(
+                LLMRequest(
+                    role=REVIEW_ROLE, messages=tuple(messages), system=prompt.system, max_tokens=limit, temperature=self.settings.agent_temperature,
+                    project_id=project_id, phase_key=plan["phase_key"], run_id=run_id,
+                ),
+                author_model=plan["author_model"], slot=slot, exclude=exclude,
+            )
+            calls.append(outcome.result)
+            independence = outcome.independence
+            parsed, problems = self._check_file_review(outcome.result, line_counts)
+            if problems:
+                log.append(logged_problems(attempt, outcome.result.call_id, problems))
+            if not problems:
+                break
+            if attempt < max_attempts:
+                messages += [Message("assistant", echo_for_repair(outcome.result.text)), Message("user", repair_message(problems))]
+        else:
+            cut = calls[-1].finish_reason in ("length", "max_tokens")
+            more = f" The last reply hit the {limit}-token output limit; raise REVIEW_FILE_MAX_OUTPUT_TOKENS." if cut else ""
+            raise ReviewOutputInvalid(
+                f"the review of {prompt.name} could not be produced: after {max_attempts} attempt(s) the reply still failed its checks ({'; '.join(problems)}).{more} Nothing was stored.",
+                problems, max_attempts,
+            )
+        assert parsed is not None and independence is not None
+        return parsed, calls, log, independence
+
+    def _check_file_review(self, result: LLMResult, line_counts: dict) -> tuple[ParsedReview | None, list[str]]:
+        try:
+            parsed = parse_review(result.text)
+        except ReplyFormatError as exc:
+            return None, [str(exc)]
+        problems = RS.check_file_review(parsed, files=line_counts, max_findings=self.settings.review_max_findings, finish_reason=result.finish_reason)
+        text = "\n".join([parsed.summary, *(f"{f.target} {f.problem} {f.fix}" for f in parsed.findings)])
+        problems = (self.runtime.scanner.problems(text) + problems)[:MAX_PROBLEMS]
+        return (None if problems else parsed), problems
+
     # ---- everything the reviewer is shown ----------------------------------------------------------------
 
     def _phase_of(self, project_id: str, artefact_id: str) -> str:
@@ -145,6 +279,8 @@ class ReviewService:
             raise NothingToReview(f"{artefact_id} has no version yet, so there is nothing to review")
         skill = self.runtime.skills.get(artefact.type)
         if skill is None:
+            if self.is_retired(project_id, artefact_id):
+                raise NothingToReview(f"'{artefact.title}' is retired: it was written by a part of this phase that no longer exists, so there is nothing to review it against. Its versions are kept")
             raise NothingToReview(f"there is no skill for '{artefact.type}', so its quality bar is unknown and it cannot be reviewed yet")
         try:
             status = self.store.phases.get(project_id, artefact.phase_key).status
@@ -206,7 +342,7 @@ class ReviewService:
 
     def _store(
         self, project_id: str, artefact_id: str, reviewed: ArtefactVersion, parsed: ParsedReview, independence, calls: Sequence[LLMResult],
-        actor: str, author_model: str, repair_log: Sequence[dict] = (),
+        actor: str, author_model: str, repair_log: Sequence[dict] = (), extra: dict | None = None,
     ) -> ReviewResult:
         final = calls[-1]
         cost = sum_costs([c.cost_usd for c in calls])
@@ -225,6 +361,7 @@ class ReviewService:
             "tokens_in": sum(c.tokens_in for c in calls), "tokens_out": sum(c.tokens_out for c in calls),
             "cost_usd": cost, "call_ids": [c.call_id for c in calls], "attempts": len(calls),
             "repair_reasons": list(repair_log),
+            **(extra or {}),
         }
         self.store.artefacts.set_review_findings(project_id, artefact_id, reviewed.number, record, actor=actor)
         return ReviewResult(
@@ -244,8 +381,8 @@ class ReviewService:
         """
         out: list[ReviewResult | PausedReview] = []
         for artefact in self.store.artefacts.list(project_id, phase_key=phase_key):
-            if artefact.latest_version is None:
-                continue
+            if artefact.latest_version is None or self.is_retired(project_id, artefact.id):
+                continue                                   # nothing written, or retired: neither is reviewed, and neither is an error
             try:
                 out.append(await self.review(project_id, artefact.id, slot=slot, run_id=run_id, actor=actor))
             except ReviewerUnavailable as exc:
@@ -254,11 +391,22 @@ class ReviewService:
 
     # ---- where an artefact's review stands -------------------------------------------------------------------------------
 
+    def is_retired(self, project_id: str, artefact_id: str) -> bool:
+        """An artefact that has a version but is no longer part of the workflow at all. The Build phase's first design wrote code artefacts; they were removed from the
+        catalogue (S19) and their versions stay in the project, so they are still listed. They cannot be reviewed, and that is not a failure.
+
+        NOT the same as an artefact that is in the workflow but has no skill YET (the Deploy and Handover artefacts): that one is simply not ready, and says so."""
+        artefact = self.store.artefacts.get(project_id, artefact_id)
+        known = {a.key for phase in self.engine.catalogue.phases for a in phase.artefacts}
+        return artefact.latest_version is not None and artefact.type not in known
+
     def status_of(self, project_id: str, artefact_id: str) -> ReviewStatus:
         artefact = self.store.artefacts.get(project_id, artefact_id)
         latest = artefact.latest_version
         if latest is None:
             return ReviewStatus(artefact_id, "unreviewed", latest_version=None)
+        if self.is_retired(project_id, artefact_id):
+            return ReviewStatus(artefact_id, "retired", latest_version=latest)
         for version in reversed(self.store.artefacts.versions(project_id, artefact_id)):
             record = version.review_findings
             if isinstance(record, dict) and "verdict" in record:

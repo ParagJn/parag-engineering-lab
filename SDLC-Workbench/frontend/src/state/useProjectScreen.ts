@@ -2,14 +2,76 @@
 // component so the component can be rendered statically with any state.
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  ServerRefused, followEvents, type ArtefactCard, type ArtefactDetail, type ChangeRequest, type Client, type DocumentInfo, type Follow, type PhaseAction,
+  ServerRefused, followEvents, type ArtefactCard, type ArtefactFailure, type ArtefactDetail, type ChangeRequest, type Client, type DocumentInfo, type Follow, type PhaseAction,
   type ProjectDetail, type ReviewPaused, type ReviewState_, type SearchResult, type UploadResult,
 } from '../api'
 import { pastedFilename } from '../lib/documents'
-import { applyEvent, idle, isLive, type Progress } from './runProgress'
+import { saveBytes, saveText } from '../lib/download'
+import { planDownload } from '../lib/instructionSet'
+import { makeZip } from '../lib/zip'
+import { applyEvent, idle, isLive, shouldClearFailures, shouldLoadFailures, type Progress } from './runProgress'
 import { requestStop, runReviewQueue, type QueueItem, type ReviewRun } from './reviewQueue'
 
 const message = (e: unknown, fallback: string) => (e instanceof Error ? e.message : fallback)
+
+/** The options a phase action sends when it starts a run: 'Rewrite everything' asks for every artefact to be written again; a plain run sends none. */
+export function rewriteOptions(action: PhaseAction): { rewrite_all: true } | undefined {
+  return action === 'rewrite' ? { rewrite_all: true } : undefined
+}
+
+/** Does this phase action start a run? 'Run it again' and 'Rewrite everything' do; handing to review and approving do not. */
+export function startsARun(action: PhaseAction): boolean {
+  return action === 'run' || action === 'rewrite'
+}
+
+/** The artefacts "Review all" goes through: those with something written, leaving out the retired ones (the server says which are retired; the page decides nothing). */
+export function reviewQueueOf(cards: ArtefactCard[], phaseKey: string, statuses: { artefact_id: string; state: string }[]): QueueItem[] {
+  const retired = new Set(statuses.filter((s) => s.state === 'retired').map((s) => s.artefact_id))
+  return cards.filter((c) => c.phase_key === phaseKey && c.latest_version !== null && !retired.has(c.id)).map((c) => ({ id: c.id, name: c.title }))
+}
+
+/** Download the files of a Build instruction set from the run panel: fetch the version the run wrote, then save one file as its own .md or all of them as one zip.
+ *  Returns a plain sentence when it could not (nothing was saved), or null when it did. */
+export async function downloadSetFiles(
+  client: Pick<Client, 'getArtefact'>, save: { text: (name: string, text: string) => void; zip: (name: string, bytes: Uint8Array) => void },
+  projectId: string, artefactId: string, version: number | null, file: string | null,
+): Promise<string | null> {
+  let detail
+  try { detail = await client.getArtefact(projectId, artefactId, version ?? undefined) } catch (e) { return message(e, 'The files could not be fetched, so nothing was saved.') }
+  const plan = planDownload(detail.body, file, artefactId, detail.version)
+  if (plan === null) return file === null ? 'This version holds no files, so there is nothing to save.' : `${file} is not in this version, so nothing was saved.`
+  if (plan.kind === 'file') save.text(plan.name, plan.text)
+  else save.zip(plan.name, makeZip(plan.entries))
+  return null
+}
+
+/** The note about a download: cleared when one starts, and set again only if that download did not work. Plain, so a test can see every step. */
+export async function downloadFilesWith(setNote: (note: string | null) => void, run: () => Promise<string | null>): Promise<void> {
+  setNote(null)
+  setNote(await run())
+}
+
+/** Where a save goes: one file of a Build set (with the version the person was looking at, so the server can refuse a stale edit), or the whole artefact. */
+export async function saveEditOf(
+  client: Pick<Client, 'editArtefact' | 'editFile'>, projectId: string, artefactId: string, version: number, editingFile: string | null, actorName: string, text: string, note: string,
+): Promise<void> {
+  if (editingFile !== null) await client.editFile(projectId, artefactId, editingFile, actorName, text, note, version)
+  else await client.editArtefact(projectId, artefactId, actorName, text, note)
+}
+
+/** What pressing a phase button asks the server to do. Plain, so a test can press every one without a screen. */
+export async function performAction(
+  client: Pick<Client, 'startRun' | 'finishPhase' | 'approvePhase'>, projectId: string, phaseKey: string, actorName: string, action: PhaseAction,
+): Promise<void> {
+  if (startsARun(action)) await startFor(client, projectId, phaseKey, actorName, action)
+  else if (action === 'finish') await client.finishPhase(projectId, phaseKey, actorName)
+  else if (action === 'approve') await client.approvePhase(projectId, phaseKey, actorName)
+}
+
+/** Start a run for 'run' or 'rewrite'. Plain, so a test can press it without a screen. */
+export function startFor(client: Pick<Client, 'startRun'>, projectId: string, phaseKey: string, actorName: string, action: PhaseAction) {
+  return client.startRun(projectId, phaseKey, actorName, rewriteOptions(action))
+}
 
 export function useProjectScreen(client: Client, initial: ProjectDetail, phaseKey: string, actorName: string, reviewsAvailable: boolean) {
   const projectId = initial.id
@@ -18,6 +80,7 @@ export function useProjectScreen(client: Client, initial: ProjectDetail, phaseKe
   const [cards, setCards] = useState<ArtefactCard[]>([])
   const [open, setOpen] = useState<ArtefactDetail | null>(null)
   const [progress, setProgress] = useState<Progress>(idle)
+  const [failures, setFailures] = useState<Record<string, ArtefactFailure>>({})
   const [connected, setConnected] = useState(true)
   const [streamProblem, setStreamProblem] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -45,6 +108,7 @@ export function useProjectScreen(client: Client, initial: ProjectDetail, phaseKe
   const [reopenBusy, setReopenBusy] = useState(false)
   const [reopenError, setReopenError] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
+  const [editingFile, setEditingFile] = useState<string | null>(null)       // S19f: the one file of a set being edited, or null for the whole artefact
   const [editBusy, setEditBusy] = useState(false)
   const [editRefusal, setEditRefusal] = useState<{ message: string; problems: string[] } | null>(null)
   const [editError, setEditError] = useState<string | null>(null)
@@ -63,17 +127,27 @@ export function useProjectScreen(client: Client, initial: ProjectDetail, phaseKe
     } catch (e) { if (live.current) setActionError(message(e, 'The project could not be reloaded.')) }
   }, [client, projectId, phaseKey])
 
+  // Why each failed artefact failed lives in the run's stored record, not in the event (an event is short and bounded). Fetched once, when the run ends.
+  const loadFailures = useCallback(async (runId: string) => {
+    try {
+      const run = await client.getRun(projectId, runId)
+      if (live.current) setFailures(run.totals?.failures ?? {})
+    } catch { /* the short reason on the row is still there; a missing detail is not worth an error banner */ }
+  }, [client, projectId])
+
   // One stream per screen, opened from the start of the log: the last run in it is the one shown, and a reload rebuilds the panel.
   const openStream = useCallback(() => {
     follow.current?.close()
     follow.current = followEvents(projectId, lastId.current, {
       onEvent: (e) => {
         lastId.current = Math.max(lastId.current, e.id)
+        if (shouldClearFailures(e)) setFailures({})
         setProgress((p) => {
           const next = applyEvent(p, e)
           return next
         })
         if (e.type === 'run.finished' || e.type === 'run.stopped' || e.type === 'gate.changed') void refresh()
+        if (shouldLoadFailures(e)) void loadFailures(e.run_id)
         if (e.type === 'artefact.finished') void refresh()
       },
       onDropped: () => openStream(),
@@ -84,6 +158,11 @@ export function useProjectScreen(client: Client, initial: ProjectDetail, phaseKe
 
   useEffect(() => { void refresh(); openStream() }, [refresh, openStream])
 
+  const [downloadNote, setDownloadNote] = useState<string | null>(null)
+  const downloadFiles = useCallback(async (artefactId: string, version: number | null, file: string | null) => {
+    await downloadFilesWith((note) => { if (live.current) setDownloadNote(note) }, () => downloadSetFiles(client, { text: saveText, zip: saveBytes }, projectId, artefactId, version, file))
+  }, [client, projectId])
+
   const open_ = useCallback(async (artefactId: string, version?: number) => {
     try { const d = await client.getArtefact(projectId, artefactId, version); if (live.current) { setOpen(d); setActionError(null) } }
     catch (e) { if (live.current) setActionError(message(e, 'The artefact could not be opened.')) }
@@ -92,9 +171,7 @@ export function useProjectScreen(client: Client, initial: ProjectDetail, phaseKe
   const act = useCallback(async (action: PhaseAction) => {
     setBusy(action); setActionError(null); setCancelNote(null)
     try {
-      if (action === 'run') await client.startRun(projectId, phaseKey, actorName)
-      else if (action === 'finish') await client.finishPhase(projectId, phaseKey, actorName)
-      else if (action === 'approve') await client.approvePhase(projectId, phaseKey, actorName)
+      await performAction(client, projectId, phaseKey, actorName, action)
       await refresh()
     } catch (e) { setActionError(message(e, 'That did not work.')); await refresh() }
     finally { if (live.current) setBusy(null) }
@@ -154,9 +231,8 @@ export function useProjectScreen(client: Client, initial: ProjectDetail, phaseKe
   }, [client, projectId, actorName, refresh])
 
   const reviewAll = useCallback(async () => {
-    const queue = cards.filter((c) => c.phase_key === phaseKey && c.latest_version !== null).map((c) => ({ id: c.id, name: c.title }))
-    await runQueue(queue)
-  }, [cards, phaseKey, runQueue])
+    await runQueue(reviewQueueOf(cards, phaseKey, reviewState?.statuses ?? []))
+  }, [cards, phaseKey, reviewState, runQueue])
 
   /** The reviewer could not run and the person chose another family: carry on with the artefacts that are left, using it. */
   const reviewWithChosen = useCallback(async () => {
@@ -203,14 +279,14 @@ export function useProjectScreen(client: Client, initial: ProjectDetail, phaseKe
     if (!open) return
     setEditBusy(true); setEditRefusal(null); setEditError(null)
     try {
-      await client.editArtefact(projectId, open.id, actorName, body, note)
-      setEditing(false); await refresh(); await open_(open.id)
+      await saveEditOf(client, projectId, open.id, open.version, editingFile, actorName, body, note)
+      setEditing(false); setEditingFile(null); await refresh(); await open_(open.id)
     } catch (e) {
       // A refusal lists every reason, and the text stays in the box. Anything else is one sentence.
       if (e instanceof ServerRefused && e.problems.length) setEditRefusal({ message: e.message, problems: e.problems })
       else setEditError(message(e, 'The edit could not be saved.'))
     } finally { if (live.current) setEditBusy(false) }
-  }, [client, projectId, actorName, open, refresh, open_])
+  }, [client, projectId, actorName, open, editingFile, refresh, open_])
 
   const search = useCallback(async () => {
     setSearching(true); setSearchError(null)
@@ -220,11 +296,13 @@ export function useProjectScreen(client: Client, initial: ProjectDetail, phaseKe
   }, [client, projectId, query])
 
   return {
-    project, documents, cards, open, progress, connected, streamProblem, actionError, busy, uploadError, lastUpload, cancelNote, query, result, searchError, searching,
-    runLive: isLive(progress), setQuery, act, cancel, upload, paste, remove, search, openArtefact: open_, close: () => { setOpen(null); setEditing(false) }, refresh,
+    project, documents, cards, open, progress, failures, connected, streamProblem, actionError, busy, uploadError, lastUpload, cancelNote, query, result, searchError, searching,
+    runLive: isLive(progress), setQuery, act, cancel, upload, paste, remove, search, openArtefact: open_, close: () => { setOpen(null); setEditing(false); setEditingFile(null) }, refresh,
     reviewsAvailable, reviewState, reviewBusy, reviewError, paused, chosenFamily, setChosenFamily, reviewOne, reviewAll, reviewWithChosen, reviewRun, stopReviews, dismissReviews,
     sendingBack, setSendingBack, changesBusy, changesError, sendBack, rerunNotes, rerunStale,
     reopening, setReopening: (on: boolean) => { setReopening(on); setReopenError(null) }, reopenBusy, reopenError, reopen,
-    editing, setEditing: (on: boolean) => { setEditing(on); setEditRefusal(null); setEditError(null) }, editBusy, editRefusal, editError, saveEdit,
+    downloadFiles, downloadNote,
+    editing, editingFile, setEditing: (on: boolean) => { setEditing(on); setEditingFile(null); setEditRefusal(null); setEditError(null) },
+    startEditFile: (name: string) => { setEditingFile(name); setEditing(true); setEditRefusal(null); setEditError(null) }, editBusy, editRefusal, editError, saveEdit,
   }
 }

@@ -2,11 +2,13 @@ import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { DISALLOWED_ELEMENTS, safeHref } from '../lib/markdown'
 import { markPlugin, type Marks } from '../lib/reviewMarks'
+import { CodeBlock } from './CodeBlock'
 import { WireframeBlock } from './WireframeBlock'
+import { filePathBefore } from '../lib/codeFiles'
 
 /** Model-written Markdown, rendered as untrusted text: no raw HTML, no images, links only to http, https and mailto and never carrying the opener. */
 /** `marks` colour-codes the places a review pointed at (red high, amber medium, blue low). Without it, or with none, the output is exactly as before. */
-export function SafeMarkdown({ children, marks }: { children: string; marks?: Marks }) {
+export function SafeMarkdown({ children, marks, collapseCode = false }: { children: string; marks?: Marks; collapseCode?: boolean }) {
   return (
     <div className="markdown">
       <Markdown
@@ -25,6 +27,14 @@ export function SafeMarkdown({ children, marks }: { children: string; marks?: Ma
                 const text = code.children.map((c) => (c.type === 'text' ? c.value : '')).join('')
                 return <WireframeBlock source={text.replace(/\n$/, '')} />
               }
+            }
+            // Code in a Build artefact is collapsed and downloadable (S18). Elsewhere a code block is exactly what it always was.
+            if (collapseCode && code && code.type === 'element' && code.tagName === 'code') {
+              const classes = Array.isArray(code.properties?.className) ? code.properties.className.map(String) : []
+              const language = classes.find((c) => c.startsWith('language-'))?.slice('language-'.length) ?? null
+              const text = code.children.map((c) => (c.type === 'text' ? c.value : '')).join('')
+              const start = node?.position?.start.line
+              return <CodeBlock code={text} language={language} path={start ? filePathBefore(children, start) : null}><pre>{inner}</pre></CodeBlock>
             }
             return <pre>{inner}</pre>
           },

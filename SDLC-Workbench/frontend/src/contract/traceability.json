@@ -151,6 +151,11 @@
           ],
           "layer": "FLOW",
           "state": "built"
+        },
+        {
+          "items": [],
+          "layer": "INS",
+          "state": "not_started"
         }
       ],
       "item": "FR-001",
@@ -256,6 +261,11 @@
           ],
           "layer": "FLOW",
           "state": "built"
+        },
+        {
+          "items": [],
+          "layer": "INS",
+          "state": "not_started"
         }
       ],
       "item": "FR-002",
@@ -357,6 +367,11 @@
           ],
           "layer": "FLOW",
           "state": "built"
+        },
+        {
+          "items": [],
+          "layer": "INS",
+          "state": "not_started"
         }
       ],
       "item": "NFR-001",
@@ -455,6 +470,11 @@
           ],
           "layer": "FLOW",
           "state": "built"
+        },
+        {
+          "items": [],
+          "layer": "INS",
+          "state": "not_started"
         }
       ],
       "item": "NFR-002",
@@ -497,7 +517,8 @@
     "TBL",
     "RUL",
     "UC",
-    "FLOW"
+    "FLOW",
+    "INS"
   ],
   "names": {
     "API-001": "POST /bookings reserves a room for a slot, or answers that…",

@@ -42,11 +42,45 @@
     "key": "epics_features",
     "run_id": "p0000000demo"
   },
+  "build.round": {
+    "artefact": "backend_code",
+    "at": "2026-01-01T00:00:00.000Z",
+    "errors": 0,
+    "failed": 2,
+    "round": 1,
+    "run_id": "p0000000demo"
+  },
   "gate.changed": {
     "at": "2026-01-01T00:00:00.000Z",
     "phase": "requirements",
     "run_id": "p0000000demo",
     "status": "running"
+  },
+  "piece.failed": {
+    "at": "2026-01-01T00:00:00.000Z",
+    "file": "UC-002-browse-rooms.md",
+    "key": "build_instructions",
+    "reason": "'UC-002-browse-rooms.md' could not be produced: after 3 attempt(s) the reply still failed its checks",
+    "run_id": "p0000000demo"
+  },
+  "piece.finished": {
+    "at": "2026-01-01T00:00:00.000Z",
+    "attempts": 1,
+    "cost_usd": 0.0942,
+    "file": "00-foundation.md",
+    "key": "build_instructions",
+    "run_id": "p0000000demo",
+    "tokens_in": 21000,
+    "tokens_out": 3200
+  },
+  "piece.started": {
+    "at": "2026-01-01T00:00:00.000Z",
+    "file": "00-foundation.md",
+    "index": 1,
+    "key": "build_instructions",
+    "of": 4,
+    "run_id": "p0000000demo",
+    "stage": "foundation"
   },
   "review.finished": {
     "artefact_id": "REQ-F-001",

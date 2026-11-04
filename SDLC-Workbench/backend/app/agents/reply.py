@@ -195,14 +195,14 @@ def unknown_citations(body: str, allowed: Collection[str]) -> list[str]:
 # ---- the whole check ----------------------------------------------------------------------------------
 
 def validate(
-    body: str, required_sections: Iterable[str], allowed_citations: Collection[str], finish_reason: str | None
+    body: str, required_sections: Iterable[str], allowed_citations: Collection[str], finish_reason: str | None, max_chars: int = MAX_BODY_CHARS,
 ) -> list[str]:
     """Every problem with a reply, as plain sentences that can be sent back to the model. [] means valid."""
     problems: list[str] = []
     if finish_reason in TRUNCATED_REASONS:
         problems.append("the reply was cut off by the output limit; write a shorter artefact that still has every required section")
-    if len(body) > MAX_BODY_CHARS:
-        problems.append(f"the artefact is {len(body)} characters long; the limit is {MAX_BODY_CHARS}")
+    if len(body) > max_chars:
+        problems.append(f"the artefact is {len(body)} characters long; the limit is {max_chars}")
     for name in missing_sections(body, required_sections):
         problems.append(f"the required section '{name}' is missing or empty; add a heading named '{name}' with text under it")
     invented = unknown_citations(body, allowed_citations)

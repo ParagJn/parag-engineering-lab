@@ -3,7 +3,7 @@
 > Generated from `backend/app/phases/definitions/*.yaml` by `scripts/render_catalogue.py`. **Do not edit by hand:**
 > change the YAML, then run the script. A test fails if this file and the YAML disagree.
 
-The lifecycle has 7 phases and 33 artefacts, 21 of them required. A **required**
+The lifecycle has 7 phases and 28 artefacts, 18 of them required. A **required**
 artefact cannot be switched off in the wizard and must have content before its phase can be approved. An
 artefact in a later **wave** waits for the ones in earlier waves; everything inside a wave runs in parallel.
 Deploy and BAU Handover are this prototype's own design; the source material stops at Code & Test.
@@ -16,7 +16,7 @@ Deploy and BAU Handover are this prototype's own design; the source material sto
 | 1 | Requirements | business engineer | 7 | 6 | 4 |
 | 2 | Design | business engineer | 3 | 2 | 3 |
 | 3 | Architecture | technical lead | 5 | 3 | 3 |
-| 4 | Build & Test | technical lead | 6 | 4 | 3 |
+| 4 | Build & Test | technical lead | 1 | 1 | 1 |
 | 5 | Deploy | deployment engineer | 5 | 3 | 3 |
 | 6 | BAU handover | BAU lead | 6 | 2 | 2 |
 
@@ -70,17 +70,12 @@ Approved by: **technical lead**.
 
 ## 4 · Build & Test
 
-Build the database, back end and front end, then prove they work by running the tests.  
+Write the instruction files a person gives to a coding tool (Copilot, Claude, GPT or Gemini) so that tool builds the application. This system does not write the application.  
 Approved by: **technical lead**.
 
 | Artefact | Required | Wave | Waits for | Agent role | ID prefix | What it is |
 | --- | --- | --- | --- | --- | --- | --- |
-| Database schema | yes | 1 | - | database_engineer | BLD-DB | Tables, constraints and seed data, checked by actually creating them. |
-| Backend code | yes | 1 | - | backend_developer | BLD-BE | The API and business rules. |
-| Frontend code | yes | 1 | - | frontend_developer | BLD-FE | The screens people use. |
-| Test suite | yes | 2 | Backend code | test_engineer | BLD-TST | Unit and API tests for the code that was built. |
-| Test report | no | 3 | Test suite | test_engineer | BLD-RPT | What the tests did when they were actually run. |
-| Code and security review | no | 3 | Backend code, Frontend code, Test suite | security_reviewer | BLD-REV | Findings from reading the code and from the secret and personal-data scan. |
+| Build instructions | yes | 1 | - | solution_architect | BLD-INS | One set of Markdown instruction files for a coding tool - a foundation file, one file for each use case, and the acceptance tests - each pointing at the design items it builds. |
 
 ## 5 · Deploy
 

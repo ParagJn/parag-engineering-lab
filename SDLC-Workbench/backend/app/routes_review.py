@@ -8,6 +8,7 @@ Review text (the summary and each finding) is model output. It is returned as te
 """
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
@@ -115,6 +116,14 @@ class RequestChangesBody(BaseModel):
     include_findings: list[str] = Field(default_factory=list, max_length=40)
 
 
+class EditFileBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    text: str = Field(max_length=MAX_BODY_CHARS)
+    based_on: int = Field(ge=1, le=100000)
+    note: str = Field(default="", max_length=1000)
+
+
 class EditBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -182,6 +191,28 @@ def review_state(project_id: str, phase_key: str, request: Request) -> dict:
 def _pending_notes(request: Request, project_id: str, phase_key: str) -> list[str]:
     """The artefacts a re-run would rewrite: those with an unaddressed note. The screen shows them; it never works them out."""
     return request.app.state.human.to_rewrite(project_id, phase_key)
+
+
+# ---- edit one file of the Build instruction set (S19f-1) ----------------------------------------------------------------------------------------
+
+FILE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,78}\.md$")
+
+
+@router.put("/artefacts/{artefact_id}/files/{file_name}")
+def edit_file(project_id: str, artefact_id: str, file_name: str, body: EditFileBody, request: Request) -> dict:
+    actor = actor_from(request)
+    if not _valid(artefact_id, ARTEFACT_ID):
+        raise HTTPException(status_code=422, detail="artefact id has unexpected characters")
+    if not FILE_NAME.match(file_name):
+        raise HTTPException(status_code=422, detail="file name has unexpected characters")
+    refuse_if_archived(request, project_id)
+    try:
+        number = request.app.state.human.edit_file(project_id, artefact_id, file_name, body.text, based_on=body.based_on, actor=actor, note=body.note)
+    except EditRefused as exc:
+        raise HTTPException(status_code=422, detail={"message": str(exc), "problems": list(exc.problems)}) from exc
+    except (NotFoundError, ReviewError, InvalidInput) as exc:
+        raise _fail(exc) from exc
+    return {"artefact_id": artefact_id, "file": file_name, "version": number}
 
 
 # ---- send changes back, and re-run only those artefacts -------------------------------------------------------------------------------

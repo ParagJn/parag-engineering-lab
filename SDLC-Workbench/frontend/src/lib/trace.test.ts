@@ -78,6 +78,8 @@ describe('the address of the tab', () => {
       expect(parseHash(buildHash(route))).toEqual(route)
     }
     expect(buildHash({ name: 'traceability', id: 'p1', item: null })).toBe('#/projects/p1/traceability')
+    expect(buildHash({ name: 'verify', id: 'p1' })).toBe('#/projects/p1/verify'); expect(parseHash('#/projects/p1/verify')).toEqual({ name: 'verify', id: 'p1' })
+    expect(parseHash('#/projects/p1/verify/extra').name).toBe('not-found'); expect(parseHash('#/projects/bad id/verify').name).toBe('not-found')
   })
   it('an item that is not shaped like an ID is not found, so nothing odd reaches the server', () => {
     for (const bad of ['comp-001', 'COMP-1', '..', 'COMP-001%2F..', 'COMP 001']) expect(parseHash(`#/projects/p1/traceability/${bad}`).name).toBe('not-found')

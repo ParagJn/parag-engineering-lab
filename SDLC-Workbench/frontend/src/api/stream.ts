@@ -22,8 +22,8 @@ export interface FollowHandlers {
 }
 
 export const STREAM_EVENT_NAMES = [
-  'run.started', 'gate.changed', 'artefact.started', 'artefact.attempt', 'artefact.finished', 'artefact.failed', 'artefact.skipped',
-  'review.started', 'review.finished', 'review.paused', 'run.finished', 'run.stopped', 'dropped',
+  'run.started', 'gate.changed', 'artefact.started', 'artefact.attempt', 'artefact.finished', 'artefact.failed', 'artefact.skipped', 'build.round',
+  'piece.started', 'piece.finished', 'piece.failed', 'review.started', 'review.finished', 'review.paused', 'run.finished', 'run.stopped', 'dropped',
 ] as const
 
 export function followEvents(

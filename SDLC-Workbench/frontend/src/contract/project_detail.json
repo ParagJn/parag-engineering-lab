@@ -233,59 +233,11 @@
       "artefacts": [
         {
           "has_content": false,
-          "key": "database_schema",
-          "name": "Database schema",
+          "key": "build_instructions",
+          "name": "Build instructions",
           "required": true,
           "waits_for": [],
           "wave": 1
-        },
-        {
-          "has_content": false,
-          "key": "backend_code",
-          "name": "Backend code",
-          "required": true,
-          "waits_for": [],
-          "wave": 1
-        },
-        {
-          "has_content": false,
-          "key": "frontend_code",
-          "name": "Frontend code",
-          "required": true,
-          "waits_for": [],
-          "wave": 1
-        },
-        {
-          "has_content": false,
-          "key": "test_suite",
-          "name": "Test suite",
-          "required": true,
-          "waits_for": [
-            "backend_code"
-          ],
-          "wave": 2
-        },
-        {
-          "has_content": false,
-          "key": "test_report",
-          "name": "Test report",
-          "required": false,
-          "waits_for": [
-            "test_suite"
-          ],
-          "wave": 3
-        },
-        {
-          "has_content": false,
-          "key": "code_security_review",
-          "name": "Code and security review",
-          "required": false,
-          "waits_for": [
-            "backend_code",
-            "frontend_code",
-            "test_suite"
-          ],
-          "wave": 3
         }
       ],
       "blocked_by": "Setup",

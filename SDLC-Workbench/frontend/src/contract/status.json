@@ -14,7 +14,7 @@
   },
   "db": {
     "projects": 0,
-    "schema_version": 6
+    "schema_version": 8
   },
   "endpoint_set": false,
   "gateway": {
@@ -152,8 +152,9 @@
     "max_seconds": 1800.0
   },
   "skills": {
-    "artefacts": 33,
+    "artefacts": 28,
     "keys": [
+      "build_instructions",
       "component_overview",
       "epics_features",
       "flow_diagram",
@@ -171,7 +172,7 @@
       "user_stories",
       "vision_objectives"
     ],
-    "with_skill": 16
+    "with_skill": 17
   },
   "slots": [
     {
@@ -208,7 +209,7 @@
     }
   ],
   "workflow": {
-    "artefact_count": 33,
+    "artefact_count": 28,
     "phase_count": 7,
     "phases": [
       {
@@ -245,11 +246,11 @@
       },
       {
         "approver": "technical lead",
-        "artefacts": 6,
+        "artefacts": 1,
         "key": "build",
         "name": "Build & Test",
         "order": 4,
-        "required": 4
+        "required": 1
       },
       {
         "approver": "deployment engineer",
@@ -268,6 +269,6 @@
         "required": 2
       }
     ],
-    "required_count": 21
+    "required_count": 18
   }
 }

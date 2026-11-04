@@ -42,7 +42,9 @@ class RunStopped(AgentError):
 class OutputInvalid(AgentError):
     """The model never produced a valid artefact within the repair budget. Nothing was saved."""
 
-    def __init__(self, message: str, problems: list[str], attempts: int):
+    def __init__(self, message: str, problems: list[str], attempts: int, cut_off: bool = False, limit: int | None = None):
         super().__init__(message)
         self.problems = tuple(problems)
         self.attempts = attempts
+        self.cut_off = cut_off          # the last reply ended because it hit the output limit, not because it was wrong
+        self.limit = limit              # that limit, in tokens

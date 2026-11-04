@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { decodeEvent, type RunEvent } from '../api'
 import eventExamples from '../contract/events.json'
-import { applyAll, applyEvent, capUsed, counts, idle, isLive, type Progress } from './runProgress'
+import { applyAll, applyEvent, capUsed, counts, idle, isLive, shouldClearFailures, shouldLoadFailures, type Progress } from './runProgress'
 
 const RUN = 'run1'
 let nextId = 0
@@ -272,5 +272,174 @@ describe('with the backend\'s own example of each event', () => {
     const p = applyAll(decoded)
     expect(p.status).toBe('finished')
     expect(p.rows.length).toBeGreaterThan(0)
+  })
+})
+
+describe('a Build fix round (S17c)', () => {
+  const round = (n: number, artefact = 'backend_code', failedTests = 2, errors = 0): RunEvent => ({ ...base(), type: 'build.round', round: n, artefact, failed: failedTests, errors })
+
+  it('is accepted without changing what the panel shows, and its id is remembered', () => {
+    const before = applyAll([started(['database_schema', 'backend_code']), begun('backend_code'), finished('backend_code')])
+    const event = round(1)
+    const after = applyEvent(before, event)
+    expect(after.lastEventId).toBe(event.id)
+    expect({ ...after, lastEventId: 0 }).toEqual({ ...before, lastEventId: 0 })
+  })
+
+  it('is dropped when it belongs to another run, like every other event', () => {
+    const before = applyAll([started(['a'])])
+    const foreign = { ...round(1), run_id: 'someone-else' } as RunEvent
+    expect(applyEvent(before, foreign).rows).toEqual(before.rows)
+  })
+
+  it('the backend\'s own example decodes to the fields the screen will use', () => {
+    const example = (eventExamples as Record<string, Record<string, unknown>>)['build.round']
+    const decoded = decodeEvent(7, 'build.round', example)
+    expect(decoded).toMatchObject({ type: 'build.round', round: 1, artefact: 'backend_code', failed: 2, errors: 0 })
+  })
+
+  it('a malformed one is refused, naming the field', () => {
+    const example = (eventExamples as Record<string, Record<string, unknown>>)['build.round']
+    expect(() => decodeEvent(1, 'build.round', { ...example, round: 'one' })).toThrow(/round/)
+    expect(() => decodeEvent(1, 'build.round', { ...example, artefact: 3 })).toThrow(/artefact/)
+    const { failed: _drop, ...without } = example
+    expect(() => decodeEvent(1, 'build.round', without)).toThrow(/failed/)
+  })
+})
+
+describe('when the stored reasons for failures are fetched and cleared', () => {
+  const finishedEvent = (): RunEvent => ended('run.finished', 'failed', null)
+  const stoppedEvent = (): RunEvent => ended('run.stopped', 'stopped', 'budget')
+  it('they are fetched when a run ends, either way, because that is when the record is complete', () => {
+    expect(shouldLoadFailures(finishedEvent())).toBe(true)
+    expect(shouldLoadFailures(stoppedEvent())).toBe(true)
+  })
+  it('they are not fetched on any other event', () => {
+    for (const e of [started(['a']), begun('a'), finished('a'), failed('a'), skipped('a')]) expect(shouldLoadFailures(e)).toBe(false)
+  })
+  it('they are cleared when a new run starts, and only then', () => {
+    expect(shouldClearFailures(started(['a']))).toBe(true)
+    for (const e of [begun('a'), finished('a'), failed('a'), skipped('a'), finishedEvent(), stoppedEvent()]) expect(shouldClearFailures(e)).toBe(false)
+  })
+})
+
+describe('the files of an artefact written in pieces (S19b)', () => {
+  const KEY = 'build_instructions'
+  const examples = eventExamples as Record<string, Record<string, unknown>>
+  const begin = (file: string, index: number, of = 4, stage = 'use_case'): RunEvent => ({ ...base(), type: 'piece.started', key: KEY, file, stage, index, of }) as RunEvent
+  const end = (file: string, attempts = 1, cost: number | null = 0.0942): RunEvent => ({ ...base(), type: 'piece.finished', key: KEY, file, attempts, tokens_in: 100, tokens_out: 20, cost_usd: cost }) as RunEvent
+  const broke = (file: string, reason = 'it could not be produced'): RunEvent => ({ ...base(), type: 'piece.failed', key: KEY, file, reason }) as RunEvent
+  const pieces = (p: Progress) => row(p, KEY).pieces
+
+  it('the backend\'s own three examples decode to the fields the screen uses', () => {
+    expect(decodeEvent(1, 'piece.started', examples['piece.started'])).toMatchObject({ type: 'piece.started', key: KEY, file: '00-foundation.md', stage: 'foundation', index: 1, of: 4 })
+    expect(decodeEvent(2, 'piece.finished', examples['piece.finished'])).toMatchObject({ type: 'piece.finished', key: KEY, file: '00-foundation.md', attempts: 1, tokens_in: 21000, tokens_out: 3200, cost_usd: 0.0942 })
+    expect(decodeEvent(3, 'piece.failed', examples['piece.failed'])).toMatchObject({ type: 'piece.failed', key: KEY, file: 'UC-002-browse-rooms.md' })
+  })
+
+  it('every stage the server can name is accepted, and nothing else', () => {
+    for (const stage of ['foundation', 'ui_guide', 'use_case', 'screen', 'acceptance']) {
+      expect(decodeEvent(1, 'piece.started', { ...examples['piece.started'], stage })).toMatchObject({ type: 'piece.started', stage })
+    }
+    for (const stage of ['guide', 'ui', 'screens', 'Screen', '']) expect(() => decodeEvent(1, 'piece.started', { ...examples['piece.started'], stage })).toThrow(/stage/)
+  })
+
+  it('a malformed one is refused, naming the field', () => {
+    const s = examples['piece.started']
+    expect(() => decodeEvent(1, 'piece.started', { ...s, stage: 'middle' })).toThrow(/stage/)
+    expect(() => decodeEvent(1, 'piece.started', { ...s, index: 'one' })).toThrow(/index/)
+    expect(() => decodeEvent(1, 'piece.started', { ...s, of: null })).toThrow(/of/)
+    const { file: _f, ...noFile } = s
+    expect(() => decodeEvent(1, 'piece.started', noFile)).toThrow(/file/)
+    expect(() => decodeEvent(1, 'piece.finished', { ...examples['piece.finished'], tokens_out: 'many' })).toThrow(/tokens_out/)
+    expect(() => decodeEvent(1, 'piece.failed', { ...examples['piece.failed'], reason: 4 })).toThrow(/reason/)
+    const { key: _k, ...noKey } = examples['piece.failed']
+    expect(() => decodeEvent(1, 'piece.failed', noKey)).toThrow(/key/)
+  })
+
+  it('a finished piece may have no known cost', () => {
+    expect(decodeEvent(1, 'piece.finished', { ...examples['piece.finished'], cost_usd: null })).toMatchObject({ cost_usd: null })
+  })
+
+  it('the cost so far counts each finished file while the artefact is still being written', () => {
+    let p = applyAll([started([KEY]), begun(KEY), begin('a.md', 1), end('a.md', 1, 0.1), begin('b.md', 2)])
+    expect(p.costUsd).toBeCloseTo(0.1)
+    expect(p.costKnown).toBe(true)
+    p = applyAll([end('b.md', 2, 0.25)], p)
+    expect(p.costUsd).toBeCloseTo(0.35)
+    expect(row(p, KEY).costUsd).toBeNull()                                              // the artefact itself has not finished, so it has no cost of its own yet
+  })
+  it('a file whose price is unknown makes the total unknown, and a failed or writing file adds nothing', () => {
+    let p = applyAll([started([KEY]), begun(KEY), begin('a.md', 1), end('a.md', 1, 0.1), begin('b.md', 2), begin('c.md', 3), broke('c.md')])
+    expect(p.costUsd).toBeCloseTo(0.1)
+    expect(p.costKnown).toBe(true)
+    p = applyAll([end('b.md', 1, null)], p)
+    expect(p.costUsd).toBeNull()
+    expect(p.costKnown).toBe(false)
+  })
+  it('a failed file leaves the total known: it carries no price, and the next file that finishes is still added', () => {
+    const p = applyAll([started([KEY]), begun(KEY), begin('a.md', 1), begin('b.md', 2), begin('c.md', 3), end('a.md', 1, 0.1), broke('b.md'), end('c.md', 1, 0.2)])
+    expect(p.costKnown).toBe(true)
+    expect(p.costUsd).toBeCloseTo(0.3)
+  })
+  it('when the artefact finishes its own cost REPLACES the files\' costs: nothing is counted twice, and other artefacts add to it', () => {
+    let p = applyAll([started([KEY, 'other']), begun(KEY), begin('a.md', 1), end('a.md', 1, 0.1), begin('b.md', 2), end('b.md', 1, 0.2)])
+    expect(p.costUsd).toBeCloseTo(0.3)
+    p = applyAll([finished(KEY, 0.3), begun('other'), finished('other', 0.05)], p)
+    expect(p.costUsd).toBeCloseTo(0.35)
+  })
+  it('an artefact written in one go still adds its cost only when it finishes', () => {
+    const p = applyAll([started(['a']), begun('a')])
+    expect(p.costUsd).toBe(0)
+    expect(applyEvent(p, finished('a', 0.02)).costUsd).toBeCloseTo(0.02)
+  })
+
+  it('files are listed in the order they started, each moving from writing to written', () => {
+    let p = applyAll([started([KEY]), begun(KEY), begin('00-foundation.md', 1, 4, 'foundation')])
+    expect(pieces(p)).toEqual([{ file: '00-foundation.md', state: 'writing', index: 1, of: 4, attempts: 0, costUsd: null, reason: null }])
+    p = applyAll([end('00-foundation.md', 2, 0.1), begin('UC-001-a.md', 2), begin('UC-002-b.md', 3)], p)
+    expect(pieces(p).map((x) => [x.file, x.state, x.attempts, x.costUsd])).toEqual([['00-foundation.md', 'done', 2, 0.1], ['UC-001-a.md', 'writing', 0, null], ['UC-002-b.md', 'writing', 0, null]])
+  })
+
+  it('a failed file keeps its reason and the others are untouched', () => {
+    const p = applyAll([started([KEY]), begun(KEY), begin('a.md', 1), begin('b.md', 2), end('a.md'), broke('b.md', 'bad <i>file</i>')])
+    expect(pieces(p).map((x) => [x.file, x.state, x.reason])).toEqual([['a.md', 'done', null], ['b.md', 'failed', 'bad <i>file</i>']])
+  })
+
+  it('files are shown without changing the artefact row\'s own state, cost or version', () => {
+    const before = applyAll([started([KEY]), begun(KEY)])
+    const after = applyAll([begin('a.md', 1), end('a.md')], before)
+    expect({ ...row(after, KEY), pieces: [] }).toEqual({ ...row(before, KEY), pieces: [] })
+  })
+
+  it('an artefact that starts again forgets the files of its last try', () => {
+    const p = applyAll([started([KEY]), begun(KEY), begin('a.md', 1), end('a.md'), begun(KEY)])
+    expect(pieces(p)).toEqual([])
+  })
+
+  it('a file that starts again starts over instead of being listed twice', () => {
+    const p = applyAll([started([KEY]), begun(KEY), begin('a.md', 1), broke('a.md'), begin('a.md', 1)])
+    expect(pieces(p)).toHaveLength(1)
+    expect(pieces(p)[0]).toMatchObject({ file: 'a.md', state: 'writing', reason: null })
+  })
+
+  it('a file event for an artefact the panel has not heard of still shows under its key', () => {
+    const p = applyAll([started(['other']), begin('a.md', 1)])
+    expect(p.rows.map((r) => r.key)).toEqual(['other', KEY]) 
+    expect(pieces(p)).toHaveLength(1)
+  })
+
+  it('a repeated or older file event changes nothing, and one from another run is ignored', () => {
+    const e1 = begin('a.md', 1)
+    const once = applyAll([started([KEY]), begun(KEY), e1])
+    expect(applyEvent(once, e1)).toBe(once)
+    const foreign = { ...begin('b.md', 2), run_id: 'someone-else' } as RunEvent
+    expect(pieces(applyEvent(once, foreign))).toEqual(pieces(once))
+  })
+
+  it('the example order from the backend can all be applied', () => {
+    const order = ['run.started', 'artefact.started', 'piece.started', 'piece.finished', 'piece.failed']
+    const decoded = order.map((t, i) => decodeEvent(i + 1, t, { ...examples[t] ?? examples['piece.started'], run_id: 'r', ...(t === 'run.started' ? { artefacts: [KEY] } : {}), ...(t === 'artefact.started' ? { key: KEY } : {}) }))
+    expect(() => applyAll(decoded)).not.toThrow()
   })
 })

@@ -9,8 +9,10 @@ most 200 characters and 12 levels. Symlinks are never created, and one already p
 """
 from __future__ import annotations
 
+import errno
 import os
 import re
+import secrets
 import shutil
 import tempfile
 from dataclasses import dataclass
@@ -218,11 +220,51 @@ class Workspace:
         current = self._real
         for part in target.parent.relative_to(self._real).parts:
             current = current / part
-            if not current.exists():
-                current.mkdir()
+            current.mkdir(exist_ok=True)                                   # two writers may make the same parent at once; a FILE of that name still fails
             real = current.resolve()
             if real != self._real and self._real not in real.parents:                      # a folder made a moment ago still has to be inside
                 raise PathRefused("that path leaves the workspace")
+
+    def remove_folder(self, path: str) -> bool:
+        """Remove a folder and everything in it. False if there was no such folder. Refused for the workspace itself, for a file, and
+        (through `resolve`) for any path that goes through a symlink or leaves the workspace; a symlink INSIDE the folder is unlinked, never followed."""
+        target = self.resolve(path)
+        if not target.exists():
+            return False
+        if not target.is_dir():
+            raise PathRefused(f"{self.shown(target)} is a file; only folders can be removed this way")
+        shutil.rmtree(target)
+        return True
+
+    def replace_folder(self, source: str, destination: str) -> None:
+        """Make `destination` hold exactly what `source` holds, then `source` is gone. The old destination is removed only once the source is known to
+        be a real folder, so a mistake in the source name cannot empty the destination."""
+        src = self.resolve(source, must_exist=True)
+        dst = self.resolve(destination)
+        if not src.is_dir():
+            raise PathRefused(f"{self.shown(src)} is a file; only a folder can replace a folder")
+        if src == dst or src in dst.parents or dst in src.parents:
+            raise PathRefused("a folder cannot replace itself or one inside it")
+        self._make_parents(dst)
+        if dst.is_file():                                                  # ONE look at the disk: "exists, then is not a folder" is two, and a folder moved aside between them reads as a file
+            raise PathRefused(f"{self.shown(dst)} is a file")
+        # The old folder is moved ASIDE in one step and only then deleted, so two replacements of the same folder at once cannot meet half way through a
+        # delete: each one swaps whole folders, and the last swap wins. (Deleting in place while another replacement fills it fails with "Directory not empty".)
+        aside = dst.with_name(f".old-{dst.name}-{secrets.token_hex(4)}")
+        try:
+            os.rename(dst, aside)
+        except FileNotFoundError:
+            pass                                                           # nothing there yet, or another replacement already moved it
+        while True:
+            try:
+                os.rename(src, dst)
+                break
+            except OSError as exc:
+                if exc.errno not in (errno.ENOTEMPTY, errno.EEXIST) or not dst.is_dir():
+                    raise
+                os.rename(dst, dst.with_name(f".old-{dst.name}-{secrets.token_hex(4)}"))    # another replacement got there first: it becomes the old one
+        for leftover in dst.parent.glob(f".old-{dst.name}-*"):
+            shutil.rmtree(leftover, ignore_errors=True)
 
     def reset(self) -> None:
         """Empty the workspace (used between runs by the caller that owns it)."""

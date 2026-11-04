@@ -642,3 +642,116 @@ async def test_the_traces_of_a_run_carry_its_run_id(rig, store):
     result = await runner.run_phase(project.id, "requirements")
     mine = [t for t in store.traces.list(project.id) if t.run_id == result.run_id]
     assert len(mine) == 7 and {t.phase_key for t in mine} == {"requirements"}
+
+
+# ---- why a failed artefact failed (2026-11-03) -------------------------------------------------------------------------------------------------
+
+async def test_a_reply_cut_off_at_the_limit_on_every_attempt_says_so_in_plain_words_and_names_the_setting(rig, store):
+    runner, provider, engine, project, bus = rig(run_max_cost_usd=0)
+    await through_setup(runner, engine, project)
+    cut = ProviderResponse("<artefact>\n## Purpose\nnever finished", Usage(1000, 8000), "length")
+    provider.fail["personas"] = [cut, cut, cut]
+    result = await runner.run_phase(project.id, "requirements")
+    assert states(result)["personas"] == FAILED and result.by_key()["personas"].cut_off is True
+    event = next(e for e in store.run_events.list(project.id, run_id=result.run_id) if e.type == "artefact.failed" and e.data["key"] == "personas")
+    assert "cut off at its 8000-token output limit on every one of 3 attempt(s)" in event.data["reason"] and "AGENT_OUTPUT_TOKENS_BY_ROLE" in event.data["reason"]
+
+
+async def test_a_reply_that_failed_its_checks_without_being_cut_off_is_not_blamed_on_the_limit(rig, store):
+    runner, provider, engine, project, bus = rig(run_max_cost_usd=0)
+    await through_setup(runner, engine, project)
+    bad = ProviderResponse("no artefact block at all", Usage(1000, 300), "stop")
+    provider.fail["personas"] = [bad, bad, bad]
+    result = await runner.run_phase(project.id, "requirements")
+    assert result.by_key()["personas"].cut_off is False
+    event = next(e for e in store.run_events.list(project.id, run_id=result.run_id) if e.type == "artefact.failed" and e.data["key"] == "personas")
+    assert event.data["reason"] == "the reply failed its checks after 3 attempt(s) (1 problem(s))" and "output limit" not in event.data["reason"]
+
+
+async def test_the_runs_stored_record_keeps_what_each_failed_artefact_was_told_was_wrong(rig, store):
+    runner, provider, engine, project, bus = rig(run_max_cost_usd=0)
+    await through_setup(runner, engine, project)
+    bad = ProviderResponse("no artefact block at all", Usage(1000, 300), "stop")
+    provider.fail["personas"] = [bad, bad, bad]
+    result = await runner.run_phase(project.id, "requirements")
+    failure = store.runs.get(project.id, result.run_id).totals["failures"]["personas"]
+    assert failure["cut_off"] is False and failure["problems"] and "no <artefact> block" in failure["problems"][0]
+    assert "could not be produced" in failure["reason"]
+
+
+async def test_the_stored_failures_are_bounded_and_cleaned(rig, store, monkeypatch):
+    from app.agents.errors import OutputInvalid
+    from app.run.runner import MAX_STORED_PROBLEMS
+    runner, provider, engine, project, bus = rig(run_max_cost_usd=0)
+    await through_setup(runner, engine, project)
+    problems = [f"problem {n}: see https://evil.example/x?token=abc" + "z" * 600 for n in range(12)]
+
+    async def boom(*args, **kwargs):
+        raise OutputInvalid("it failed", problems, 3)
+    monkeypatch.setattr(runner.runtime, "run", boom)
+    result = await runner.run_phase(project.id, "requirements", only=["personas"])
+    failure = store.runs.get(project.id, result.run_id).totals["failures"]["personas"]
+    assert len(failure["problems"]) == MAX_STORED_PROBLEMS == 5
+    assert all(len(p) <= 300 and "evil.example" not in p for p in failure["problems"])
+
+
+async def test_a_run_that_fails_nothing_stores_no_failures(rig, store):
+    runner, provider, engine, project, bus = rig(run_max_cost_usd=0)
+    await through_setup(runner, engine, project)
+    result = await runner.run_phase(project.id, "requirements")
+    assert "failures" not in store.runs.get(project.id, result.run_id).totals
+
+
+async def test_the_failure_details_are_not_in_the_bounded_finished_event_so_a_flood_of_them_cannot_break_the_run(rig, store, monkeypatch):
+    """An event may hold 20,000 bytes. Enough failed artefacts with long reasons would pass that; the details are kept in the stored record only."""
+    import json
+    runner, provider, engine, project, bus = rig(run_max_cost_usd=0)
+    await through_setup(runner, engine, project)
+    real_publish = bus.publish
+    sizes = []
+
+    def watching(project_id, run_id, type_, data=None):
+        if type_ in ("run.finished", "run.stopped"):
+            sizes.append(len(json.dumps(data)))
+        return real_publish(project_id, run_id, type_, data)
+    monkeypatch.setattr(bus, "publish", watching)
+    from app.agents.errors import OutputInvalid
+
+    async def boom(*args, **kwargs):
+        raise OutputInvalid("it failed", ["p" * 600] * 5, 3)
+    monkeypatch.setattr(runner.runtime, "run", boom)
+    result = await runner.run_phase(project.id, "requirements")
+    final = [e for e in store.run_events.list(project.id, run_id=result.run_id) if e.type in ("run.finished", "run.stopped")][-1]
+    stored = store.runs.get(project.id, result.run_id).totals["failures"]
+    assert result.status == "failed" and final.type == "run.finished" and "failures" not in final.data
+    assert stored and len(json.dumps(stored)) > sizes[0]                                      # the record holds far more than the event does
+
+
+async def test_it_is_the_LAST_reply_that_decides_whether_a_failure_was_a_cut_off(rig, store):
+    """An earlier reply that hit the limit, followed by a last one that did not, is not blamed on the limit: the last attempt is what the person needs to fix."""
+    runner, provider, engine, project, bus = rig(run_max_cost_usd=0)
+    await through_setup(runner, engine, project)
+    cut = ProviderResponse("<artefact>\n## Purpose\nnever finished", Usage(1000, 8000), "length")
+    wrong = ProviderResponse("no artefact block at all", Usage(1000, 300), "stop")
+    provider.fail["personas"] = [cut, wrong, wrong]
+    result = await runner.run_phase(project.id, "requirements")
+    assert states(result)["personas"] == FAILED and result.by_key()["personas"].cut_off is False
+    assert store.runs.get(project.id, result.run_id).totals["failures"]["personas"]["cut_off"] is False
+    opposite = ProviderResponse("<artefact>\n## Purpose\nnever finished", Usage(1000, 8000), "length")
+    runner2, provider2, engine2, project2, bus2 = rig(run_max_cost_usd=0)
+    await through_setup(runner2, engine2, project2)
+    provider2.fail["personas"] = [wrong, wrong, opposite]
+    result2 = await runner2.run_phase(project2.id, "requirements")
+    assert result2.by_key()["personas"].cut_off is True and store.runs.get(project2.id, result2.run_id).totals["failures"]["personas"]["cut_off"] is True
+
+
+async def test_only_artefacts_that_failed_are_stored_as_failures_never_the_ones_skipped_because_of_them(rig, store):
+    runner, provider, engine, project, bus = rig(run_max_cost_usd=0)
+    await through_setup(runner, engine, project)
+    provider.fail["personas"] = [ContentFilterBlocked("blocked")] * 4
+    result = await runner.run_phase(project.id, "requirements")
+    skipped_keys = {o.key for o in result.outcomes if o.state == SKIPPED}
+    failed_keys = {o.key for o in result.outcomes if o.state == FAILED}
+    stored = store.runs.get(project.id, result.run_id).totals["failures"]
+    assert skipped_keys and failed_keys == {"personas"}
+    assert set(stored) == failed_keys and not (set(stored) & skipped_keys)

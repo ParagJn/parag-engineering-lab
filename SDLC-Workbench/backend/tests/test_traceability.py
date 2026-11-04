@@ -133,7 +133,7 @@ def test_every_shipped_skill_that_numbers_items_gives_a_rule_and_the_rule_says_w
     catalogue, skills = library
     rules = {r.artefact: r for r in G.rules_of(skills, catalogue)}
     held = {k for k in skills.keys if skills.get(k).items}
-    assert set(rules) == held and len(rules) == 14
+    assert set(rules) == held and len(rules) == 15
     for key, rule in rules.items():
         skill = skills.get(key)
         assert rule.holds == tuple(s.prefix for s in skill.items) and rule.covers == tuple(skill.covers) and rule.phase == skill.artefact.phase_key
@@ -144,7 +144,8 @@ def test_the_rules_the_matrix_uses_are_the_covers_lines_so_a_new_covers_line_cha
     got = {(r.artefact, c) for r in G.rules_of(skills, catalogue) for c in r.covers}
     assert got == {("component_overview", "FR"), ("component_overview", "NFR"), ("epics_features", "FR"), ("epics_features", "NFR"), ("flow_diagram", "IFC"),
                    ("hifi_wireframes", "LFS"), ("high_level_design", "COMP"), ("low_level_design", "FR"), ("lowfi_wireframes", "JS"), ("usecase_diagram", "PER"),
-                   ("user_journey", "PER"), ("user_stories", "FEAT")}
+                   ("user_journey", "PER"), ("user_stories", "FEAT"),
+                   ("build_instructions", "UC")}      # S19a: every use case must have an instruction file
 
 
 def test_what_a_rule_may_read_is_wider_than_what_it_must_cover(library):
@@ -161,7 +162,7 @@ def test_the_kinds_that_start_the_chain_are_read_from_the_skills_not_listed_by_h
 def test_columns_follow_the_phases_then_the_distance_from_the_requirements(library):
     catalogue, skills = library
     order = layer_order(G.rules_of(skills, catalogue), ("FR", "NFR"), [p.key for p in catalogue.phases])
-    assert order == ("EPIC", "FEAT", "US", "LFS", "JS", "HFS", "COMP", "DEC", "IFC", "API", "TBL", "RUL", "UC", "FLOW")
+    assert order == ("EPIC", "FEAT", "US", "LFS", "JS", "HFS", "COMP", "DEC", "IFC", "API", "TBL", "RUL", "UC", "FLOW", "INS")      # S19a: the one Build kind (instruction files), after the design ones
 
 
 def test_a_skill_that_ships_later_brings_its_own_column_and_rule(library):

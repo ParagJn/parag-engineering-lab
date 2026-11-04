@@ -126,7 +126,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 continue
             broken = text.replace(old, new)
             try:
-                compile(broken, relative, "exec")
+                if relative.endswith(".py"):                  # a Markdown skill or a YAML file is not Python: compiling it would call every break of it invalid
+                    compile(broken, relative, "exec")
             except SyntaxError as exc:
                 # A mutant that is not valid Python "fails" the suite for the wrong reason (nothing imports), so it
                 # would look caught. It tests nothing, so it is reported and counted against the run.

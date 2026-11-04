@@ -1,43 +1,12 @@
 key: build
 order: 4
 name: "Build & Test"
-summary: Build the database, back end and front end, then prove they work by running the tests.
+summary: Write the instruction files a person gives to a coding tool (Copilot, Claude, GPT or Gemini) so that tool builds the application. This system does not write the application.
 approver: technical lead
 artefacts:
-  - key: database_schema
-    name: Database schema
-    id_prefix: BLD-DB
-    role: database_engineer
+  - key: build_instructions
+    name: Build instructions
+    id_prefix: BLD-INS
+    role: solution_architect
     required: true
-    description: Tables, constraints and seed data, checked by actually creating them.
-  - key: backend_code
-    name: Backend code
-    id_prefix: BLD-BE
-    role: backend_developer
-    required: true
-    description: The API and business rules.
-  - key: frontend_code
-    name: Frontend code
-    id_prefix: BLD-FE
-    role: frontend_developer
-    required: true
-    description: The screens people use.
-  - key: test_suite
-    name: Test suite
-    id_prefix: BLD-TST
-    role: test_engineer
-    required: true
-    after: [backend_code]
-    description: Unit and API tests for the code that was built.
-  - key: test_report
-    name: Test report
-    id_prefix: BLD-RPT
-    role: test_engineer
-    after: [test_suite]
-    description: What the tests did when they were actually run.
-  - key: code_security_review
-    name: Code and security review
-    id_prefix: BLD-REV
-    role: security_reviewer
-    after: [backend_code, frontend_code, test_suite]
-    description: Findings from reading the code and from the secret and personal-data scan.
+    description: One set of Markdown instruction files for a coding tool - a foundation file, one file for each use case, and the acceptance tests - each pointing at the design items it builds.

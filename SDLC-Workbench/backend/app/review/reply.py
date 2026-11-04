@@ -33,17 +33,24 @@ _SUMMARY = re.compile(r"^\s*Summary\s*:\s*(?P<text>.*)$", re.IGNORECASE)
 _FINDING = re.compile(r"^\s*(?:[-*+]\s*)?\[(?P<severity>[A-Za-z]+)\]\s*(?P<rest>.*)$")  # the bullet is optional
 _TARGET_ID = re.compile(r"^(?P<target>[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-\d{3,})\s*[:\-–—]\s*(?P<rest>.*)$")
 _FIX = re.compile(r"\bFix\s*:\s*", re.IGNORECASE)
+# A file of the Build instruction set, optionally with a line: `UC-002-reserve-a-room.md` or `UC-002-reserve-a-room.md:41`. Read BEFORE the item-ID form, because a file name
+# starts with an item ID (`UC-002-...`) and would otherwise be cut at its first dash.
+_FILE_TARGET = re.compile(r"^[*_`'\"]*(?P<target>[A-Za-z0-9][A-Za-z0-9._-]*\.md(?::\d{1,5})?)[*_`'\"]*\s*:\s*(?P<rest>.*)$")
 
 
 @dataclass(frozen=True)
 class Finding:
     severity: str  # "high" | "medium" | "low"
-    target: str  # an item ID, a section heading, or "General"
+    target: str  # an item ID, a section heading, a file (`UC-001-a.md`) or a line in one (`UC-001-a.md:41`), or "General"
     problem: str
     fix: str
+    source: str = ""  # "" for the reviewer; "system" for a finding the system's own checks made (no model, no cost)
 
     def as_dict(self) -> dict[str, str]:
-        return {"severity": self.severity, "target": self.target, "problem": self.problem, "fix": self.fix}
+        out = {"severity": self.severity, "target": self.target, "problem": self.problem, "fix": self.fix}
+        if self.source:
+            out["source"] = self.source          # only when set, so every review stored before this existed reads exactly as it did
+        return out
 
 
 @dataclass(frozen=True)
@@ -101,7 +108,7 @@ def parse_review(text: str) -> ParsedReview:
                 for at in range(len(findings) - group, len(findings)):      # a wrapped continuation of the finding(s) above
                     last = findings[at]
                     if in_fix[at]:
-                        findings[at] = Finding(last.severity, last.target, last.problem, (last.fix + "\n" + raw.strip())[:MAX_FIX_CHARS].strip())
+                        findings[at] = Finding(last.severity, last.target, last.problem, (last.fix + "\n" + raw.strip())[:MAX_FIX_CHARS].strip(), last.source)
                     else:
                         findings[at] = _rebuild(last, (last.problem + " " + raw.strip()))
                         in_fix[at] = bool(_FIX.search(raw))
@@ -133,11 +140,14 @@ def parse_review(text: str) -> ParsedReview:
 
 def _rebuild(finding: Finding, text: str) -> Finding:
     problem, fix = _split_fix(text) if _FIX.search(text) else (text, finding.fix)
-    return Finding(finding.severity, finding.target, problem.strip()[:MAX_TEXT_CHARS], fix or finding.fix)
+    return Finding(finding.severity, finding.target, problem.strip()[:MAX_TEXT_CHARS], fix or finding.fix, finding.source)
 
 
 def _split_target(rest: str) -> tuple[str, str]:
     rest = rest.strip()
+    as_file = _FILE_TARGET.match(rest)
+    if as_file:
+        return as_file.group("target"), as_file.group("rest").strip()
     as_id = _TARGET_ID.match(rest)
     if as_id:
         return as_id.group("target"), as_id.group("rest").strip()

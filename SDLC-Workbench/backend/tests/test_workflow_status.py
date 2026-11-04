@@ -18,11 +18,11 @@ def block(make_settings) -> dict:
 
 def test_the_workflow_block_has_the_counts_and_one_row_per_phase(make_settings):
     wf, _ = block(make_settings)
-    assert (wf["phase_count"], wf["artefact_count"], wf["required_count"]) == (7, 33, 21)
+    assert (wf["phase_count"], wf["artefact_count"], wf["required_count"]) == (7, 28, 18)
     assert [p["key"] for p in wf["phases"]] == ["setup", "requirements", "design", "architecture", "build", "deploy", "handover"]
     assert all(set(p) == {"key", "order", "name", "approver", "artefacts", "required"} for p in wf["phases"])
     build = next(p for p in wf["phases"] if p["key"] == "build")
-    assert (build["name"], build["artefacts"], build["required"], build["approver"]) == ("Build & Test", 6, 4, "technical lead")
+    assert (build["name"], build["artefacts"], build["required"], build["approver"]) == ("Build & Test", 1, 1, "technical lead")
     assert sum(p["artefacts"] for p in wf["phases"]) == wf["artefact_count"]
     assert sum(p["required"] for p in wf["phases"]) == wf["required_count"]
 

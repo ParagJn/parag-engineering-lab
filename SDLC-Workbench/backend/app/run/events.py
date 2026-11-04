@@ -27,6 +27,10 @@ EVENT_TYPES = (
     "artefact.finished",
     "artefact.failed",
     "artefact.skipped",
+    "build.round",
+    "piece.started",
+    "piece.finished",
+    "piece.failed",
     "review.started",
     "review.finished",
     "review.paused",
@@ -59,6 +63,9 @@ def event_reason(exc: BaseException, secrets: Iterable[str] = ()) -> str:
     from ..models import InvalidInput
     from ..review.errors import ReviewOutputInvalid
 
+    if isinstance(exc, OutputInvalid) and exc.cut_off:
+        return (f"the reply was cut off at its {exc.limit}-token output limit on every one of {exc.attempts} attempt(s); "
+                "raise AGENT_OUTPUT_TOKENS_BY_ROLE for this role, or ask for a smaller artefact")
     if isinstance(exc, (OutputInvalid, ReviewOutputInvalid)):
         return f"the reply failed its checks after {exc.attempts} attempt(s) ({len(exc.problems)} problem(s))"
     if isinstance(exc, (AgentError, LLMError, InvalidInput)):

@@ -27,6 +27,7 @@ from .routes_content import router as content_router
 from .routes_projects import router as projects_router
 from .routes_review import router as review_router
 from .routes_trace import router as trace_router
+from .routes_verify import router as verify_router
 from .run.events import EventBus
 from .run.runner import PhaseRunner
 from .run.status import run_status
@@ -98,13 +99,24 @@ def create_app(settings: Settings | None = None, provider: Provider | None = Non
     bus = EventBus(store, queue_size=cfg.run_event_queue, secrets=cfg.secret_values)
     app.state.bus = bus
     app.state.settings = cfg
-    app.state.runner = PhaseRunner(cfg, store, engine, app.state.agents, app.state.reviews, bus)
+    from .build.loop import FixLoop
+    from .build.phase import BuildHooks
+    from .build.service import BuildService
+    from .sandbox.service import SandboxService
+
+    sandbox_service = SandboxService(cfg, store, scanner)           # the one place generated code is written and run (S16)
+    build_service = BuildService(sandbox_service)
+    from .build.compose import SetComposer
+    app.state.build = BuildHooks(FixLoop(cfg, store, app.state.agents, skills, build_service, sandbox_service), build_service, store, skills, cfg,
+                                 composer=SetComposer(app.state.agents, cfg, skills))
+    app.state.runner = PhaseRunner(cfg, store, engine, app.state.agents, app.state.reviews, bus, build=app.state.build)
     app.include_router(router)
     app.include_router(projects_router)
     app.include_router(content_router)
     app.include_router(artefacts_router)
     app.include_router(review_router)
     app.include_router(trace_router)
+    app.include_router(verify_router)
 
     app.add_middleware(
         CORSMiddleware,

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pathlib
+
 import pytest
 from pydantic import ValidationError
 
@@ -163,3 +165,49 @@ def test_get_settings_is_cached(monkeypatch, tmp_path):
 def test_unknown_env_lines_are_ignored(tmp_path):
     s = from_file(tmp_path, "SOMETHING_ELSE=1\nBACKEND_PORT=9999\n")
     assert s.app_mode == "replay"
+
+
+# ---- the per-run spending limit (2026-11-04) -----------------------------------------------------------------------------------------------------------
+# `.env.example` told people to set RUN_BUDGET_USD, but the cap the runner enforces is run_max_cost_usd, so the limit they set was never used and every run stayed at $5.
+
+def test_the_budget_a_person_sets_is_the_cap_a_run_is_stopped_at(tmp_path):
+    assert from_file(tmp_path, "RUN_BUDGET_USD=8.00\n").run_max_cost_usd == 8.0
+    assert from_file(tmp_path, "RUN_BUDGET_USD=8.00\n").run_budget_usd == 8.0
+
+
+def test_with_neither_set_the_cap_is_the_built_in_five_dollars(tmp_path):
+    s = from_file(tmp_path, "APP_MODE=replay\n")
+    assert s.run_max_cost_usd == 5.0 and s.run_budget_usd == 5.0
+
+
+def test_the_more_specific_name_wins_when_both_are_given_in_either_order(tmp_path):
+    assert from_file(tmp_path, "RUN_BUDGET_USD=8.00\nRUN_MAX_COST_USD=3.00\n").run_max_cost_usd == 3.0
+    assert from_file(tmp_path, "RUN_MAX_COST_USD=3.00\nRUN_BUDGET_USD=8.00\n").run_max_cost_usd == 3.0
+    assert from_file(tmp_path, "RUN_MAX_COST_USD=12.00\n").run_max_cost_usd == 12.0
+
+
+def test_the_specific_name_alone_does_not_move_the_budget_and_zero_still_switches_the_cap_off(tmp_path):
+    s = from_file(tmp_path, "RUN_MAX_COST_USD=12.00\n")
+    assert s.run_budget_usd == 5.0 and s.run_max_cost_usd == 12.0
+    assert from_file(tmp_path, "RUN_BUDGET_USD=0\n").run_max_cost_usd == 0.0
+
+
+def test_a_budget_outside_the_allowed_range_is_still_refused_at_start_up(tmp_path):
+    with pytest.raises(Exception):
+        from_file(tmp_path, "RUN_BUDGET_USD=5000\n")                        # the cap is limited to 1000, and the budget is copied into it
+
+
+def test_a_name_the_app_does_not_know_is_still_ignored(tmp_path):
+    assert from_file(tmp_path, "RUN_MAX=8.00\n").run_max_cost_usd == 5.0
+
+
+def test_the_example_file_says_which_name_wins():
+    text = (pathlib.Path(__file__).resolve().parents[1] / ".env.example").read_text(encoding="utf-8")
+    assert "RUN_BUDGET_USD=5.00" in text and "RUN_MAX_COST_USD" in text
+
+
+def test_a_budget_that_was_never_given_leaves_the_cap_alone_whether_the_cap_was_given_or_not(tmp_path):
+    assert from_file(tmp_path, "APP_MODE=replay\n").run_max_cost_usd == 5.0                        # neither given: the built-in cap
+    assert from_file(tmp_path, "RUN_MAX_COST_USD=2.50\n").run_max_cost_usd == 2.5                  # only the cap given: the cap, not the budget's default
+    assert from_file(tmp_path, "RUN_MAX_COST_USD=2.50\n").run_budget_usd == 5.0
+    assert from_file(tmp_path, "RUN_MAX_COST_USD=0\n").run_max_cost_usd == 0.0

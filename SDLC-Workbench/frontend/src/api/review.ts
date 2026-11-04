@@ -9,15 +9,17 @@ export const VERDICTS = ['ok', 'revise'] as const
 export type Verdict = (typeof VERDICTS)[number]
 export const INDEPENDENCE_LABELS = ['independent', 'same_family', 'unverified'] as const
 export type IndependenceLabel = (typeof INDEPENDENCE_LABELS)[number]
-export const REVIEW_STATES = ['unreviewed', 'reviewed', 'stale'] as const
+export const REVIEW_STATES = ['unreviewed', 'reviewed', 'stale', 'retired'] as const
 export type ReviewState = (typeof REVIEW_STATES)[number]
 
-export interface Finding { severity: Severity; target: string; problem: string; fix: string }
+/** `source` is `system` for a finding the system's own checks made (no model); absent for a reviewer's. */
+export interface Finding { severity: Severity; target: string; problem: string; fix: string; source?: 'system' }
 export interface Independence { label: IndependenceLabel; author_family: string; reviewer_family: string; fell_back: boolean }
 
 function decodeFinding(value: unknown, w: string): Finding {
   const o = obj(value, w)
-  return { severity: oneOf(o.severity, `${w}.severity`, SEVERITIES), target: str(o.target, `${w}.target`), problem: str(o.problem, `${w}.problem`), fix: str(o.fix, `${w}.fix`) }
+  const base = { severity: oneOf(o.severity, `${w}.severity`, SEVERITIES), target: str(o.target, `${w}.target`), problem: str(o.problem, `${w}.problem`), fix: str(o.fix, `${w}.fix`) }
+  return 'source' in o ? { ...base, source: oneOf(o.source, `${w}.source`, ['system'] as const) } : base
 }
 
 function decodeIndependence(value: unknown, w: string): Independence {
@@ -155,6 +157,13 @@ export interface EditSaved { artefact_id: string; version: number }
 export function decodeEditSaved(value: unknown): EditSaved {
   const o = obj(value, 'edit')
   return { artefact_id: str(o.artefact_id, 'edit.artefact_id'), version: num(o.version, 'edit.version') }
+}
+
+/** One file of the Build instruction set was changed and the set saved as a new version (S19f). */
+export interface EditFileSaved { artefact_id: string; file: string; version: number }
+export function decodeEditFileSaved(value: unknown): EditFileSaved {
+  const o = obj(value, 'file edit')
+  return { artefact_id: str(o.artefact_id, 'file edit.artefact_id'), file: str(o.file, 'file edit.file'), version: num(o.version, 'file edit.version') }
 }
 
 /** An edit the server refused: a sentence, and every reason, so the person can fix the text and try again. Nothing was saved. */

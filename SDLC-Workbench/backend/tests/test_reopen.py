@@ -97,7 +97,7 @@ async def test_the_reopened_phase_can_be_reviewed_edited_and_handed_back_again(w
     app, client, project = await world()
     assert (await client.post(f"/api/projects/{project.id}/phases/requirements/reopen", json={"reason": "to review again"})).status_code == 200
     state = next(p for p in (await client.get(f"/api/projects/{project.id}")).json()["phases"] if p["key"] == "requirements")
-    assert state["status"] == "running" and state["allowed_actions"] == ["run", "finish"]
+    assert state["status"] == "running" and state["allowed_actions"] == ["run", "rewrite", "finish"]      # the reopened phase has content, so a rewrite is offered
     assert (await client.post(f"/api/projects/{project.id}/phases/requirements/finish")).status_code == 200
     assert status_of(app, project.id, "requirements") == "awaiting_review"
     assert (await client.post(f"/api/projects/{project.id}/phases/requirements/approve")).status_code == 200

@@ -33,7 +33,7 @@ def create(client, **body):
 def test_the_catalogue_lists_every_phase_and_artefact_the_wizard_can_offer(client):
     body = client.get("/api/catalogue").json()
     assert [p["key"] for p in body["phases"]] == ["setup", "requirements", "design", "architecture", "build", "deploy", "handover"]
-    assert sum(len(p["artefacts"]) for p in body["phases"]) == 33
+    assert sum(len(p["artefacts"]) for p in body["phases"]) == 28
     reqs = next(p for p in body["phases"] if p["key"] == "requirements")
     assert {a["key"]: a["required"] for a in reqs["artefacts"]}["user_stories"] is False
     assert set(reqs["artefacts"][0]) == {"key", "name", "required", "description", "waits_for"}
@@ -242,7 +242,7 @@ def test_a_project_whose_stored_selection_is_broken_is_a_plain_error_not_a_crash
 # ---- allowed actions: the screen decides nothing -------------------------------------------------------------------------------------------
 
 @pytest.mark.parametrize("status, expected", [
-    ("not_started", ("run",)), ("running", ("run", "finish")), ("awaiting_review", ("approve", "request_changes")),
+    ("not_started", ("run",)), ("running", ("run", "rewrite", "finish")), ("awaiting_review", ("approve", "request_changes")),
     ("rejected", ("run",)), ("approved", ("reopen",)),
 ])
 def test_each_status_offers_exactly_these_actions(status, expected):
@@ -256,7 +256,7 @@ def test_a_phase_with_nothing_in_the_plan_offers_nothing():
 
 def test_a_phase_that_has_not_started_and_is_blocked_offers_nothing_but_one_under_way_is_never_blocked():
     assert allowed_actions("not_started", True, "Setup") == ()
-    assert allowed_actions("running", True, "Setup") == ("run", "finish")
+    assert allowed_actions("running", True, "Setup") == ("run", "rewrite", "finish")
 
 
 def test_an_unknown_status_offers_nothing_rather_than_guessing():
@@ -276,7 +276,7 @@ def test_the_actions_follow_a_phase_through_its_life(client):
     def actions(key="setup"):
         return next(p for p in client.get(f"/api/projects/{pid}").json()["phases"] if p["key"] == key)["allowed_actions"]
     assert actions() == ["run"]
-    engine.start(pid, "setup", actor="system");                     assert actions() == ["run", "finish"]
+    engine.start(pid, "setup", actor="system");                     assert actions() == ["run", "finish"]          # nothing written yet: a rewrite would be a plain run
     engine.finish(pid, "setup", actor="system");                    assert actions() == ["approve", "request_changes"]
     engine.reject(pid, "setup", actor="human:ann", feedback="redo"); assert actions() == ["run"]
     engine.start(pid, "setup", actor="system"); engine.finish(pid, "setup", actor="system")
@@ -351,3 +351,54 @@ def test_the_new_routes_are_exactly_these(client):
     added = sorted((m.upper(), p) for p, ops in paths.items() for m in ops if p in ("/api/catalogue", "/api/modes", "/api/plan/preview", "/api/projects", "/api/projects/{project_id}"))
     assert added == [("GET", "/api/catalogue"), ("GET", "/api/modes"), ("GET", "/api/projects"), ("GET", "/api/projects/{project_id}"),
                      ("POST", "/api/plan/preview"), ("POST", "/api/projects")]
+
+
+# ---- "rewrite everything" (2026-11-04) ----------------------------------------------------------------------------------------------------------------
+
+def test_a_running_phase_offers_rewrite_only_once_something_has_been_written():
+    assert allowed_actions("running", True, None, has_content=False) == ("run", "finish")
+    assert allowed_actions("running", True, None, has_content=True) == ("run", "rewrite", "finish")
+    assert allowed_actions("running", True, None) == ("run", "rewrite", "finish")                    # the default is that there is content
+
+
+def test_no_other_status_offers_rewrite_with_or_without_content():
+    for status in ("not_started", "awaiting_review", "rejected", "approved"):
+        for content in (True, False):
+            assert "rewrite" not in allowed_actions(status, True, None, has_content=content), (status, content)
+    assert "rewrite" in ACTIONS_BY_STATUS["running"] and sum("rewrite" in v for v in ACTIONS_BY_STATUS.values()) == 1
+
+
+def test_a_phase_with_nothing_in_the_plan_still_offers_nothing_even_with_content():
+    assert allowed_actions("running", False, None, has_content=True) == ()
+
+
+def test_the_page_is_told_to_offer_rewrite_once_an_artefact_exists_and_not_before(client):
+    pid = create(client).json()["id"]
+    engine, store = client.app.state.engine, client.app.state.store
+    def actions():
+        return next(p for p in client.get(f"/api/projects/{pid}").json()["phases"] if p["key"] == "setup")["allowed_actions"]
+    engine.start(pid, "setup", actor="system")
+    assert actions() == ["run", "finish"]
+    store.artefacts.create(pid, artefact_type="project_charter", phase_key="setup", title="C", actor="system", prefix="SET-CHR")
+    store.artefacts.add_version(pid, "SET-CHR-001", body="x", author="human:ann")
+    assert actions() == ["run", "rewrite", "finish"]
+
+
+def test_rewrite_is_offered_when_only_some_of_a_phases_artefacts_have_been_written(client):
+    """Requirements has seven artefacts. One written is enough to offer a rewrite: it is 'something has been written', not 'everything has'."""
+    pid = create(client).json()["id"]
+    engine, store = client.app.state.engine, client.app.state.store
+    store.artefacts.create(pid, artefact_type="project_charter", phase_key="setup", title="C", actor="system", prefix="SET-CHR")
+    store.artefacts.add_version(pid, "SET-CHR-001", body="x", author="human:ann")
+    engine.start(pid, "setup", actor="system"); engine.finish(pid, "setup", actor="system"); engine.approve(pid, "setup", actor="human:ann")
+    def actions():
+        return next(p for p in client.get(f"/api/projects/{pid}").json()["phases"] if p["key"] == "requirements")["allowed_actions"]
+    engine.start(pid, "requirements", actor="system")
+    phase = next(p for p in client.get(f"/api/projects/{pid}").json()["phases"] if p["key"] == "requirements")
+    assert len(phase["artefacts"]) > 1 and not any(a["has_content"] for a in phase["artefacts"])
+    assert actions() == ["run", "finish"]
+    store.artefacts.create(pid, artefact_type="personas", phase_key="requirements", title="P", actor="system", prefix="REQ-PER")
+    store.artefacts.add_version(pid, "REQ-PER-001", body="x", author="human:ann")
+    phase = next(p for p in client.get(f"/api/projects/{pid}").json()["phases"] if p["key"] == "requirements")
+    assert sum(a["has_content"] for a in phase["artefacts"]) == 1 and len(phase["artefacts"]) > 1          # one of several
+    assert actions() == ["run", "rewrite", "finish"]

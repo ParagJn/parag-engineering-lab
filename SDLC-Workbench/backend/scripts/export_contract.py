@@ -158,9 +158,57 @@ async def _scripted_runs(workdir: Path) -> tuple[dict[str, Any], Any]:
     interrupted = project("An interrupted run")
     app.state.store.runs.start(interrupted, "setup")
     app.state.store.runs.interrupt_unfinished()
+    # A fix round of the Build phase. The sandbox is not needed to know the SHAPE of the event, which the loop builds with this same function.
+    from app.build.loop import round_event
+    building = project("A build round")
+    build_run = app.state.store.runs.start(building, "build")
+    app.state.bus.publish(building, build_run.id, "build.round", round_event(1, "backend_code", 2, 0))
+    app.state.store.runs.end(build_run.id, "finished", totals={})
+    # The files of the Build instruction set (S19b). The runner adds the artefact's key; the bodies come from the composer's own functions.
+    from app.build.compose import failed_event, finished_event, started_event
+    writing = project("An instruction set")
+    set_run = app.state.store.runs.start(writing, "build")
+    for kind, data in (("piece.started", started_event("00-foundation.md", "foundation", 1, 4)),
+                       ("piece.finished", finished_event("00-foundation.md", 1, 21000, 3200, 0.0942)),
+                       ("piece.failed", failed_event("UC-002-browse-rooms.md", "'UC-002-browse-rooms.md' could not be produced: after 3 attempt(s) the reply still failed its checks"))):
+        app.state.bus.publish(writing, set_run.id, kind, {"key": "build_instructions", **data})
+    app.state.store.runs.end(set_run.id, "finished", totals={})
     events = _events_by_type(app)
     events.update({k: v for k, v in _events_by_type(capped).items() if k == "run.stopped"})
     return events, app
+
+
+def _verify_examples() -> dict[str, Any]:
+    """Build Verify (S20): a real check of a small FastAPI project written to a temporary folder, as the server answers it. The folder is a random name, so it is
+    replaced with a fixed one before the fixture is kept."""
+    from scripts.verify_demo import CODE, DESIGN, SCHEMA
+
+    with tempfile.TemporaryDirectory(prefix="sdlc_contract_verify_") as tmp:
+        root = Path(tmp) / "build"
+        (root / "app").mkdir(parents=True)
+        (root / "app" / "main.py").write_text(CODE)
+        (root / "app" / "schema.sql").write_text(SCHEMA)
+        (root / ".env").write_text("SECRET=never-read\n")
+        front = Path(tmp) / "front"
+        (front / "src" / "pages").mkdir(parents=True)
+        (front / "src" / "pages" / "BrowseRooms.tsx").write_text('// RUL-001 the form checks this first\nfetch("/api/rooms")\n')
+        settings = Settings(_env_file=None, data_dir=str(Path(tmp) / "data"), recordings_dir=str(Path(tmp) / "rec"), app_mode="replay")
+        app = create_app(settings)
+        client = TestClient(app, headers=ACTOR)
+        pid = client.post("/api/projects", json={"name": "Verify", "brief": BRIEF}).json()["id"]
+        lld = ("## Overview\nx\n## Endpoints\n- API-001 GET /api/rooms lists rooms. Derives from: FR-001\n- API-002 POST /api/reservations reserves a room. Derives from: FR-001\n"
+               "- API-003 DELETE /api/reservations/{id} cancels. Derives from: FR-001\n## Tables\n- TBL-001 rooms: id, name, capacity. Derives from: FR-001\n"
+               "## Rules\n- RUL-001 A booking may not overlap another. Derives from: FR-001\n## Coverage check\nNone\n## Open questions\nNone")
+        app.state.store.artefacts.create_and_add_version(pid, artefact_type="low_level_design", phase_key="design", title="Low-level design", prefix="DES-LLD", body=lld, author="human:seed")
+        app.state.store.artefacts.create_and_add_version(pid, artefact_type="hifi_wireframes", phase_key="design", title="Hi-fi wireframes", prefix="DES-HFS",
+                                                         body="## Screens\n- HFS-001 Browse rooms: the page. Derives from: FR-001\n", author="human:seed")
+        made = client.post(f"/api/projects/{pid}/verify", json={"backend_path": str(root), "frontend_path": str(front)})
+        out = {"verify_run": made.json()}
+        out["verify_list"] = client.get(f"/api/projects/{pid}/verify").json()
+        out["error_422_verify"] = client.post(f"/api/projects/{pid}/verify", json={"backend_path": str(Path(tmp) / "nope")}).json()
+        out["error_404_verify"] = client.get(f"/api/projects/{pid}/verify/99").json()
+        text = json.dumps(out).replace(str(root), "/projects/build/backend").replace(str(front), "/projects/build/frontend").replace(str(Path(tmp) / "nope"), "/projects/build/missing")
+        return json.loads(text)
 
 
 def _architecture_examples() -> dict[str, Any]:
@@ -371,6 +419,7 @@ def build_examples() -> dict[str, Any]:
         out.update(asyncio.run(_review_examples(Path(tmp))))
         out.update(_design_examples())
         out.update(_architecture_examples())
+        out.update(_verify_examples())
         return {name: normalise(body) for name, body in out.items()}
 
 

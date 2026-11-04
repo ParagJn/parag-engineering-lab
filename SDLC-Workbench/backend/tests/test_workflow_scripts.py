@@ -117,7 +117,7 @@ def test_the_document_lists_every_artefact_with_its_role_prefix_and_wave():
         assert f"## {phase.order} · {phase.name}" in text
         for item in phase.artefacts:
             assert item.name in text and item.id_prefix in text and item.role in text, item.key
-    assert "7 phases and 33 artefacts, 21 of them required" in text
+    assert "7 phases and 28 artefacts, 18 of them required" in text
 
 
 def test_a_changed_definition_changes_the_document(tmp_path, monkeypatch):

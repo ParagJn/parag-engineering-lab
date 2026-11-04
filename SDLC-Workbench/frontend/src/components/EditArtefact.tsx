@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { LineNumberedTextarea } from './LineNumberedTextarea'
 import { Notice } from './Notice'
 
 export interface EditArtefactProps {
@@ -20,9 +21,8 @@ export function EditArtefact({ title, initialBody, busy, refusal, error, onSave,
   return (
     <form aria-label={`Edit ${title}`} className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4" onSubmit={(e) => { e.preventDefault(); if (!unchanged && body.trim()) onSave(body, note) }}>
       <h3 className="text-base font-bold">Edit {title}</h3>
-      <p className="text-xs text-slate-500">This is saved as a new version in your name. It must pass every check an agent's text passes (structure, citations, item numbers, no secrets). If it does not, nothing is saved and the reasons are listed.</p>
-      <textarea aria-label="Artefact text" value={body} onChange={(e) => setBody(e.target.value)} rows={22} spellCheck={false}
-        className="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-sm" />
+      <p className="text-xs text-slate-500">The numbers beside the text are the line numbers a review names (for example UC-001-reserve.md:41). This is saved as a new version in your name. It must pass every check an agent's text passes (structure, citations, item numbers, no secrets). If it does not, nothing is saved and the reasons are listed.</p>
+      <LineNumberedTextarea label="Artefact text" value={body} onChange={setBody} />
       <label className="block text-sm font-semibold" htmlFor="edit-note">What did you change? (optional)</label>
       <input id="edit-note" value={note} onChange={(e) => setNote(e.target.value)} maxLength={1000} className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm" />
       {refusal && (

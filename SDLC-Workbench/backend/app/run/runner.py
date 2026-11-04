@@ -36,11 +36,16 @@ log = logging.getLogger(__name__)
 DONE, FAILED, SKIPPED, NOT_STARTED = "done", "failed", "skipped", "not_started"
 
 
+MAX_STORED_PROBLEMS = 5       # the last attempt's problems kept with a failed artefact, so a person can see WHY it failed afterwards
+
+
 @dataclass
 class ArtefactOutcome:
     key: str
     state: str  # done | failed | skipped | not_started
     reason: str | None = None
+    why: list = field(default_factory=list)   # the checks' own sentences for a reply that failed them (bounded, cleaned)
+    cut_off: bool = False                     # the last reply stopped because it hit the output limit
     artefact_id: str | None = None
     version: int | None = None
     attempts: int = 0
@@ -60,6 +65,7 @@ class RunResult:
     serial_seconds: float  # the sum of each artefact's own elapsed time: what a one-at-a-time run would have taken
     elapsed_seconds: float
     max_in_flight: int
+    build: Any = None  # a BuildOutcome when the Build phase ran its fix loop (or said why it did not), else None
 
     def by_key(self) -> dict[str, ArtefactOutcome]:
         return {o.key: o for o in self.outcomes}
@@ -69,7 +75,7 @@ class PhaseRunner:
     def __init__(
         self, settings: Settings, store: Store, engine: WorkflowEngine, runtime: AgentRuntime,
         reviews: ReviewService, bus: EventBus,
-        clock: Callable[[], float] = time.monotonic,
+        clock: Callable[[], float] = time.monotonic, build: Any = None,
     ):
         self.settings = settings
         self.store = store
@@ -78,6 +84,7 @@ class PhaseRunner:
         self.reviews = reviews
         self.bus = bus
         self.clock = clock
+        self.build = build                  # BuildHooks, or None: every phase but Build runs with none and is exactly as it was
         self._active: dict[tuple[str, str], str] = {}  # (project, phase) -> run id
         self._meters: dict[str, Meter] = {}
         self._tasks: dict[str, asyncio.Task] = {}
@@ -195,6 +202,9 @@ class PhaseRunner:
         existing = {a.type: a for a in self.store.artefacts.list(project_id, phase_key=phase_key)}
         has_version = {k: (k in existing and existing[k].latest_version is not None) for k in order}
         wanted = wanted_keys(order, has_version, only=options.get("only"), rewrite_all=bool(options.get("rewrite_all")))
+        # What the phase's hook writes itself AFTER the artefacts (S18: the Build test report and review) is not scheduled here as model work.
+        hook_writes = set(self.build.writes(phase_key)) if self.build is not None else set()
+        wanted = [k for k in wanted if k not in hook_writes]
         review = bool(options.get("review"))
 
         self.bus.publish(project_id, run_id, "run.started", {
@@ -264,6 +274,10 @@ class PhaseRunner:
                 skip_blocked()
 
         stop_reason = stop_reason or meter.should_stop()
+        build_outcome = None
+        if self.build is not None and self.build.wants(phase_key):
+            build_outcome = await self._build_loop(run_id, project_id, done, failed, skipped, meter, stop_reason)
+            stop_reason = stop_reason or meter.should_stop()
         # Anything never started is reported honestly; if the run was stopped, say why.
         for key in wanted:
             outcome = outcomes[key]
@@ -273,14 +287,28 @@ class PhaseRunner:
         counts = {s: sum(1 for o in outcomes.values() if o.state == s) for s in (DONE, FAILED, SKIPPED, NOT_STARTED)}
         status = "stopped" if stop_reason else ("failed" if counts[FAILED] else "finished")
         totals = {**meter.snapshot(), "artefacts": counts}
+        # What went wrong with each failed artefact, kept with the run so it can be read afterwards (the event only has a short sentence). Bounded and cleaned.
+        failures = {k: {"reason": o.reason, "problems": o.why, "cut_off": o.cut_off} for k, o in outcomes.items() if o.state == FAILED}
+        if failures:
+            totals["failures"] = failures
+        if build_outcome is not None:
+            totals["build"] = {"result": build_outcome.result, "reason": clean_reason(build_outcome.reason, self.settings.secret_values()), "rounds": build_outcome.rounds}
         serial = round(sum(elapsed.values()), 3)
         wall = round(self.clock() - wall_start, 3)
         totals.update({"serial_seconds": serial, "elapsed_seconds": wall, "max_in_flight": max_in_flight})
         self.store.runs.end(run_id, status if status != "failed" else "failed", stop_reason=stop_reason, totals=totals)
         event = "run.stopped" if stop_reason else "run.finished"
-        self.bus.publish(project_id, run_id, event, {"status": status, "reason": stop_reason, **{k: v for k, v in totals.items()}})
+        # The failure DETAILS live in the stored run record only. An event is bounded (20,000 bytes) and a run with many failed artefacts could pass that,
+        # which would raise here and turn a finished run into a failed one. The event keeps its short sentence per artefact (`artefact.failed`).
+        self.bus.publish(project_id, run_id, event, {"status": status, "reason": stop_reason, **{k: v for k, v in totals.items() if k != "failures"}})
         return RunResult(
-            run_id, project_id, phase_key, status, stop_reason, [outcomes[k] for k in wanted], totals, serial, wall, max_in_flight,
+            run_id, project_id, phase_key, status, stop_reason, [outcomes[k] for k in wanted], totals, serial, wall, max_in_flight, build_outcome,
+        )
+
+    async def _build_loop(self, run_id, project_id, done, failed, skipped, meter, stop_reason):
+        """The Build phase's one extra step: really run the generated tests and ask for fixes. The hook decides whether it can, and puts the workspace back."""
+        return await self.build.after_artefacts(
+            project_id, run_id, done, failed, skipped, meter, lambda kind, data: self.bus.publish(project_id, run_id, kind, data), stop_reason,
         )
 
     def _poll_seconds(self, meter: Meter) -> float | None:
@@ -315,9 +343,16 @@ class PhaseRunner:
             if existing.latest_version is not None:
                 previous = self.store.artefacts.get_version(project_id, existing.id).body
         try:
-            result: AgentResult = await self.runtime.run(
-                project_id, key, previous_draft=previous, run_id=run_id, on_call=on_call,
-            )
+            if self.build is not None and self.build.composes(phase_key, key):
+                # Written in small pieces by the phase's own hook (S19b); every piece event carries this artefact's key so the screen can file it under its row.
+                result: AgentResult = await self.build.compose(
+                    project_id, run_id, meter, lambda kind, data: self.bus.publish(project_id, run_id, kind, {"key": key, **data}),
+                )
+            else:
+                result = await self.runtime.run(
+                    project_id, key, previous_draft=previous, run_id=run_id, on_call=on_call,
+                    extra_check=self.build.extra_check(phase_key, key, project_id) if self.build is not None else None,
+                )
         except RunStopped as exc:
             outcome.state, outcome.reason = NOT_STARTED, f"dropped unsaved: the run was stopped ({exc.reason})"
             self.bus.publish(project_id, run_id, "artefact.failed", {"key": key, "reason": outcome.reason, "saved": False})
@@ -327,6 +362,8 @@ class PhaseRunner:
             raise
         except (AgentError, LLMError, InvalidInput) as exc:
             outcome.state, outcome.reason = FAILED, clean_reason(str(exc), secrets)   # the full reason stays in the result
+            outcome.why = [clean_reason(p, secrets) for p in list(getattr(exc, "problems", ()))[:MAX_STORED_PROBLEMS]]
+            outcome.cut_off = bool(getattr(exc, "cut_off", False))
             self.bus.publish(project_id, run_id, "artefact.failed", {"key": key, "reason": event_reason(exc, secrets), "saved": False})
             elapsed[key] = self.clock() - began
             return

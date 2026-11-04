@@ -33,11 +33,11 @@ def test_seven_phases_in_lifecycle_order(catalogue):
 
 
 def test_counts_match_the_reviewed_spec(catalogue):
-    assert (len(catalogue.phases), catalogue.artefact_count, catalogue.required_count) == (7, 33, 21)
+    assert (len(catalogue.phases), catalogue.artefact_count, catalogue.required_count) == (7, 28, 18)
     per_phase = {p.key: (len(p.artefacts), sum(a.required for a in p.artefacts)) for p in catalogue.phases}
     assert per_phase == {
         "setup": (1, 1), "requirements": (7, 6), "design": (3, 2), "architecture": (5, 3),
-        "build": (6, 4), "deploy": (5, 3), "handover": (6, 2),
+        "build": (1, 1), "deploy": (5, 3), "handover": (6, 2),
     }
 
 
@@ -54,7 +54,7 @@ def test_every_role_exists_in_routing(catalogue):
 
 def test_every_artefact_has_a_description_and_a_unique_key_across_the_catalogue(catalogue):
     keys = [a.key for p in catalogue.phases for a in p.artefacts]
-    assert len(keys) == len(set(keys)) == 33
+    assert len(keys) == len(set(keys)) == 28
     assert all(a.description.strip() for p in catalogue.phases for a in p.artefacts)
 
 
@@ -89,8 +89,8 @@ def test_dependencies_stay_inside_their_phase_and_have_no_loops(catalogue):
 def test_the_demo_critical_path_artefacts_are_required(catalogue):
     required = {a.key for p in catalogue.phases for a in p.artefacts if a.required}
     for key in ("project_charter", "functional_requirements", "non_functional_requirements", "user_journey",
-                "high_level_design", "low_level_design", "database_schema", "backend_code", "frontend_code",
-                "test_suite", "infrastructure_as_code", "release_notes", "runbook", "support_guide"):
+                "high_level_design", "low_level_design", "build_instructions",
+                "infrastructure_as_code", "release_notes", "runbook", "support_guide"):
         assert key in required, key
     for key in ("handover_signoff", "hypercare_plan", "user_stories", "hifi_wireframes"):
         assert key not in required, key
@@ -98,7 +98,7 @@ def test_the_demo_critical_path_artefacts_are_required(catalogue):
 
 def test_phase_lookup(catalogue):
     assert catalogue.phase("build").name == "Build & Test"
-    assert catalogue.phase("build").artefact("backend_code").role == "backend_developer"
+    assert catalogue.phase("build").artefact("build_instructions").role == "solution_architect"
     assert catalogue.has_phase("deploy") and not catalogue.has_phase("nope")
     with pytest.raises(KeyError):
         catalogue.phase("nope")

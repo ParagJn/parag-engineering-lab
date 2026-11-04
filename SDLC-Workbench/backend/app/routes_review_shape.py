@@ -9,10 +9,13 @@ from typing import Any
 
 
 def finding_payload(finding: dict[str, Any]) -> dict[str, Any]:
-    return {
+    out = {
         "severity": str(finding.get("severity", "")), "target": str(finding.get("target", "")),
         "problem": str(finding.get("problem", "")), "fix": str(finding.get("fix", "")),
     }
+    if finding.get("source"):
+        out["source"] = str(finding["source"])      # only when a finding came from the system's own checks, so every other review reads exactly as before
+    return out
 
 
 def review_payload(record: Any) -> dict[str, Any] | None:

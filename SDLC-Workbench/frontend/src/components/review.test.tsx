@@ -3,7 +3,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import {
-  decodeArtefactDetail, decodeArtefactList, decodeProject, decodeReviewAnswer, decodeReviewState, type OpenItems, type ReviewStatus, type StoredReview,
+  decodeArtefactDetail, decodeArtefactList, decodeProject, decodeReviewAnswer, decodeReviewState, decodeStoredReview, type OpenItems, type ReviewStatus, type StoredReview,
 } from '../api'
 import artefactsJson from '../contract/artefacts.json'
 import detailJson from '../contract/project_detail.json'
@@ -11,7 +11,10 @@ import pausedJson from '../contract/review_paused.json'
 import reviewDetailJson from '../contract/review_artefact_detail.json'
 import stateAfterJson from '../contract/review_state_after.json'
 import stateStaleJson from '../contract/review_state_stale.json'
+import { REVIEW_STATES } from '../api'
+import { REVIEW_STATE_LABEL } from '../lib/format'
 import { actionSpecs } from '../lib/phaseActions'
+import { reviewQueueOf } from '../state/useProjectScreen'
 import { emptyReview, emptyScreen, ProjectPage, type ReviewScreen } from '../pages/ProjectPage'
 import { ApprovalSummary, openCount } from './ApprovalSummary'
 import { ArtefactCardView } from './ArtefactCard'
@@ -41,10 +44,35 @@ const status = (over: Partial<ReviewStatus> = {}): ReviewStatus => ({ artefact_i
 const noGaps = { needs_attention: 0, explained: 0, items: [] as string[] }
 const noOpen: OpenItems = { open_high_findings: 0, unreviewed: [], review_out_of_date: [], built_on_changed: [], guardrail_flags: {}, traceability_gaps: noGaps }
 
+describe('a finding made by the system\'s own checks', () => {
+  const base = { severity: 'high' as const, target: '00-foundation.md:3', problem: 'wrong code', fix: '' }
+  it('is labelled, and the label says it was not the reviewer model and cost nothing', () => {
+    const out = html(<FindingRow finding={{ ...base, source: 'system' }} />)
+    expect(out).toContain('found by the system')
+    expect(out).toContain('title="Found by the system&#x27;s own checks, not by the reviewer model. It cost nothing."')
+  })
+  it('a reviewer\'s finding, and any other artefact\'s, carries no such label', () => {
+    expect(html(<FindingRow finding={base} />)).not.toContain('found by the system')
+  })
+  it('is read from the server as `system` and nothing else: an unknown source is refused, and no source stays absent', () => {
+    const one = (extra: object) => ({ ...(review as object), findings: [{ ...base, ...extra }] })
+    expect(decodeStoredReview(one({ source: 'system' })).findings[0].source).toBe('system')
+    expect(decodeStoredReview(one({})).findings[0]).not.toHaveProperty('source')
+    expect(() => decodeStoredReview(one({ source: 'reviewer' }))).toThrow()
+    expect(() => decodeStoredReview(one({ source: 7 }))).toThrow()
+  })
+})
+
 describe('the review chip', () => {
   it('not reviewed, with no status at all, reads the same', () => {
     expect(html(<ReviewChip status={null} />)).toContain('Not reviewed')
     expect(html(<ReviewChip status={status({ state: 'unreviewed', verdict: null })} />)).toContain('Not reviewed')
+  })
+  it('a retired artefact says Retired, in its own quiet look, and never says Not reviewed, OK or Revise', () => {
+    const out = html(<ReviewChip status={status({ state: 'retired', verdict: null, reviewed_version: null })} />)
+    expect(out).toContain('Retired')
+    expect(out).toContain('title="This part of the phase no longer exists.')
+    for (const word of ['Not reviewed', '>OK<', 'Revise', 'out of date']) expect(out).not.toContain(word)
   })
   it('OK and Revise are different words, with the number of high findings', () => {
     expect(html(<ReviewChip status={status()} />)).toContain('>OK<')
@@ -352,6 +380,39 @@ describe('the project page with review state', () => {
     const out = html(<ProjectPage project={awaiting} phaseKey="requirements" screen={{ ...screen(review({ editing: true })), open: artefact }} />)
     expect(out).toContain(`aria-label="Edit ${artefact.title}"`); expect(out).not.toContain('aria-label="Sources"')
   })
+  it('editing one file of a set shows a box titled with the file and holding only that file\'s text', () => {
+    const body = '## Overview\nx\n\n## Files\n- INS-001 00-foundation.md: F.\n\n## Instructions\n=== FILE: 00-foundation.md ===\n# Foundation\n\nFirst file.\n\n=== FILE: UC-001-a.md ===\n# Second\n\nSecond file text.\n'
+    const set = { ...artefact, type: 'build_instructions', body }
+    const out = html(<ProjectPage project={awaiting} phaseKey="requirements" screen={{ ...screen(review({ editing: true, editingFile: 'UC-001-a.md' })), open: set }} />)
+    expect(out).toContain('aria-label="Edit UC-001-a.md"')
+    expect(out).toContain('Second file text.'); expect(out).not.toContain('First file.')
+    expect(out).not.toContain('aria-label="Instruction files"')
+  })
+  it('moving from one file to another gives the second its own text, not what was typed in the first', () => {
+    const body = '## Overview\nx\n\n## Instructions\n=== FILE: 00-foundation.md ===\n# Foundation\n\nFirst file.\n\n=== FILE: UC-001-a.md ===\n# Second\n\nSecond file text.\n'
+    const at = (name: string) => ({ ...screen(review({ editing: true, editingFile: name })), open: { ...artefact, type: 'build_instructions', body } })
+    const first = ProjectPage({ project: awaiting, phaseKey: 'requirements', screen: at('00-foundation.md') } as never)
+    const second = ProjectPage({ project: awaiting, phaseKey: 'requirements', screen: at('UC-001-a.md') } as never)
+    const keyOf = (node: unknown): string[] => {
+      const out: string[] = []
+      const walk = (n: unknown): void => {
+        if (Array.isArray(n)) return n.forEach(walk)
+        if (n && typeof n === 'object' && 'props' in (n as object)) {
+          const el = n as { type: unknown; key: string | null; props: { children?: unknown } }
+          if (typeof el.type === 'function' && (el.type as { name?: string }).name === 'EditArtefact' && el.key) out.push(el.key)
+          walk(el.props.children)
+        }
+      }
+      walk(node)
+      return out
+    }
+    expect(keyOf(first)).toEqual(['00-foundation.md']); expect(keyOf(second)).toEqual(['UC-001-a.md'])
+  })
+  it('editing the whole set (no file named) still holds the whole text', () => {
+    const body = '## Overview\nx\n\n## Instructions\n=== FILE: 00-foundation.md ===\n# Foundation\n\nFirst file.\n\n=== FILE: UC-001-a.md ===\n# Second\n\nSecond file text.\n'
+    const out = html(<ProjectPage project={awaiting} phaseKey="requirements" screen={{ ...screen(review({ editing: true })), open: { ...artefact, type: 'build_instructions', body } }} />)
+    expect(out).toContain('First file.'); expect(out).toContain('Second file text.')
+  })
   it('the reader offers Review and Edit when the server allows them, and Edit is off while a run is going', () => {
     const open = { ...screen(review()), open: artefact }
     const out = html(<ProjectPage project={awaiting} phaseKey="requirements" screen={open} />)
@@ -642,4 +703,48 @@ describe('Copy the suggested fix', () => {
     const out = html(<FindingRow finding={{ severity: 'low', target: '<b>x</b>', problem: 'p', fix: '<script>alert(1)</script>' }} />)
     expect(out).not.toContain('<script>'); expect(out).not.toContain('<b>x</b>')
   })
+})
+
+
+describe('the Review all queue (2026-11-05)', () => {
+  const card = (id: string, phase = 'build', version: number | null = 1) => ({ id, title: `Title ${id}`, phase_key: phase, latest_version: version }) as never
+  it('leaves out an artefact the server says is retired, and keeps the others in the order they come', () => {
+    const queue = reviewQueueOf([card('A'), card('B'), card('C')], 'build', [{ artefact_id: 'B', state: 'retired' }, { artefact_id: 'A', state: 'unreviewed' }])
+    expect(queue).toEqual([{ id: 'A', name: 'Title A' }, { id: 'C', name: 'Title C' }])
+  })
+  it('still leaves out another phase, and an artefact with nothing written', () => {
+    expect(reviewQueueOf([card('A', 'design'), card('B', 'build', null), card('C')], 'build', [])).toEqual([{ id: 'C', name: 'Title C' }])
+  })
+  it('a state other than retired never removes an artefact', () => {
+    const queue = reviewQueueOf([card('A'), card('B'), card('C')], 'build', [{ artefact_id: 'A', state: 'reviewed' }, { artefact_id: 'B', state: 'stale' }, { artefact_id: 'C', state: 'unreviewed' }])
+    expect(queue.map((q) => q.id)).toEqual(['A', 'B', 'C'])
+  })
+  it('with no statuses loaded yet, nothing is left out', () => {
+    expect(reviewQueueOf([card('A'), card('B')], 'build', []).map((q) => q.id)).toEqual(['A', 'B'])
+  })
+  it('the server may name the new state and the page accepts it', () => {
+    expect(REVIEW_STATES).toContain('retired')
+    expect(REVIEW_STATE_LABEL.retired).toBe('Retired')
+  })
+})
+
+describe('line numbers in the edit box', () => {
+  const props = { title: 'UC-001-a.md', initialBody: '# Title\n\n## Goal\nOne line.\n', busy: false, refusal: null, error: null, onSave: noop, onCancel: noop }
+  const gutter = (out: string) => { const at = out.indexOf('aria-hidden="true" class="font-mono'); return out.slice(at, out.indexOf('</textarea>', at)) }
+  it('numbers every real line from 1, and the empty piece after the last newline is not a line', () => {
+    const numbers = [...gutter(html(<EditArtefact {...props} />)).matchAll(/<div[^>]*>(\d+)<\/div>/g)].map((m) => m[1])
+    expect(numbers).toEqual(['1', '2', '3', '4'])
+  })
+  it('a blank line is numbered like any other, and one line with no newline is line 1', () => {
+    const blank = [...gutter(html(<EditArtefact {...props} initialBody={'a\n\n\nb'} />)).matchAll(/<div[^>]*>(\d+)<\/div>/g)].map((m) => m[1])
+    expect(blank).toEqual(['1', '2', '3', '4'])
+    const one = [...gutter(html(<EditArtefact {...props} initialBody="only" />)).matchAll(/<div[^>]*>(\d+)<\/div>/g)].map((m) => m[1])
+    expect(one).toEqual(['1'])
+  })
+  it('the text itself is still in the text area exactly as stored, and the numbers are hidden from a screen reader and cannot be selected', () => {
+    const out = html(<EditArtefact {...props} />)
+    expect(out).toContain('<textarea'); expect(out).toContain('aria-label="Artefact text"'); expect(out).toContain('# Title\n\n## Goal\nOne line.\n')
+    expect(out).toContain('select-none')
+  })
+  it('tells the person what the numbers are for', () => { expect(html(<EditArtefact {...props} />)).toContain('the line numbers a review names') })
 })

@@ -1,0 +1,158 @@
+{
+  "at": "2026-01-01T00:00:00.000Z",
+  "backend_path": "/projects/build/backend",
+  "by": "human:Demo Person",
+  "counts": [
+    {
+      "area": "endpoint",
+      "designed": 3,
+      "differences": 0,
+      "extras": 2,
+      "found": 1,
+      "not_found": 2,
+      "possible": 0,
+      "weak": 0
+    },
+    {
+      "area": "table",
+      "designed": 1,
+      "differences": 1,
+      "extras": 0,
+      "found": 0,
+      "not_found": 0,
+      "possible": 0,
+      "weak": 0
+    },
+    {
+      "area": "screen",
+      "designed": 1,
+      "differences": 0,
+      "extras": 0,
+      "found": 1,
+      "not_found": 0,
+      "possible": 0,
+      "weak": 0
+    },
+    {
+      "area": "rule",
+      "designed": 1,
+      "differences": 0,
+      "extras": 0,
+      "found": 0,
+      "not_found": 0,
+      "possible": 0,
+      "weak": 1
+    }
+  ],
+  "design": {
+    "DES-HFS-001": 1,
+    "DES-LLD-001": 1
+  },
+  "frontend_path": "/projects/build/frontend",
+  "id": 1,
+  "matches": [
+    {
+      "area": "endpoint",
+      "built": "GET /api/rooms",
+      "designed": "API-001",
+      "differences": [],
+      "file": "app/main.py",
+      "line": 16,
+      "note": "",
+      "score": 1.0,
+      "state": "found",
+      "step": "exact"
+    },
+    {
+      "area": "endpoint",
+      "built": "",
+      "designed": "API-002",
+      "differences": [],
+      "file": "",
+      "line": 0,
+      "note": "nothing in the code looks like this endpoint",
+      "score": 0.0,
+      "state": "not_found",
+      "step": ""
+    },
+    {
+      "area": "endpoint",
+      "built": "",
+      "designed": "API-003",
+      "differences": [],
+      "file": "",
+      "line": 0,
+      "note": "nothing in the code looks like this endpoint",
+      "score": 0.0,
+      "state": "not_found",
+      "step": ""
+    },
+    {
+      "area": "table",
+      "built": "room",
+      "designed": "TBL-001",
+      "differences": [
+        "the design calls it 'rooms', the code 'room'",
+        "the design has column 'capacity' that the code's table does not"
+      ],
+      "file": "app/schema.sql",
+      "line": 1,
+      "note": "",
+      "score": 1.0,
+      "state": "differences",
+      "step": "shape"
+    },
+    {
+      "area": "screen",
+      "built": "BrowseRooms",
+      "designed": "HFS-001",
+      "differences": [],
+      "file": "src/pages/BrowseRooms.tsx",
+      "line": 1,
+      "note": "calls /api/rooms",
+      "score": 1.0,
+      "state": "found",
+      "step": "words"
+    },
+    {
+      "area": "rule",
+      "built": "",
+      "designed": "RUL-001",
+      "differences": [],
+      "file": "src/pages/BrowseRooms.tsx",
+      "line": 0,
+      "note": "RUL-001 is written in a comment, a test or a message. This is weak evidence: it shows the rule was talked about, not that it is enforced.",
+      "score": 0.0,
+      "state": "weak",
+      "step": "words"
+    },
+    {
+      "area": "endpoint",
+      "built": "GET /api/health",
+      "designed": null,
+      "differences": [],
+      "file": "app/main.py",
+      "line": 25,
+      "note": "",
+      "score": 0.0,
+      "state": "extra",
+      "step": ""
+    },
+    {
+      "area": "endpoint",
+      "built": "POST /api/bookings",
+      "designed": null,
+      "differences": [],
+      "file": "app/main.py",
+      "line": 20,
+      "note": "",
+      "score": 0.0,
+      "state": "extra",
+      "step": ""
+    }
+  ],
+  "notes": [
+    "backend: left out .env (it may hold a secret)",
+    "frontend: read 1 files by pattern, not parsed: 1 pages and 1 API calls found"
+  ]
+}

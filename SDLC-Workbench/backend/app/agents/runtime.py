@@ -8,7 +8,7 @@ from __future__ import annotations
 import asyncio
 import sqlite3
 from dataclasses import dataclass, replace
-from typing import Callable, Mapping, Sequence
+from typing import Awaitable, Callable, Mapping, Sequence
 
 from ..config import Settings
 from ..llm.gateway import Gateway
@@ -18,6 +18,7 @@ from ..repos import Store
 from ..workflow.definitions import Catalogue
 from ..workflow.engine import WorkflowEngine
 from .errors import (
+    AgentError,
     RunStopped,
     ArtefactNotInPlan,
     InputTooLarge,
@@ -28,6 +29,7 @@ from .errors import (
 )
 from ..guardrails.scan import Scanner
 from .checks import check_body
+from ..build.instructions import INSTRUCTIONS_KEY
 from .items import Item, ItemContext, history_of, parse_items, upstream_pool
 from .notes import unacted_notes
 from .prompt import (
@@ -40,7 +42,7 @@ from .prompt import (
     repair_message,
     select_hits,
 )
-from .reply import CUT_OFF_BEFORE_CLOSING, TRUNCATED_REASONS, ReplyFormatError, cited_ids, parse_reply
+from .reply import CUT_OFF_BEFORE_CLOSING, MAX_PROBLEMS, TRUNCATED_REASONS, ReplyFormatError, cited_ids, parse_reply
 from .skills import Skill, SkillLibrary
 
 
@@ -108,15 +110,47 @@ class AgentRuntime:
         run_id: str | None = None,
         overrides: Mapping[str, str] | None = None,
         on_call: Callable[[LLMResult, int, list[str]], str | None] | None = None,
+        extra_check: Callable[[str], Awaitable[Sequence[str]]] | None = None,
     ) -> AgentResult:
         """Generate one artefact and save it as a new version. Raises (and saves nothing) on any failure.
 
         `on_call(result, attempt, problems)` is told after every model call, with the problems found in that
         reply. A phase run uses it to count cost as it happens. If it returns a reason ("budget", "time" or
-        "cancelled") the artefact is dropped unsaved at once, so a repair loop cannot spend past a cap."""
+        "cancelled") the artefact is dropped unsaved at once, so a repair loop cannot spend past a cap.
+
+        `extra_check(body)` runs on a reply that passed every ordinary check, and returns more problems in plain sentences (or none). They are
+        sent back exactly like any other problem, so what it finds is repaired in the same conversation and nothing bad is ever saved. A Build
+        artefact uses it to really try its files (S17b). It is never called on a reply that already has problems, and None means no extra check."""
+        if artefact_key == INSTRUCTIONS_KEY:
+            # One reply cannot hold the whole set (the first live run wrote nothing at 8,000 tokens): it is written file by file by the Build phase run.
+            raise AgentError("the Build instructions are written file by file when the Build phase is run; run the Build phase to write or rewrite them")
         project, skill = await asyncio.to_thread(self._check_runnable, project_id, artefact_key)
         prompt, item_ctx = await asyncio.to_thread(self._assemble, project, skill, feedback, previous_draft)
+        calls, repair_log, body = await self.converse(
+            project_id, skill, prompt, lambda result: self._check(result, skill, prompt, item_ctx, self.scanner),
+            run_id=run_id, overrides=overrides, on_call=on_call, extra_check=extra_check,
+        )
+        return await asyncio.to_thread(self._save, project_id, skill, body, calls, prompt, run_id, item_ctx, repair_log)
 
+    async def converse(
+        self,
+        project_id: str,
+        skill: Skill,
+        prompt: Prompt,
+        check: Callable[[LLMResult], tuple[list[str], str]],
+        *,
+        run_id: str | None = None,
+        overrides: Mapping[str, str] | None = None,
+        on_call: Callable[[LLMResult, int, list[str]], str | None] | None = None,
+        extra_check: Callable[[str], Awaitable[Sequence[str]]] | None = None,
+        label: str | None = None,
+    ) -> tuple[list[LLMResult], list[dict], str]:
+        """The model conversation for ONE reply: call, check, send the problems back, up to the repair budget. Returns (the calls, what was wrong with each
+        attempt that had to be repaired, the body of the accepted reply). Raises (and saves nothing) when no attempt is accepted.
+
+        `check(result)` returns (problems, body). `label` names what is being written in the messages (default: the artefact's name); the Build instruction
+        set writes one file per conversation and names the file."""
+        what = label or skill.artefact.name
         calls: list[LLMResult] = []
         repair_log: list[dict] = []   # what was wrong with each attempt that had to be repaired, kept with the saved version
         messages = [Message("user", prompt.user)]
@@ -138,14 +172,16 @@ class AgentRuntime:
                 overrides=overrides,
             )
             calls.append(result)
-            problems, body = self._check(result, skill, prompt, item_ctx, self.scanner)
+            problems, body = check(result)
+            if not problems and extra_check is not None:
+                problems = [str(p) for p in await extra_check(body)][:MAX_PROBLEMS]
             if problems:
                 repair_log.append(logged_problems(attempt, result.call_id, problems))
             if on_call is not None:
                 stop = on_call(result, attempt, problems)
                 if stop is not None:
                     raise RunStopped(
-                        f"'{skill.artefact.name}' was dropped unsaved: the run was stopped ({stop}) after attempt {attempt}", stop,
+                        f"'{what}' was dropped unsaved: the run was stopped ({stop}) after attempt {attempt}", stop,
                     )
             if not problems:
                 break
@@ -153,11 +189,24 @@ class AgentRuntime:
                 messages += [Message("assistant", echo_for_repair(result.text)), Message("user", repair_message(problems))]
         else:
             raise OutputInvalid(
-                f"'{skill.artefact.name}' could not be produced: after {max_attempts} attempt(s) the reply still "
+                f"'{what}' could not be produced: after {max_attempts} attempt(s) the reply still "
                 f"failed its checks ({'; '.join(problems)}). Nothing was saved.",
                 problems, max_attempts,
+                cut_off=calls[-1].finish_reason in TRUNCATED_REASONS, limit=self.settings.output_tokens_for(skill.artefact.role),
             )
-        return await asyncio.to_thread(self._save, project_id, skill, body, calls, prompt, run_id, item_ctx, repair_log)
+        return calls, repair_log, body
+
+    def ensure_runnable(self, project_id: str, artefact_key: str) -> tuple[Project, Skill]:
+        """Raise, in plain words, unless this artefact may be written now (known, has a skill, switched on, its phase running). Returns the project and skill."""
+        return self._check_runnable(project_id, artefact_key)
+
+    def save_composed(
+        self, project_id: str, skill: Skill, body: str, calls: Sequence[LLMResult], upstream: Sequence[Upstream], run_id: str | None,
+        item_ctx: ItemContext | None, repair_log: Sequence[dict], extra_generation: Mapping,
+    ) -> AgentResult:
+        """Save a body that was written in several conversations (the Build instruction set) as one version, through the same save path as every artefact."""
+        prompt = Prompt(system="", user="", allowed=(), shown_chunks=(), built_on=tuple((u.artefact_id, u.version) for u in upstream))
+        return self._save(project_id, skill, body, calls, prompt, run_id, item_ctx, repair_log, extra_generation)
 
     # ---- before any model call ------------------------------------------------------------------
 
@@ -193,14 +242,7 @@ class AgentRuntime:
         self, project: Project, skill: Skill, feedback: Sequence[str], previous_draft: str | None
     ) -> tuple[Prompt, ItemContext | None]:
         upstream = self._upstream(project.id, skill)
-        total = sum(len(u.text) for u in upstream)
-        if total > self.settings.agent_upstream_max_chars:
-            biggest = sorted(upstream, key=lambda u: -len(u.text))
-            names = ", ".join(f"{u.title} ({len(u.text)} characters)" for u in biggest[:3])
-            raise InputTooLarge(
-                f"the artefacts '{skill.artefact.name}' builds on total {total} characters, over the "
-                f"{self.settings.agent_upstream_max_chars} limit; the largest are {names}. Nothing is cut silently"
-            )
+        self.check_upstream_size(skill, upstream)
         own = self._own_artefact_id(project.id, skill)
         hits = []
         queries = list(skill.searches) + brief_queries(project.brief, self.settings.agent_brief_queries)
@@ -228,6 +270,17 @@ class AgentRuntime:
                 item_ctx.current, item_ctx.retired, item_ctx.highest, item_ctx.previous,
             )
         return prompt, item_ctx
+
+    def check_upstream_size(self, skill: Skill, upstream: Sequence[Upstream]) -> None:
+        """Refuse, in plain words, when the material a skill builds on is over the limit. Nothing is ever cut silently."""
+        total = sum(len(u.text) for u in upstream)
+        if total > self.settings.agent_upstream_max_chars:
+            biggest = sorted(upstream, key=lambda u: -len(u.text))
+            names = ", ".join(f"{u.title} ({len(u.text)} characters)" for u in biggest[:3])
+            raise InputTooLarge(
+                f"the artefacts '{skill.artefact.name}' builds on total {total} characters, over the "
+                f"{self.settings.agent_upstream_max_chars} limit; the largest are {names}. Nothing is cut silently"
+            )
 
     def _item_context(
         self, project_id: str, skill: Skill, upstream: Sequence[Upstream], own: str | None
@@ -301,7 +354,7 @@ class AgentRuntime:
 
     def _save(
         self, project_id: str, skill: Skill, body: str, calls: Sequence[LLMResult], prompt: Prompt, run_id: str | None,
-        item_ctx: ItemContext | None = None, repair_log: Sequence[dict] = (),
+        item_ctx: ItemContext | None = None, repair_log: Sequence[dict] = (), extra_generation: Mapping | None = None,
     ) -> AgentResult:
         final = calls[-1]
         author = f"agent:{skill.artefact.role}@{final.served_model}"
@@ -327,6 +380,7 @@ class AgentRuntime:
                  "tokens_in": c.tokens_in, "tokens_out": c.tokens_out, "cost_usd": c.cost_usd}
                 for c in calls
             ],
+            **(extra_generation or {}),
         }
 
         def still_running(conn: sqlite3.Connection) -> None:

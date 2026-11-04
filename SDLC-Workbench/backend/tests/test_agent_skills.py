@@ -22,6 +22,7 @@ SHIPPED = {
     "user_journey", "lowfi_wireframes", "hifi_wireframes",          # S13
     "component_overview", "high_level_design", "low_level_design",  # S14a
     "flow_diagram", "usecase_diagram",                              # S14b
+    "build_instructions",                                           # S19a (replaced the four code skills of S17a)
 }
 
 
@@ -61,8 +62,8 @@ def parse(text: str, name="personas.md", catalogue_=None):
 # ---- the shipped skills ---------------------------------------------------------------------------------
 
 def test_exactly_the_planned_skills_are_shipped(library):
-    """Eight for the first two phases (S07, S11), three for Design (S13) and three for Architecture (S14a) and two diagrams (S14b). Each step that adds one updates SHIPPED."""
-    assert set(library.keys) == SHIPPED and len(library) == 16
+    """Eight for the first two phases (S07, S11), three for Design (S13), three for Architecture (S14a), two diagrams (S14b) and one for Build (S19a; it replaced the four code skills of S17a). Each step that adds one updates SHIPPED."""
+    assert set(library.keys) == SHIPPED and len(library) == 17
 
 
 def test_every_shipped_skill_names_a_catalogue_key_and_takes_its_role_and_prefix_from_the_catalogue(library, catalogue):
@@ -347,7 +348,7 @@ def test_a_whole_artefact_prefix_with_its_hyphen_is_refused_as_not_a_plain_item_
 
 def test_every_shipped_item_prefix_is_unique_and_each_covered_prefix_is_held_by_an_input(library):
     prefixes = [spec.prefix for key in library.keys for spec in library.get(key).items]
-    assert sorted(prefixes) == sorted(["PER", "OBJ", "FR", "NFR", "EPIC", "FEAT", "US", "JS", "LFS", "HFS", "COMP", "DEC", "IFC", "API", "TBL", "RUL", "FLOW", "UC"])
+    assert sorted(prefixes) == sorted(["PER", "OBJ", "FR", "NFR", "EPIC", "FEAT", "US", "JS", "LFS", "HFS", "COMP", "DEC", "IFC", "API", "TBL", "RUL", "FLOW", "UC", "INS"])
     for key in library.keys:
         skill = library.get(key)
         for prefix in skill.covers:
@@ -355,6 +356,7 @@ def test_every_shipped_item_prefix_is_unique_and_each_covered_prefix_is_held_by_
     assert library.get("epics_features").covers == ("FR", "NFR") and library.get("user_stories").covers == ("FEAT",)
     assert library.get("component_overview").covers == ("FR", "NFR") and library.get("high_level_design").covers == ("COMP",) and library.get("low_level_design").covers == ("FR",)
     assert library.get("flow_diagram").covers == ("IFC",) and library.get("usecase_diagram").covers == ("PER",)
+    assert library.get("build_instructions").covers == ("UC",)       # S19a: every use case must have an instruction file
     assert library.get("problem_statement").items == () and library.get("project_charter").items == ()
 
 
@@ -387,5 +389,10 @@ def test_every_item_bearing_skill_tells_the_model_to_use_derives_from_keep_ids_a
             continue
         method = " ".join(skill.method.lower().split())
         assert "derives from" in method, key
+        if key == "build_instructions":
+            # S19b: the model writes ONE file per call and never numbers or withdraws anything; the system numbers the files (`assemble`), keeps their IDs between
+            # versions and lists a removed file under 'Withdrawn items'. Telling the model to use that heading would contradict the rule that no file may use it.
+            assert "belong to the set" in method and "withdrawn items" in method and "never reuse or renumber" not in method
+            continue
         assert "never reuse or renumber an id" in method, key
         assert '"withdrawn items" heading' in method, key

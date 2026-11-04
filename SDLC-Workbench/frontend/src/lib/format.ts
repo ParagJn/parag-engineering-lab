@@ -78,7 +78,7 @@ export function independenceText(label: string, authorFamily: string, reviewerFa
 
 export const INDEPENDENCE_SHORT: Record<string, string> = { independent: 'Independent', same_family: 'Same family', unverified: 'Unverified' }
 export const SEVERITY_LABEL: Record<string, string> = { high: 'High', medium: 'Medium', low: 'Low' }
-export const REVIEW_STATE_LABEL: Record<string, string> = { unreviewed: 'Not reviewed', reviewed: 'Reviewed', stale: 'Review out of date' }
+export const REVIEW_STATE_LABEL: Record<string, string> = { unreviewed: 'Not reviewed', reviewed: 'Reviewed', stale: 'Review out of date', retired: 'Retired' }
 
 /** A price per million tokens, or "unknown". Never $0.00 for a price nobody told us. */
 export function pricePerMillion(usd: number | null | undefined): string {

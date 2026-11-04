@@ -16,9 +16,10 @@ import { Notice } from '../components/Notice'
 import { PhaseRail } from '../components/PhaseRail'
 import { RunPanel } from '../components/RunPanel'
 import { SearchBox } from '../components/SearchBox'
-import type { ProjectDetail } from '../api'
+import type { ArtefactFailure, ProjectDetail } from '../api'
 import { CONNECTOR_LABEL, count } from '../lib/format'
 import { actionSpecs, pressRoute } from '../lib/phaseActions'
+import { fileText } from '../lib/instructionSet'
 import type { Progress } from '../state/runProgress'
 import { ApprovalSummary, openCount } from '../components/ApprovalSummary'
 
@@ -28,6 +29,8 @@ export interface ProjectScreen {
   cards: ArtefactCard[]
   open: ArtefactDetail | null
   progress: Progress
+  /** Why each failed artefact failed, from the run's stored record (S18 follow-up). Empty when nothing failed or it has not loaded. */
+  failures?: Record<string, ArtefactFailure>
   connected: boolean
   streamProblem: string | null
   actionError: string | null
@@ -48,6 +51,9 @@ export interface ProjectScreen {
   onPaste: (filename: string, text: string) => void
   onRemove: (doc: DocumentInfo) => void
   onOpen: (artefactId: string) => void
+  /** Save the files of a Build instruction set from the run panel: one file (by name) or all of them (null) as a zip. */
+  onDownload?: (artefactId: string, version: number | null, file: string | null) => void
+  downloadNote?: string | null
   onVersion: (number: number) => void
   onClose: () => void
   // S12c
@@ -69,6 +75,8 @@ export interface ReviewScreen {
   changesBusy: boolean
   changesError: string | null
   editing: boolean
+  /** The name of the one file of a set being edited, or null when the whole artefact is. */
+  editingFile: string | null
   editBusy: boolean
   editRefusal: { message: string; problems: string[] } | null
   editError: string | null
@@ -89,6 +97,7 @@ export interface ReviewScreen {
   onRerunNotes: () => void
   onRerunStale: () => void
   onStartEdit: () => void
+  onStartEditFile: (name: string) => void
   onCancelEdit: () => void
   onSaveEdit: (body: string, note: string) => void
 }
@@ -96,8 +105,8 @@ export interface ReviewScreen {
 const none = () => {}
 export const emptyReview: ReviewScreen = {
   state: null, available: false, busy: null, error: null, paused: null, chosenFamily: null, sendingBack: false, reopening: false, reopenBusy: false, reopenError: null, changesBusy: false, changesError: null,
-  editing: false, editBusy: false, editRefusal: null, editError: null, onReviewOne: none, onReviewAll: none, run: null, onStopReviews: none, onDismissReviews: none, onChooseFamily: none, onReviewWithChosen: none,
-  onStartSendBack: none, onStartReopen: none, onCancelReopen: none, onReopen: none, onCancelSendBack: none, onSendBack: none, onRerunNotes: none, onRerunStale: none, onStartEdit: none, onCancelEdit: none, onSaveEdit: none,
+  editing: false, editingFile: null, editBusy: false, editRefusal: null, editError: null, onReviewOne: none, onReviewAll: none, run: null, onStopReviews: none, onDismissReviews: none, onChooseFamily: none, onReviewWithChosen: none,
+  onStartSendBack: none, onStartReopen: none, onCancelReopen: none, onReopen: none, onCancelSendBack: none, onSendBack: none, onRerunNotes: none, onRerunStale: none, onStartEdit: none, onStartEditFile: none, onCancelEdit: none, onSaveEdit: none,
 }
 
 export const emptyScreen: ProjectScreen = {
@@ -202,8 +211,8 @@ export function ProjectPage({ project, phaseKey, screen = emptyScreen, canChange
           </div>
 
           {showingThisPhase && (
-            <RunPanel progress={screen.progress} names={names} connected={screen.connected} cancelling={screen.busy === 'cancel'} cancelNote={screen.cancelNote}
-              problem={screen.streamProblem} onCancel={screen.onCancel} onOpen={screen.onOpen} />
+            <RunPanel progress={screen.progress} failures={screen.failures} names={names} connected={screen.connected} cancelling={screen.busy === 'cancel'} cancelNote={screen.cancelNote}
+              problem={screen.streamProblem} onCancel={screen.onCancel} onOpen={screen.onOpen} onDownload={screen.onDownload} downloadNote={screen.downloadNote ?? null} />
           )}
 
           {rv.reopening && (
@@ -216,14 +225,14 @@ export function ProjectPage({ project, phaseKey, screen = emptyScreen, canChange
           )}
 
           {screen.open && rv.editing && (
-            <EditArtefact title={screen.open.title} initialBody={screen.open.body} busy={rv.editBusy} refusal={rv.editRefusal} error={rv.editError} onSave={rv.onSaveEdit} onCancel={rv.onCancelEdit} />
+            <EditArtefact key={rv.editingFile ?? 'whole'} title={rv.editingFile ?? screen.open.title} initialBody={rv.editingFile ? fileText(screen.open.body, rv.editingFile) : screen.open.body} busy={rv.editBusy} refusal={rv.editRefusal} error={rv.editError} onSave={rv.onSaveEdit} onCancel={rv.onCancelEdit} />
           )}
 
           {screen.open && !rv.editing && (
             <ArtefactReader artefact={screen.open} onClose={screen.onClose} onVersion={screen.onVersion}
               canReview={rv.available && reviewable && canChange} reviewBusy={rv.busy === screen.open.id} onReview={() => rv.onReviewOne(screen.open!.id)}
               reviewNote={!rv.available && reviewable ? rv.state?.replay_sentence ?? null : null}
-              canEdit={(phase.status === 'running' || phase.status === 'awaiting_review') && canChange && !screen.runLive} onEdit={rv.onStartEdit} />
+              canEdit={(phase.status === 'running' || phase.status === 'awaiting_review') && canChange && !screen.runLive} onEdit={rv.onStartEdit} onEditFile={rv.onStartEditFile} />
           )}
 
           <div className="grid gap-4 lg:grid-cols-2">

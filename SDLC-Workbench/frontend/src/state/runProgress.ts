@@ -7,6 +7,18 @@ import type { RunStatus } from '../api/content'
 export const ROW_STATES = ['waiting', 'writing', 'retrying', 'done', 'failed', 'skipped'] as const
 export type RowState = (typeof ROW_STATES)[number]
 
+/** One file of a set an artefact is written in pieces (the Build instruction set). */
+export interface Piece {
+  file: string
+  state: 'writing' | 'done' | 'failed'
+  /** 1-based position in the set (the foundation is 1, the acceptance file is last). */
+  index: number
+  of: number
+  attempts: number
+  costUsd: number | null
+  reason: string | null
+}
+
 export interface Row {
   key: string
   state: RowState
@@ -24,6 +36,8 @@ export interface Row {
   /** Review of this artefact, when the run asked for one. */
   review: 'none' | 'running' | 'done' | 'paused'
   reviewNote: string | null
+  /** The files of an artefact written in pieces, in the order they were started; empty for every other artefact. */
+  pieces: Piece[]
 }
 
 export interface Progress {
@@ -50,7 +64,7 @@ export const idle: Progress = {
   costUsd: 0, costKnown: true, totals: null,
 }
 
-const blank = (key: string): Row => ({ key, state: 'waiting', attempts: 0, made: 0, reason: null, artefactId: null, version: null, costUsd: null, items: null, flags: 0, review: 'none', reviewNote: null })
+const blank = (key: string): Row => ({ key, state: 'waiting', attempts: 0, made: 0, reason: null, artefactId: null, version: null, costUsd: null, items: null, flags: 0, review: 'none', reviewNote: null, pieces: [] })
 
 function withRow(p: Progress, key: string, change: (r: Row) => Row): Progress {
   const exists = p.rows.some((r) => r.key === key)
@@ -58,14 +72,33 @@ function withRow(p: Progress, key: string, change: (r: Row) => Row): Progress {
   return { ...p, rows: rows.map((r) => (r.key === key ? change(r) : r)) }
 }
 
+/** Add a file, or change the one with the same name. A file that is started again (a re-run) starts over. */
+function upsertPiece(pieces: Piece[], change: Partial<Piece> & { file: string }): Piece[] {
+  const at = pieces.findIndex((x) => x.file === change.file)
+  if (at < 0) return [...pieces, { index: pieces.length + 1, of: pieces.length + 1, attempts: 0, costUsd: null, reason: null, state: 'writing', ...change }]
+  return pieces.map((x, n) => (n === at ? { ...x, ...change } : x))
+}
+
 function withReview(p: Progress, artefactId: string, change: (r: Row) => Row): Progress {
   return { ...p, rows: p.rows.map((r) => (r.artefactId === artefactId ? change(r) : r)) }
 }
 
+/** What one row has cost so far: a finished artefact its own cost; an artefact still being written in pieces the files already written; anything else nothing (null = a price was unknown). */
+function rowCost(r: Row): number | null {
+  if (r.state === 'done') return r.costUsd
+  let sum = 0
+  for (const x of r.pieces) {
+    if (x.state !== 'done') continue
+    if (x.costUsd === null) return null
+    sum += x.costUsd
+  }
+  return sum
+}
+
 function recomputeCost(p: Progress): Progress {
-  const finished = p.rows.filter((r) => r.state === 'done')
-  const known = finished.every((r) => r.costUsd !== null)
-  return { ...p, costKnown: known, costUsd: known ? finished.reduce((sum, r) => sum + (r.costUsd ?? 0), 0) : null }
+  const costs = p.rows.map(rowCost)
+  const known = costs.every((c) => c !== null)
+  return { ...p, costKnown: known, costUsd: known ? costs.reduce<number>((sum, c) => sum + (c ?? 0), 0) : null }
 }
 
 export function applyEvent(p: Progress, e: RunEvent): Progress {
@@ -81,7 +114,7 @@ export function applyEvent(p: Progress, e: RunEvent): Progress {
     case 'gate.changed':
       return next
     case 'artefact.started':
-      return withRow(next, e.key, (r) => ({ ...r, state: 'writing', attempts: Math.max(r.attempts, 1) }))
+      return withRow(next, e.key, (r) => ({ ...r, state: 'writing', attempts: Math.max(r.attempts, 1), pieces: [] }))
     case 'artefact.attempt':
       // `made` is simply the attempt that just ended: events arrive in order and an older one is dropped at the top, so it only ever goes up.
       return withRow(next, e.key, (r) => ({
@@ -95,6 +128,14 @@ export function applyEvent(p: Progress, e: RunEvent): Progress {
       return withRow(next, e.key, (r) => ({ ...r, state: 'failed', reason: e.reason, attempts: r.made > 0 ? r.made : r.attempts }))
     case 'artefact.skipped':
       return withRow(next, e.key, (r) => ({ ...r, state: 'skipped', reason: e.reason }))
+    case 'build.round':
+      return next            // no screen shows the rounds yet (S18 does); the event is accepted and the id is remembered so a reconnect does not replay it
+    case 'piece.started':
+      return withRow(next, e.key, (r) => ({ ...r, pieces: upsertPiece(r.pieces, { file: e.file, state: 'writing', index: e.index, of: e.of, attempts: 0, costUsd: null, reason: null }) }))
+    case 'piece.finished':
+      return recomputeCost(withRow(next, e.key, (r) => ({ ...r, pieces: upsertPiece(r.pieces, { file: e.file, state: 'done', attempts: e.attempts, costUsd: e.cost_usd, reason: null }) })))
+    case 'piece.failed':
+      return withRow(next, e.key, (r) => ({ ...r, pieces: upsertPiece(r.pieces, { file: e.file, state: 'failed', reason: e.reason }) }))
     case 'review.started':
       return withReview(next, e.artefact_id, (r) => ({ ...r, review: 'running' }))
     case 'review.finished':
@@ -130,4 +171,14 @@ export function counts(p: Progress): Record<RowState, number> {
 export function capUsed(p: Progress): number | null {
   if (p.capUsd === null || p.capUsd <= 0 || p.costUsd === null) return null
   return Math.min(1, p.costUsd / p.capUsd)
+}
+
+/** Whether the stored run record should be fetched after this event: only when a run ENDS, because why an artefact failed lives in that record, not in the event. */
+export function shouldLoadFailures(e: RunEvent): boolean {
+  return e.type === 'run.finished' || e.type === 'run.stopped'
+}
+
+/** Whether the failure details shown must be cleared: a new run starts with none, so the last run's reasons are never shown beside this run's rows. */
+export function shouldClearFailures(e: RunEvent): boolean {
+  return e.type === 'run.started'
 }

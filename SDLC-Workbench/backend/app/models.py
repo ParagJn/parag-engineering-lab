@@ -167,6 +167,57 @@ class RunEvent:
 
 
 @dataclass(frozen=True)
+class BuildRound:
+    """One round of the write -> test -> fix loop, as it happened. Counts and short failure lines only."""
+    id: int
+    project_id: str
+    run_id: str | None
+    loop_id: str
+    round: int
+    artefact: str                    # the artefact that was asked to fix things this round ("" for the first run of the tests)
+    version: int | None              # the version of that artefact that was tested
+    outcome: str
+    passed: int
+    failed: int
+    errors: int
+    skipped: int
+    fingerprint: str                 # which tests failed, as a short stable code: the same failing set gives the same code
+    failures: tuple                  # up to 10 of {"test", "kind", "message"}
+    seconds: float
+    at: str
+
+
+@dataclass(frozen=True)
+class VerifyRun:
+    """One check of a build against the design (S20b): which folders, which design versions, the counts. The matches are in `verify_matches`."""
+    id: int
+    project_id: str
+    backend_path: str
+    frontend_path: str | None
+    actor: str
+    design: dict                     # design artefact id -> the version it was compared against
+    counts: list                     # per area: designed, found, differences, possible, not_found, weak, extras
+    notes: tuple                     # what could not be read, in plain words
+    at: str
+
+
+@dataclass(frozen=True)
+class VerifyMatch:
+    id: int
+    run_id: int
+    designed: str | None             # None for a built thing the design never mentioned
+    area: str
+    state: str                       # found | differences | possible | not_found | weak | extra
+    step: str
+    score: float
+    built: str
+    file: str
+    line: int
+    differences: tuple
+    note: str
+
+
+@dataclass(frozen=True)
 class RollupRow:
     """Totals for one model, phase, agent or slot. cost_usd is None when nothing in the group was priced."""
 

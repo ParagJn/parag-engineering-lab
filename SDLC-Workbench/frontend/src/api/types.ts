@@ -7,7 +7,7 @@ export const PHASE_STATUSES = ['not_started', 'running', 'awaiting_review', 'app
 export type PhaseStatus = (typeof PHASE_STATUSES)[number]
 
 // The actions the SERVER says a person may take. The screen shows these and decides nothing itself.
-export const ACTIONS = ['run', 'finish', 'approve', 'request_changes', 'reopen'] as const
+export const ACTIONS = ['run', 'rewrite', 'finish', 'approve', 'request_changes', 'reopen'] as const
 export type PhaseAction = (typeof ACTIONS)[number]
 
 export const CONNECTORS = ['source_control', 'issue_tracker', 'ci_cd', 'cloud_account'] as const

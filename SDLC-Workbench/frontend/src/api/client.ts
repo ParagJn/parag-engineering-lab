@@ -2,7 +2,8 @@
 // three plain things a person can act on: the backend is not running, the server said no (in its own words), or the two disagree.
 import { ContractError, type Json } from './decode'
 import { decodeTraceItem, decodeTraceability, type TraceItem, type Traceability } from './trace'
-import { decodeChangesRequested, decodeEditRefusal, decodeEditSaved, decodePhaseReview, decodeReviewAnswer, decodeReviewState, decodeRerun, type ChangesRequested, type EditSaved, type RerunStarted, type ReviewAnswer, type ReviewState_ } from './review'
+import { decodeVerifyDetail, decodeVerifyList, type VerifyDetail, type VerifyList } from './verify'
+import { decodeChangesRequested, decodeEditFileSaved, decodeEditRefusal, decodeEditSaved, decodePhaseReview, decodeReviewAnswer, decodeReviewState, decodeRerun, type ChangesRequested, type EditFileSaved, type EditSaved, type RerunStarted, type ReviewAnswer, type ReviewState_ } from './review'
 import {
   decodeCatalogue, decodeError, decodeMode, decodePlan, decodeProject, decodeProjectList, decodeStatus,
   type Catalogue, type ModeInfo, type Plan, type ProjectDetail, type ProjectSummary, type StatusSummary,
@@ -63,10 +64,16 @@ export interface Client {
   reviewState(projectId: string, phase: string): Promise<ReviewState_>
   traceability(projectId: string): Promise<Traceability>
   traceItem(projectId: string, itemId: string): Promise<TraceItem>
+  /** S20: Build Verify. Compare the real build, in folders on this computer, with the design. */
+  verifyRuns(projectId: string): Promise<VerifyList>
+  verifyRun(projectId: string, runId: number): Promise<VerifyDetail>
+  runVerify(projectId: string, actorName: string, backendPath: string, frontendPath: string | null): Promise<VerifyDetail>
   requestChanges(projectId: string, phase: string, actorName: string, input: ChangeRequest): Promise<ChangesRequested>
   rerun(projectId: string, phase: string, actorName: string): Promise<RerunStarted>
   rerunStale(projectId: string, phase: string, actorName: string): Promise<RerunStarted>
   editArtefact(projectId: string, artefactId: string, actorName: string, body: string, note: string): Promise<EditSaved>
+  /** S19f: change ONE file of the Build instruction set. `basedOn` is the version the person was looking at; the server refuses if the set has moved on. */
+  editFile(projectId: string, artefactId: string, fileName: string, actorName: string, text: string, note: string, basedOn: number): Promise<EditFileSaved>
 }
 
 /** What to send back: a note per artefact (required), an optional note for the whole phase, and which artefacts also pass on the reviewer's findings. */
@@ -119,6 +126,12 @@ export function makeClient(fetcher: Fetcher = (...args) => fetch(...args), base 
       decodeProject(await post('/api/projects', { ...input }, { 'X-Actor': actorName })),
 
     traceability: async (projectId) => decodeTraceability(await call(`/api/projects/${id(projectId)}/traceability`)),
+    verifyRuns: async (projectId) => decodeVerifyList(await call(`/api/projects/${id(projectId)}/verify`)),
+    verifyRun: async (projectId, runId) => decodeVerifyDetail(await call(`/api/projects/${id(projectId)}/verify/${id(String(runId))}`)),
+    runVerify: async (projectId, actorName, backendPath, frontendPath) =>
+      decodeVerifyDetail(await call(`/api/projects/${id(projectId)}/verify`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...who(actorName) }, body: JSON.stringify({ backend_path: backendPath, frontend_path: frontendPath }),
+      })),
     traceItem: async (projectId, itemId) => decodeTraceItem(await call(`/api/projects/${id(projectId)}/traceability/item/${id(itemId)}`)),
 
     sample: async () => decodeSample(await call('/api/sample')),
@@ -161,6 +174,10 @@ export function makeClient(fetcher: Fetcher = (...args) => fetch(...args), base 
     editArtefact: async (projectId, artefactId, actorName, body, note) =>
       decodeEditSaved(await call(`/api/projects/${id(projectId)}/artefacts/${id(artefactId)}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json', ...who(actorName) }, body: JSON.stringify({ body, note }),
+      })),
+    editFile: async (projectId, artefactId, fileName, actorName, text, note, basedOn) =>
+      decodeEditFileSaved(await call(`/api/projects/${id(projectId)}/artefacts/${id(artefactId)}/files/${encodeURIComponent(fileName)}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json', ...who(actorName) }, body: JSON.stringify({ text, note, based_on: basedOn }),
       })),
   }
 }

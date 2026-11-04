@@ -169,10 +169,23 @@ export interface RunTotals {
   artefacts: { done: number; failed: number; skipped: number; not_started: number }
   calls: number; cost_usd: number | null; cost_is_partial: boolean; unpriced_calls: number; tokens_in: number; tokens_out: number
   elapsed_seconds: number; serial_seconds: number; max_in_flight: number; over_budget_by_usd: number | null
+  /** Why each failed artefact failed, kept with the run (S18 follow-up). Absent when nothing failed. Text only; never shown as HTML. */
+  failures: Record<string, ArtefactFailure>
 }
+export interface ArtefactFailure { reason: string; problems: string[]; cut_off: boolean }
 export interface RunRecord {
   run_id: string; project_id: string; phase: string; status: RunStatus; stop_reason: string | null; started_at: string; finished_at: string | null
   totals: RunTotals | null
+}
+
+function decodeFailures(value: unknown, w: string): Record<string, ArtefactFailure> {
+  if (value === undefined || value === null) return {}
+  const out: Record<string, ArtefactFailure> = {}
+  for (const [key, raw] of Object.entries(obj(value, w))) {
+    const f = obj(raw, `${w}.${key}`)
+    out[key] = { reason: str(f.reason, `${w}.${key}.reason`), problems: strings(f.problems, `${w}.${key}.problems`), cut_off: bool(f.cut_off, `${w}.${key}.cut_off`) }
+  }
+  return out
 }
 
 function decodeTotals(value: unknown, w: string): RunTotals | null {
@@ -185,6 +198,7 @@ function decodeTotals(value: unknown, w: string): RunTotals | null {
     unpriced_calls: num(o.unpriced_calls, `${w}.unpriced_calls`), tokens_in: num(o.tokens_in, `${w}.tokens_in`), tokens_out: num(o.tokens_out, `${w}.tokens_out`),
     elapsed_seconds: num(o.elapsed_seconds, `${w}.elapsed_seconds`), serial_seconds: num(o.serial_seconds, `${w}.serial_seconds`),
     max_in_flight: num(o.max_in_flight, `${w}.max_in_flight`), over_budget_by_usd: nullable(o.over_budget_by_usd, `${w}.over_budget_by_usd`, num),
+    failures: decodeFailures(o.failures, `${w}.failures`),
   }
 }
 

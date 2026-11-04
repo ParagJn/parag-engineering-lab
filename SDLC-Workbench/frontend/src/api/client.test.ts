@@ -56,4 +56,26 @@ describe('api client', () => {
     expect(seenUrl).toBe('/api/projects/a%2Fb%20c')
     expect(seenInit).toBeUndefined()
   })
+
+  describe('editing one file of the Build set (S19f)', () => {
+    it('sends the file text, the note and the version it was based on to the file\'s own address, in the person\'s name', async () => {
+      const seen: { url: string; init: RequestInit }[] = []
+      const client = makeClient(async (url, init) => { seen.push({ url: String(url), init: init ?? {} }); return new Response(JSON.stringify({ artefact_id: 'BLD-INS-001', file: 'UC-001-a b.md', version: 4 }), { status: 200, headers: { 'Content-Type': 'application/json' } }) })
+      const saved = await client.editFile('p001', 'BLD-INS-001', 'UC-001-a b.md', 'Ann', '# text\n', 'tidied', 3)
+      expect(saved).toEqual({ artefact_id: 'BLD-INS-001', file: 'UC-001-a b.md', version: 4 })
+      expect(seen).toHaveLength(1)
+      expect(seen[0].url).toBe('/api/projects/p001/artefacts/BLD-INS-001/files/UC-001-a%20b.md')
+      expect(seen[0].init.method).toBe('PUT')
+      expect(JSON.parse(String(seen[0].init.body))).toEqual({ text: '# text\n', note: 'tidied', based_on: 3 })
+      expect(new Headers(seen[0].init.headers).get('X-Actor')).toBe('Ann')
+    })
+    it('a refusal carries every reason the server gave, and an answer with a field missing is a contract error', async () => {
+      const refusal = { detail: { message: 'the edit was not saved: 2 problems', problems: ['one', 'two'] } }
+      const error = await makeClient(reply(refusal, 422)).editFile('p001', 'A', 'x.md', 'Ann', 't', '', 1).catch((e) => e)
+      expect(error).toBeInstanceOf(ServerRefused)
+      expect(error.problems).toEqual(['one', 'two'])
+      const bad = await makeClient(reply({ artefact_id: 'A', file: 'x.md' })).editFile('p001', 'A', 'x.md', 'Ann', 't', '', 1).catch((e) => e)
+      expect(bad).toBeInstanceOf(ContractError)
+    })
+  })
 })

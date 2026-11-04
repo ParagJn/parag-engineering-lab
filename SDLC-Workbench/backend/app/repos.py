@@ -5,7 +5,7 @@ import math
 import re
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Callable, Iterable, Sequence
+from typing import Any, Callable, Iterable, Mapping, Sequence
 
 import sqlite3
 
@@ -22,6 +22,7 @@ from .models import (
     AuditEvent,
     PHASE_TRANSITIONS,
     ConflictError,
+    BuildRound,
     RunEvent,
     RunRecord,
     IllegalTransition,
@@ -33,6 +34,8 @@ from .models import (
     Project,
     RollupRow,
     Trace,
+    VerifyMatch,
+    VerifyRun,
 )
 
 _UNSET: Any = object()
@@ -1360,6 +1363,134 @@ class RunEventRepo(_Repo):
             return conn.execute("SELECT COALESCE(MAX(id), 0) FROM run_events WHERE project_id = ?", (project_id,)).fetchone()[0]
 
 
+# ---- build rounds ----------------------------------------------------------------------------------------------------------
+
+MAX_ROUND_FAILURES = 10
+MAX_FAILURE_TEXT = 400
+ROUND_OUTCOMES = ("passed", "failed", "no_tests", "blocked", "stopped", "invalid", "not_converging", "cap_reached")
+
+
+def _build_round(r: sqlite3.Row) -> BuildRound:
+    return BuildRound(
+        id=r["id"], project_id=r["project_id"], run_id=r["run_id"], loop_id=r["loop_id"], round=r["round"], artefact=r["artefact"],
+        version=r["version"], outcome=r["outcome"], passed=r["passed"], failed=r["failed"], errors=r["errors"], skipped=r["skipped"],
+        fingerprint=r["fingerprint"], failures=tuple(json.loads(r["failures"])), seconds=r["seconds"], at=r["at"],
+    )
+
+
+class BuildRoundRepo(_Repo):
+    """The permanent record of the fix loop, one row per round. Append-only: a round is a fact. Never file contents, never a full output."""
+
+    def append(
+        self, project_id: str, loop_id: str, round_: int, *, artefact: str, outcome: str, version: int | None = None, run_id: str | None = None,
+        passed: int = 0, failed: int = 0, errors: int = 0, skipped: int = 0, fingerprint: str = "", failures: Sequence[Mapping[str, Any]] = (),
+        seconds: float = 0.0,
+    ) -> BuildRound:
+        loop_id = _text(loop_id, "loop_id")
+        if isinstance(round_, bool) or not isinstance(round_, int) or round_ < 1:
+            raise InvalidInput("round must be a whole number, one or more")
+        if outcome not in ROUND_OUTCOMES:
+            raise InvalidInput(f"outcome must be one of {ROUND_OUTCOMES}, got {outcome!r}")
+        if version is not None:
+            version = _count(version, "version")
+        counts = [_count(n, name) for n, name in ((passed, "passed"), (failed, "failed"), (errors, "errors"), (skipped, "skipped"))]
+        if isinstance(seconds, bool) or not isinstance(seconds, (int, float)) or seconds < 0:
+            raise InvalidInput("seconds must be a number, zero or more")
+        kept = [
+            {"test": str(f.get("test", ""))[:MAX_FAILURE_TEXT], "kind": str(f.get("kind", ""))[:40], "message": str(f.get("message", ""))[:MAX_FAILURE_TEXT]}
+            for f in list(failures)[:MAX_ROUND_FAILURES]
+        ]
+        with self.db.write() as conn:
+            _require_project(conn, project_id)
+            cursor = conn.execute(
+                "INSERT INTO build_rounds (project_id, run_id, loop_id, round, artefact, version, outcome, passed, failed, errors, skipped,"
+                " fingerprint, failures, seconds, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (project_id, run_id, loop_id, round_, artefact, version, outcome, *counts, str(fingerprint)[:200], _dump(kept, "failures"), float(seconds), self._clock()),
+            )
+            return _build_round(conn.execute("SELECT * FROM build_rounds WHERE id = ?", (cursor.lastrowid,)).fetchone())
+
+    def list(self, project_id: str, *, loop_id: str | None = None, limit: int = 1000) -> list[BuildRound]:
+        """Rounds oldest first, for a project or one loop."""
+        limit = _count(limit, "limit")
+        sql, args = "SELECT * FROM build_rounds WHERE project_id = ?", [project_id]
+        if loop_id is not None:
+            sql += " AND loop_id = ?"
+            args.append(loop_id)
+        with self.db.read() as conn:
+            _require_project(conn, project_id)
+            rows = conn.execute(sql + " ORDER BY id LIMIT ?", [*args, limit]).fetchall()
+        return [_build_round(r) for r in rows]
+
+
+# ---- build verify ----------------------------------------------------------
+
+MAX_VERIFY_MATCHES = 5000
+VERIFY_STATES = ("found", "differences", "possible", "not_found", "weak", "extra")
+
+
+def _verify_run(r: sqlite3.Row) -> VerifyRun:
+    return VerifyRun(id=r["id"], project_id=r["project_id"], backend_path=r["backend_path"], frontend_path=r["frontend_path"], actor=r["actor"], design=json.loads(r["design"]),
+                     counts=json.loads(r["counts"]), notes=tuple(json.loads(r["notes"])), at=r["at"])
+
+
+def _verify_match(r: sqlite3.Row) -> VerifyMatch:
+    return VerifyMatch(id=r["id"], run_id=r["run_id"], designed=r["designed"], area=r["area"], state=r["state"], step=r["step"], score=r["score"], built=r["built"], file=r["file"],
+                       line=r["line"], differences=tuple(json.loads(r["differences"])), note=r["note"])
+
+
+class VerifyRepo(_Repo):
+    """The permanent record of every Build Verify run. Append-only: a run is a fact about a folder at a moment."""
+
+    def add_run(self, project_id: str, *, backend_path: str, frontend_path: str | None, actor: str, design: Mapping[str, int], counts: Sequence[Mapping[str, Any]],
+                notes: Sequence[str], matches: Sequence[Mapping[str, Any]]) -> VerifyRun:
+        backend_path = _text(backend_path, "backend_path")
+        if frontend_path is not None and not str(frontend_path).strip():
+            frontend_path = None
+        if len(matches) > MAX_VERIFY_MATCHES:
+            raise InvalidInput(f"a run holds at most {MAX_VERIFY_MATCHES} matches")
+        rows = []
+        for m in matches:
+            if m.get("state") not in VERIFY_STATES:
+                raise InvalidInput(f"state must be one of {VERIFY_STATES}, got {m.get('state')!r}")
+            rows.append((m.get("designed"), str(m["area"])[:20], m["state"], str(m.get("step", ""))[:20], float(m.get("score", 0)), str(m.get("built", ""))[:300], str(m.get("file", ""))[:400],
+                         _count(int(m.get("line", 0)), "line"), _dump(list(m.get("differences", ()))[:20], "differences"), str(m.get("note", ""))[:500]))
+        with self.db.write() as conn:
+            _require_project(conn, project_id)
+            cursor = conn.execute(
+                "INSERT INTO verify_runs (project_id, backend_path, frontend_path, actor, design, counts, notes, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (project_id, backend_path[:1000], None if frontend_path is None else str(frontend_path)[:1000], _text(actor, "actor"), _dump(dict(design), "design"),
+                 _dump(list(counts), "counts"), _dump(list(notes)[:50], "notes"), self._clock()),
+            )
+            run_id = cursor.lastrowid
+            conn.executemany(
+                "INSERT INTO verify_matches (run_id, designed, area, state, step, score, built, file, line, differences, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                [(run_id, *row) for row in rows],
+            )
+            return _verify_run(conn.execute("SELECT * FROM verify_runs WHERE id = ?", (run_id,)).fetchone())
+
+    def runs(self, project_id: str, *, limit: int = 100) -> list[VerifyRun]:
+        """Runs, newest first."""
+        limit = _count(limit, "limit")
+        with self.db.read() as conn:
+            _require_project(conn, project_id)
+            rows = conn.execute("SELECT * FROM verify_runs WHERE project_id = ? ORDER BY id DESC LIMIT ?", (project_id, limit)).fetchall()
+        return [_verify_run(r) for r in rows]
+
+    def run(self, project_id: str, run_id: int) -> VerifyRun:
+        with self.db.read() as conn:
+            _require_project(conn, project_id)
+            row = conn.execute("SELECT * FROM verify_runs WHERE project_id = ? AND id = ?", (project_id, run_id)).fetchone()
+        if row is None:
+            raise NotFoundError(f"verify run {run_id!r} not found in this project")
+        return _verify_run(row)
+
+    def matches(self, project_id: str, run_id: int) -> list[VerifyMatch]:
+        self.run(project_id, run_id)
+        with self.db.read() as conn:
+            rows = conn.execute("SELECT * FROM verify_matches WHERE run_id = ? ORDER BY id", (run_id,)).fetchall()
+        return [_verify_match(r) for r in rows]
+
+
 # ---- the store -------------------------------------------------------------
 
 class Store:
@@ -1384,6 +1515,8 @@ class Store:
         self.memory = MemoryRepo(db, clock, id_factory)
         self.runs = RunRepo(db, clock, id_factory)
         self.run_events = RunEventRepo(db, clock, id_factory)
+        self.build_rounds = BuildRoundRepo(db, clock, id_factory)
+        self.verify = VerifyRepo(db, clock, id_factory)
         # Imported here, not at the top: the context store builds on this module's helpers.
         from .context.store import ContextStore
 

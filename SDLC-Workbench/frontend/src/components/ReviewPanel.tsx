@@ -45,7 +45,7 @@ export function ReviewPanel({ review, shownVersion }: { review: StoredReview; sh
 export function FindingRow({ finding }: { finding: Finding }) {
   return (
     <li className="rounded-lg border border-slate-100 px-3 py-2 text-sm">
-      <p><span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs">{finding.target}</span> {finding.problem}</p>
+      <p><span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs">{finding.target}</span> {finding.source === 'system' && <span title="Found by the system's own checks, not by the reviewer model. It cost nothing." className="mr-1 rounded-full border border-slate-300 bg-slate-50 px-1.5 py-0.5 text-[11px] font-semibold text-slate-600">found by the system</span>}{finding.problem}</p>
       {finding.fix && (
         <p className="mt-1 text-xs text-slate-600">
           <span className="font-semibold">Suggested fix:</span> {finding.fix}

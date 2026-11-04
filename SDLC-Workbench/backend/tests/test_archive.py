@@ -262,7 +262,7 @@ async def test_an_unknown_project_is_still_a_404_not_an_archived_message(world):
 
 # ---- the migration ------------------------------------------------------------------------------------------------------------
 
-def test_a_v5_database_with_data_upgrades_to_v6_keeping_its_data_and_its_guards(tmp_path):
+def test_a_v5_database_with_data_upgrades_to_the_latest_keeping_its_data_and_its_guards(tmp_path):
     path = tmp_path / "old.db"
     raw = sqlite3.connect(path)
     for script in (SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5):
@@ -274,7 +274,7 @@ def test_a_v5_database_with_data_upgrades_to_v6_keeping_its_data_and_its_guards(
     raw.execute("INSERT INTO artefact_versions (project_id, artefact_id, number, body, author, created_at) VALUES ('p1', 'REQ-F-001', 1, 'old', 'human:a', 't')")
     raw.commit(); raw.close()
 
-    assert len(MIGRATIONS) == 6 and Database(path).migrate() == 6
+    assert len(MIGRATIONS) == 8 and Database(path).migrate() == 8                       # v6 (archiving), v7 (S17b build rounds) and v8 (S20b verify) all apply
     store = Store.open(path)
     [old] = store.projects.list()
     assert old.name == "Old" and old.archived_at is None                      # every existing project is active

@@ -12,6 +12,7 @@ import { createPayload, initialWizard, selectionOf } from './lib/wizard'
 import { HomePage } from './pages/HomePage'
 import { ProjectPage } from './pages/ProjectPage'
 import { TraceabilityPage } from './pages/TraceabilityPage'
+import { VerifyPage } from './pages/VerifyPage'
 import { WizardPage } from './pages/WizardPage'
 import { makeWizardReducer } from './state/wizardReducer'
 import { useRoute } from './state/useRoute'
@@ -60,6 +61,7 @@ export default function App() {
       ) : route.name === 'home' ? <Home actorName={actorName} />
         : route.name === 'new' ? <NewProject key={route.sample ? 'sample' : 'blank'} useSample={!!route.sample} actorName={actorName} modeInfo={modeLoad.state === 'ready' ? modeLoad.value : null} onCreated={(id, note) => { setFlash(note ? { id, message: note } : null); go({ name: 'project', id, phase: null }) }} />
         : route.name === 'traceability' ? <TraceabilityPage key={route.id} client={client} id={route.id} item={route.item} />
+        : route.name === 'verify' ? <VerifyPage key={route.id} client={client} id={route.id} actorName={actorName} />
         : route.name === 'project' ? <OneProject id={route.id} phase={route.phase} actorName={actorName} mode={mode} reviewsAvailable={modeLoad.state === 'ready' && modeLoad.value.reviews_available} flash={flash?.id === route.id ? flash.message : null} />
         : <Notice tone="info" title="That page does not exist"><a href={buildHash({ name: 'home' })} className="underline">Back to projects</a></Notice>}
     </Shell>
@@ -112,14 +114,14 @@ function LoadedProject({ initial, phase, actorName, mode, reviewsAvailable, flas
           documents: screen.documents, cards: screen.cards, open: screen.open, progress: screen.progress, connected: screen.connected, streamProblem: screen.streamProblem,
           actionError: screen.actionError, busy: screen.busy, uploadError: screen.uploadError, lastUpload: screen.lastUpload, cancelNote: screen.cancelNote, query: screen.query,
           result: screen.result, searchError: screen.searchError, searching: screen.searching, runLive: screen.runLive, onQuery: screen.setQuery, onSearch: screen.search,
-          onAct: screen.act, onCancel: screen.cancel, onUpload: screen.upload, onPaste: screen.paste, onRemove: screen.remove, onOpen: (a) => screen.openArtefact(a),
+          onAct: screen.act, onCancel: screen.cancel, onUpload: screen.upload, onPaste: screen.paste, onRemove: screen.remove, onOpen: (a) => screen.openArtefact(a), onDownload: screen.downloadFiles, downloadNote: screen.downloadNote,
           onVersion: (n) => screen.open && screen.openArtefact(screen.open.id, n), onClose: screen.close,
           review: {
             state: screen.reviewState, available: screen.reviewsAvailable, busy: screen.reviewBusy, error: screen.reviewError, paused: screen.paused, chosenFamily: screen.chosenFamily,
-            sendingBack: screen.sendingBack, changesBusy: screen.changesBusy, changesError: screen.changesError, editing: screen.editing, editBusy: screen.editBusy,
+            sendingBack: screen.sendingBack, changesBusy: screen.changesBusy, changesError: screen.changesError, editing: screen.editing, editingFile: screen.editingFile, editBusy: screen.editBusy,
             editRefusal: screen.editRefusal, editError: screen.editError, onReviewOne: (id) => screen.reviewOne(id), onReviewAll: screen.reviewAll, run: screen.reviewRun, onStopReviews: screen.stopReviews, onDismissReviews: screen.dismissReviews, onChooseFamily: screen.setChosenFamily,
             onReviewWithChosen: screen.reviewWithChosen, onStartSendBack: () => screen.setSendingBack(true), reopening: screen.reopening, reopenBusy: screen.reopenBusy, reopenError: screen.reopenError, onStartReopen: () => screen.setReopening(true), onCancelReopen: () => screen.setReopening(false), onReopen: screen.reopen, onCancelSendBack: () => screen.setSendingBack(false), onSendBack: screen.sendBack,
-            onRerunNotes: screen.rerunNotes, onRerunStale: screen.rerunStale, onStartEdit: () => screen.setEditing(true), onCancelEdit: () => screen.setEditing(false), onSaveEdit: screen.saveEdit,
+            onRerunNotes: screen.rerunNotes, onRerunStale: screen.rerunStale, onStartEdit: () => screen.setEditing(true), onStartEditFile: screen.startEditFile, onCancelEdit: () => screen.setEditing(false), onSaveEdit: screen.saveEdit,
           },
         }}
       />

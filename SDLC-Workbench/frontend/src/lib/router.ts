@@ -4,6 +4,7 @@ export type Route =
   | { name: 'new'; sample?: true }
   | { name: 'project'; id: string; phase: string | null }
   | { name: 'traceability'; id: string; item: string | null }
+  | { name: 'verify'; id: string }
   | { name: 'not-found'; hash: string }
 
 const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/
@@ -27,6 +28,7 @@ export function parseHash(hash: string): Route {
     if (parts.length === 2) return { name: 'project', id, phase: null }
     if (parts.length === 4 && parts[2] === 'phases' && SAFE_KEY.test(parts[3])) return { name: 'project', id, phase: parts[3] }
     if (parts.length === 3 && parts[2] === 'traceability') return { name: 'traceability', id, item: null }
+    if (parts.length === 3 && parts[2] === 'verify') return { name: 'verify', id }
     if (parts.length === 4 && parts[2] === 'traceability' && SAFE_ITEM.test(parts[3])) return { name: 'traceability', id, item: parts[3] }
   }
   return { name: 'not-found', hash: clean }
@@ -38,6 +40,7 @@ export function buildHash(route: Route): string {
     case 'new': return route.sample ? '#/new/sample' : '#/new'
     case 'project': return route.phase ? `#/projects/${encodeURIComponent(route.id)}/phases/${route.phase}` : `#/projects/${encodeURIComponent(route.id)}`
     case 'traceability': return route.item ? `#/projects/${encodeURIComponent(route.id)}/traceability/${route.item}` : `#/projects/${encodeURIComponent(route.id)}/traceability`
+    case 'verify': return `#/projects/${encodeURIComponent(route.id)}/verify`
     case 'not-found': return '#/'
   }
 }

@@ -176,60 +176,17 @@
       "approver": "technical lead",
       "artefacts": [
         {
-          "description": "Tables, constraints and seed data, checked by actually creating them.",
-          "key": "database_schema",
-          "name": "Database schema",
+          "description": "One set of Markdown instruction files for a coding tool - a foundation file, one file for each use case, and the acceptance tests - each pointing at the design items it builds.",
+          "key": "build_instructions",
+          "name": "Build instructions",
           "required": true,
           "waits_for": []
-        },
-        {
-          "description": "The API and business rules.",
-          "key": "backend_code",
-          "name": "Backend code",
-          "required": true,
-          "waits_for": []
-        },
-        {
-          "description": "The screens people use.",
-          "key": "frontend_code",
-          "name": "Frontend code",
-          "required": true,
-          "waits_for": []
-        },
-        {
-          "description": "Unit and API tests for the code that was built.",
-          "key": "test_suite",
-          "name": "Test suite",
-          "required": true,
-          "waits_for": [
-            "backend_code"
-          ]
-        },
-        {
-          "description": "What the tests did when they were actually run.",
-          "key": "test_report",
-          "name": "Test report",
-          "required": false,
-          "waits_for": [
-            "test_suite"
-          ]
-        },
-        {
-          "description": "Findings from reading the code and from the secret and personal-data scan.",
-          "key": "code_security_review",
-          "name": "Code and security review",
-          "required": false,
-          "waits_for": [
-            "backend_code",
-            "frontend_code",
-            "test_suite"
-          ]
         }
       ],
       "key": "build",
       "name": "Build & Test",
       "order": 4,
-      "summary": "Build the database, back end and front end, then prove they work by running the tests."
+      "summary": "Write the instruction files a person gives to a coding tool (Copilot, Claude, GPT or Gemini) so that tool builds the application. This system does not write the application."
     },
     {
       "approver": "deployment engineer",

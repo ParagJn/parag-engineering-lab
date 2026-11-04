@@ -438,3 +438,98 @@ async def test_a_review_that_needed_no_repair_records_an_empty_list(rig, store, 
     provider.queue("m-sonnet", review_reply(REVIEW_CLEAN))
     await service.review(project.id, written.artefact_id)
     assert store.artefacts.get_version(project.id, written.artefact_id).review_findings["repair_reasons"] == []
+
+
+# ---- S19e-1: an artefact the workflow no longer has is retired, not failed -------------------------------------------------------------------------
+
+def add_old_artefact(store, project, key="backend_code", prefix="BLD-BE", phase="setup", title="Backend code"):
+    """What the user's first live Build run left behind: an artefact of a type the catalogue no longer has."""
+    store.artefacts.create(project.id, artefact_type=key, phase_key=phase, title=title, actor="system", prefix=prefix)
+    store.artefacts.add_version(project.id, f"{prefix}-001", body="old code", author=PERSON)
+    return f"{prefix}-001"
+
+
+async def test_an_artefact_the_catalogue_no_longer_has_is_retired(rig, store, project):
+    service, *_ = rig()
+    old = add_old_artefact(store, project)
+    assert service.is_retired(project.id, old) is True
+    assert service.status_of(project.id, old).state == "retired" and service.status_of(project.id, old).latest_version == 1
+    assert service.status_of(project.id, old).verdict is None and service.status_of(project.id, old).high_findings == 0
+
+
+async def test_an_artefact_still_in_the_catalogue_without_a_skill_yet_is_not_retired(rig, store, project):
+    service, *_ = rig()
+    store.artefacts.create(project.id, artefact_type="deployment_plan", phase_key="setup", title="X", actor="system", prefix="DEP-PLN")
+    store.artefacts.add_version(project.id, "DEP-PLN-001", body="x", author=PERSON)
+    assert service.is_retired(project.id, "DEP-PLN-001") is False
+    assert service.status_of(project.id, "DEP-PLN-001").state == "unreviewed"
+    with pytest.raises(NothingToReview, match="no skill for 'deployment_plan'"):
+        await service.review(project.id, "DEP-PLN-001")
+
+
+async def test_an_artefact_with_no_version_is_never_retired_even_if_its_type_is_gone(rig, store, project):
+    service, *_ = rig()
+    store.artefacts.create(project.id, artefact_type="backend_code", phase_key="setup", title="B", actor="system", prefix="BLD-BE")
+    assert service.is_retired(project.id, "BLD-BE-001") is False
+    assert service.status_of(project.id, "BLD-BE-001").state == "unreviewed"
+
+
+async def test_a_current_artefact_is_not_retired(rig, store, project):
+    service, runtime, provider, engine = rig()
+    await write_personas(runtime, provider, store, project, engine)
+    assert service.is_retired(project.id, "REQ-PER-001") is False and service.status_of(project.id, "REQ-PER-001").state == "unreviewed"
+
+
+async def test_reviewing_a_retired_artefact_says_why_and_makes_no_call(rig, store, project):
+    service, runtime, provider, engine = rig()
+    old = add_old_artefact(store, project)
+    with pytest.raises(NothingToReview) as caught:
+        await service.review(project.id, old)
+    text = str(caught.value)
+    assert "'Backend code' is retired" in text and "no longer exists" in text and "versions are kept" in text and "skill" not in text
+    assert provider.calls == []
+
+
+async def test_review_all_skips_a_retired_artefact_and_still_reviews_the_others(rig, store, project):
+    service, runtime, provider, engine = rig()
+    await chain_to_requirements(runtime, provider, store, project, engine)
+    provider.queue("m-sonnet", ok(PERSONA_SECTIONS, items=PERSONA_ITEMS))
+    await runtime.run(project.id, "personas")
+    old = add_old_artefact(store, project, phase="requirements")
+    provider.queue("m-sonnet", review_reply(REVIEW_CLEAN))
+    results = await service.review_phase(project.id, "requirements")
+    assert [r.artefact_id for r in results] == ["REQ-PER-001"] and isinstance(results[0], ReviewResult)
+    assert len(provider.calls) == len([c for c in provider.calls if c.model_id == "m-sonnet"]) and old not in [r.artefact_id for r in results]
+    assert store.artefacts.get_version(project.id, old).review_findings is None
+
+
+async def test_the_phase_status_lists_a_retired_artefact_as_retired_beside_the_others(rig, store, project):
+    service, runtime, provider, engine = rig()
+    await chain_to_requirements(runtime, provider, store, project, engine)
+    provider.queue("m-sonnet", ok(PERSONA_SECTIONS, items=PERSONA_ITEMS))
+    await runtime.run(project.id, "personas")
+    old = add_old_artefact(store, project, phase="requirements")
+    states = {s.artefact_id: s.state for s in service.phase_status(project.id, "requirements")}
+    assert states == {"REQ-PER-001": "unreviewed", old: "retired"}
+
+
+async def test_review_all_does_not_stumble_on_an_artefact_that_has_a_retired_type_but_no_version(rig, store, project):
+    """No version: skipped as 'nothing written' (the first test of the loop). Not retired, because there is nothing to retire."""
+    service, runtime, provider, engine = rig()
+    await chain_to_requirements(runtime, provider, store, project, engine)
+    provider.queue("m-sonnet", ok(PERSONA_SECTIONS, items=PERSONA_ITEMS))
+    await runtime.run(project.id, "personas")
+    store.artefacts.create(project.id, artefact_type="backend_code", phase_key="requirements", title="B", actor="system", prefix="BLD-BE")
+    provider.queue("m-sonnet", review_reply(REVIEW_CLEAN))
+    results = await service.review_phase(project.id, "requirements")
+    assert [r.artefact_id for r in results] == ["REQ-PER-001"]
+    assert [s.state for s in service.phase_status(project.id, "requirements") if s.artefact_id == "BLD-BE-001"] == ["unreviewed"]
+
+
+async def test_a_retired_artefact_that_already_has_a_stored_review_is_still_retired_and_adds_nothing_to_the_open_counts(rig, store, project):
+    service, *_ = rig()
+    old = add_old_artefact(store, project)
+    store.artefacts.set_review_findings(project.id, old, 1, {"version_reviewed": 1, "verdict": "revise", "summary": "s", "findings": [
+        {"severity": "high", "target": "General", "problem": "p", "fix": "f"}]}, actor="system")
+    status = service.status_of(project.id, old)
+    assert status.state == "retired" and status.high_findings == 0 and status.verdict is None         # the old review is kept, but it is not the phase's standing any more

@@ -708,3 +708,21 @@ async def test_repair_reasons_are_kept_on_the_version_and_never_published_in_an_
     assert "repair_reasons" not in published and "has no numbered items" not in published   # only a COUNT of problems may be published
     attempt_events = [e for e in store.run_events.list(project.id) if e.type == "artefact.attempt"]
     assert attempt_events and all(isinstance(e.data["problems"], int) for e in attempt_events)
+
+
+async def test_a_rewrite_writes_every_artefact_again_as_a_new_version_and_a_plain_run_does_not(world):
+    """The page's 'Rewrite everything' button sends exactly {"rewrite_all": true}. A plain run after a finished one writes nothing; the rewrite writes all seven again."""
+    app, client, provider, project = await world()
+    await finish_setup(app, project)
+    first = (await client.post(f"/api/projects/{project.id}/phases/requirements/run", json={})).json()["run_id"]
+    assert (await wait_for_end(app, project, first)).totals["artefacts"]["done"] == 7
+    calls = len(provider.asked)
+    plain = (await client.post(f"/api/projects/{project.id}/phases/requirements/run", json={})).json()["run_id"]
+    assert (await wait_for_end(app, project, plain)).totals["artefacts"]["done"] == 0 and len(provider.asked) == calls
+    rewrite = (await client.post(f"/api/projects/{project.id}/phases/requirements/run", json={"rewrite_all": True})).json()["run_id"]
+    assert (await wait_for_end(app, project, rewrite)).totals["artefacts"]["done"] == 7 and len(provider.asked) >= calls + 7
+    store = app.state.store
+    assert all(a.latest_version == 2 for a in store.artefacts.list(project.id, phase_key="requirements"))
+    audit = [e for e in store.audit.list(project_id=project.id) if e.action == "run.requested"] if hasattr(store.audit, "list") else []
+    assert not audit or any(e.detail.get("rewrite_all") is True for e in audit)
+    await client.aclose()

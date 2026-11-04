@@ -55,13 +55,15 @@ class Snapshot:
 
 # What a person may do with a phase, by its status. One table, so the screen never re-implements the state machine.
 #   run       produce the phase's artefacts (starts the phase if it has not started)
+#   rewrite   run a running phase again and rewrite EVERY artefact in it, even those already written (each becomes a new version; the old ones are kept).
+#             Offered only once something has been written: before that it would be the same as run.
 #   finish    hand a running phase to review
 #   approve   a person approves a phase under review
 #   request_changes   send a phase under review back, naming the artefacts to rewrite
 #   reopen   take an approved phase back to running, with a written reason; later phases are not changed (they show that they stand on a reopened one)
 ACTIONS_BY_STATUS: dict[str, tuple[str, ...]] = {
     "not_started": ("run",),
-    "running": ("run", "finish"),
+    "running": ("run", "rewrite", "finish"),
     "awaiting_review": ("approve", "request_changes"),
     "rejected": ("run",),
     # An approved phase can be taken back to running by a person with a written reason (2026-10-31). Listed for EVERY phase, so a phase added later
@@ -70,14 +72,15 @@ ACTIONS_BY_STATUS: dict[str, tuple[str, ...]] = {
 }
 
 
-def allowed_actions(status: str, has_artefacts: bool, blocked_by: str | None) -> tuple[str, ...]:
+def allowed_actions(status: str, has_artefacts: bool, blocked_by: str | None, has_content: bool = True) -> tuple[str, ...]:
     """The actions open to a person for one phase. A phase with nothing in the plan, or one an earlier unapproved phase blocks
     (and which has not started), offers none. A phase already under way is never blocked: it cannot have started if it was."""
     if not has_artefacts:
         return ()
     if status == "not_started" and blocked_by is not None:
         return ()
-    return ACTIONS_BY_STATUS.get(status, ())
+    actions = ACTIONS_BY_STATUS.get(status, ())
+    return actions if has_content else tuple(a for a in actions if a != "rewrite")      # nothing written yet: a rewrite would be exactly a run
 
 
 def selection_of(project: Project) -> dict[str, Any]:
@@ -226,7 +229,7 @@ class WorkflowEngine:
                     artefacts=artefacts,
                     needs_review=self._needs_review(plan, rows, reopened_at, phase),
                     blocked_by=self._blocked_by(plan, list(rows.values()), phase),
-                    allowed_actions=allowed_actions(status, bool(phase.artefacts), self._blocked_by(plan, list(rows.values()), phase)),
+                    allowed_actions=allowed_actions(status, bool(phase.artefacts), self._blocked_by(plan, list(rows.values()), phase), any(a.has_content for a in artefacts)),
                 )
             )
         return Snapshot(project_id, tuple(states), plan.notes, self._next_action(states))

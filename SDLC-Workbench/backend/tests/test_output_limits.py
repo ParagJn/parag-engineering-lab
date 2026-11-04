@@ -73,7 +73,7 @@ async def test_the_request_sent_for_a_role_uses_that_roles_own_limit(rig, store,
 def test_the_runtime_asks_the_settings_for_the_roles_limit_and_nothing_else():
     import inspect
 
-    source = inspect.getsource(AgentRuntime.run)
+    source = inspect.getsource(AgentRuntime.converse) + inspect.getsource(AgentRuntime.run)
     assert "self.settings.output_tokens_for(skill.artefact.role)" in source and "agent_max_output_tokens" not in source
 
 
@@ -144,3 +144,40 @@ def test_the_lowlevel_design_size_that_was_refused_before_now_fits_and_the_limit
     refused_before = 32_381
     assert refused_before > 24_000 and refused_before <= Settings(_env_file=None).agent_upstream_max_chars
     assert 100_001 > Settings(_env_file=None).agent_upstream_max_chars
+
+
+# ---- the code roles (2026-11-03) ---------------------------------------------------------------------------------------------------------
+
+def test_the_four_build_roles_have_limits_that_fit_real_code_and_the_database_keeps_the_general_one():
+    """At 8,000 a real frontend and a real test suite were cut off. The limits are per ROLE, so the database engineer (short schemas) is unchanged."""
+    s = Settings(_env_file=None)
+    assert (s.output_tokens_for("frontend_developer"), s.output_tokens_for("test_engineer"), s.output_tokens_for("backend_developer")) == (24000, 24000, 16000)
+    assert s.output_tokens_for("database_engineer") == s.agent_max_output_tokens == 8000
+    assert s.output_tokens_for("ux_designer") == 24000                                         # the earlier override is still there
+
+
+def test_the_default_limits_are_inside_the_bounds_the_setting_allows():
+    for role in ("frontend_developer", "test_engineer", "backend_developer", "ux_designer"):
+        assert 256 <= Settings(_env_file=None).output_tokens_for(role) <= 64000
+
+
+def test_a_person_can_still_lower_or_clear_the_code_limits():
+    assert Settings(_env_file=None, agent_output_tokens_by_role="").output_tokens_for("frontend_developer") == 8000
+    assert Settings(_env_file=None, agent_output_tokens_by_role="frontend_developer=30000").output_tokens_for("test_engineer") == 8000
+
+
+async def test_the_request_for_each_code_role_carries_its_own_limit(make_settings, store, project):
+    import itertools
+
+    from app.llm.gateway import Gateway
+    from app.llm.providers.mock import MockProvider
+    from app.llm.routing import Routing
+    from app.workflow.definitions import load_catalogue
+    from app.workflow.engine import WorkflowEngine
+    cfg = make_settings(ibm_ica_model_id="m-sonnet", ibm_ica_fallback_model_id="m-sonnet", ibm_ica_haiku_model_id="m-haiku", ibm_ica_openai_model_id="m-openai",
+                        ibm_ica_gemini_model_id="m-gemini")
+    seen = {}
+    for role, expected in (("frontend_developer", 24000), ("test_engineer", 24000), ("backend_developer", 16000), ("database_engineer", 8000)):
+        assert cfg.output_tokens_for(role) == expected
+        seen[role] = expected
+    assert len(seen) == 4

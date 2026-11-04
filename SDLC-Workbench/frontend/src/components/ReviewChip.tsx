@@ -1,4 +1,4 @@
-import { CheckCircle2, CircleAlert, Clock } from 'lucide-react'
+import { Archive, CheckCircle2, CircleAlert, Clock } from 'lucide-react'
 import type { ReviewStatus, StoredReview } from '../api'
 import { INDEPENDENCE_SHORT, REVIEW_STATE_LABEL } from '../lib/format'
 
@@ -15,6 +15,9 @@ export function IndependenceChip({ label }: { label: string }) {
 
 /** Where an artefact's review stands, from the status the server computed. The screen does not work out "out of date" itself. */
 export function ReviewChip({ status }: { status: ReviewStatus | null }) {
+  if (status !== null && status.state === 'retired') {
+    return <span title="This part of the phase no longer exists. Its versions are kept; it is not reviewed." className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-500"><Archive size={11} aria-hidden /> {REVIEW_STATE_LABEL.retired}</span>
+  }
   if (status === null || status.state === 'unreviewed') {
     return <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-500"><Clock size={11} aria-hidden /> {REVIEW_STATE_LABEL.unreviewed}</span>
   }

@@ -721,3 +721,152 @@ def test_the_real_location_is_replaced_before_the_short_one_that_is_inside_it(tm
     clean = scrub_locations(text, workspace, scratch)  # type: ignore[arg-type]
     assert clean == 'File "a.py", line 1\nb.py:2\nhome <scratch>/h and <scratch>/g\n'
     assert "/private" not in clean and "/var/" not in clean
+
+
+# ---- folder tools (S17a) -----------------------------------------------------------------------------------------------------------
+
+def test_remove_folder_removes_a_folder_and_everything_in_it_and_says_so(ws):
+    ws.write_file("a/b/c.txt", "x")
+    ws.write_file("a/d.txt", "y")
+    ws.write_file("keep.txt", "z")
+    assert ws.remove_folder("a") is True
+    assert ws.list_files() == ["keep.txt"]
+
+
+def test_remove_folder_says_false_for_a_folder_that_is_not_there(ws):
+    assert ws.remove_folder("nothing") is False
+
+
+def test_remove_folder_refuses_a_file_and_leaves_it(ws):
+    ws.write_file("a.txt", "x")
+    with pytest.raises(PathRefused, match="a.txt is a file; only folders can be removed"):
+        ws.remove_folder("a.txt")
+    assert ws.read_file("a.txt") == "x"
+
+
+def test_remove_folder_refuses_the_workspace_itself_and_a_path_that_leaves_it(ws):
+    ws.write_file("a.txt", "x")
+    for bad in (".", "..", "../x", "/etc"):
+        with pytest.raises(PathRefused):
+            ws.remove_folder(bad)
+    assert ws.list_files() == ["a.txt"]
+
+
+def test_remove_folder_unlinks_a_link_inside_without_following_it(ws, tmp_path):
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "precious.txt").write_text("keep me")
+    ws.write_file("a/real.txt", "x")
+    os.symlink(outside, ws.root / "a" / "link")
+    assert ws.remove_folder("a") is True
+    assert (outside / "precious.txt").read_text() == "keep me"
+
+
+def test_replace_folder_makes_the_destination_hold_exactly_the_source(ws):
+    ws.write_file("stage/db/new.sql", "new")
+    ws.write_file("db/old.sql", "old")
+    ws.write_file("other/keep.txt", "k")
+    ws.replace_folder("stage/db", "db")
+    assert ws.list_files() == ["db/new.sql", "other/keep.txt"]
+
+
+def test_replace_folder_creates_the_destination_when_there_is_none(ws):
+    ws.write_file("stage/db/new.sql", "new")
+    ws.replace_folder("stage/db", "deep/er/db")
+    assert ws.read_file("deep/er/db/new.sql") == "new"
+
+
+def test_replace_folder_with_a_missing_source_leaves_the_destination_whole(ws):
+    ws.write_file("db/old.sql", "old")
+    with pytest.raises(PathRefused, match="does not exist"):
+        ws.replace_folder("stage/db", "db")
+    assert ws.read_file("db/old.sql") == "old"
+
+
+def test_replace_folder_with_a_file_as_source_leaves_the_destination_whole(ws):
+    ws.write_file("stage.txt", "x")
+    ws.write_file("db/old.sql", "old")
+    with pytest.raises(PathRefused, match="only a folder can replace a folder"):
+        ws.replace_folder("stage.txt", "db")
+    assert ws.read_file("db/old.sql") == "old"
+
+
+def test_replace_folder_refuses_a_file_as_destination(ws):
+    ws.write_file("stage/x.txt", "x")
+    ws.write_file("db", "i am a file")
+    with pytest.raises(PathRefused, match="is a file"):
+        ws.replace_folder("stage", "db")
+    assert ws.read_file("db") == "i am a file"
+
+
+@pytest.mark.parametrize("source, destination", [("a", "a"), ("a/b", "a"), ("a", "a/b")])
+def test_a_folder_cannot_replace_itself_or_one_inside_it(ws, source, destination):
+    ws.write_file("a/b/c.txt", "x")
+    with pytest.raises(PathRefused, match="cannot replace itself or one inside it"):
+        ws.replace_folder(source, destination)
+    assert ws.read_file("a/b/c.txt") == "x"
+
+
+def test_replace_folder_leaves_no_moved_aside_copy_next_to_it(ws):
+    ws.write_file("stage/db/new.sql", "new")
+    ws.write_file("db/old.sql", "old")
+    ws.replace_folder("stage/db", "db")
+    assert sorted(p.name for p in ws.root.iterdir()) == ["db", "stage"] and ws.list_files() == ["db/new.sql"]
+
+
+def test_replace_folder_sweeps_a_moved_aside_copy_a_crashed_replacement_left(ws):
+    ws.write_file("db/old.sql", "old")
+    (ws.root / ".old-db-deadbeef").mkdir()
+    (ws.root / ".old-db-deadbeef" / "junk.txt").write_text("junk")
+    ws.write_file("stage/db/new.sql", "new")
+    ws.replace_folder("stage/db", "db")
+    assert sorted(p.name for p in ws.root.iterdir()) == ["db", "stage"]
+
+
+def test_replace_folder_works_when_another_replacement_filled_the_destination_a_moment_ago(ws, monkeypatch):
+    """The second of two replacements finds the folder it meant to move aside already gone, and the first one's folder in its place."""
+    ws.write_file("stage/db/mine.sql", "mine")
+    real_rename = os.rename
+    calls = {"n": 0}
+
+    def rename(src, dst, *a, **k):
+        calls["n"] += 1
+        if calls["n"] == 1:                                           # the move-aside: another writer got there first
+            raise FileNotFoundError(2, "gone", str(src))
+        return real_rename(src, dst, *a, **k)
+    monkeypatch.setattr(os, "rename", rename)
+    ws.replace_folder("stage/db", "db")
+    assert ws.read_file("db/mine.sql") == "mine"
+
+
+def test_replace_folder_moves_a_folder_that_appears_at_the_last_moment_aside_and_still_succeeds(ws, monkeypatch):
+    ws.write_file("stage/db/mine.sql", "mine")
+    real_rename = os.rename
+    state = {"planted": False}
+
+    def rename(src, dst, *a, **k):
+        if str(dst).endswith("/db") and not state["planted"] and "stage" in str(src):
+            state["planted"] = True
+            (ws.root / "db").mkdir()
+            (ws.root / "db" / "theirs.sql").write_text("theirs")           # another replacement filled it between our two steps
+        return real_rename(src, dst, *a, **k)
+    monkeypatch.setattr(os, "rename", rename)
+    ws.replace_folder("stage/db", "db")
+    assert ws.list_files() == ["db/mine.sql"] and sorted(p.name for p in ws.root.iterdir()) == ["db", "stage"]
+
+
+def test_a_folder_that_another_replacement_moves_aside_between_two_looks_is_never_mistaken_for_a_file(ws, monkeypatch):
+    """The failure seen one run in many: the destination "exists", then is gone by the time it is asked whether it is a folder, so it read as a file."""
+    ws.write_file("stage/db/mine.sql", "mine")
+    real_exists = Path.exists
+    monkeypatch.setattr(Path, "exists", lambda self, *a, **k: True if self.name == "db" and "stage" not in str(self) else real_exists(self, *a, **k))
+    ws.replace_folder("stage/db", "db")                                           # nothing is at db, yet exists() claims there is: the answer must not be "it is a file"
+    assert ws.read_file("db/mine.sql") == "mine"
+
+
+def test_a_real_file_in_the_way_is_still_refused_and_left_alone(ws):
+    ws.write_file("stage/db/mine.sql", "mine")
+    ws.write_file("db", "i am a file")
+    with pytest.raises(PathRefused, match="db is a file"):
+        ws.replace_folder("stage/db", "db")
+    assert ws.read_file("db") == "i am a file" and ws.read_file("stage/db/mine.sql") == "mine"

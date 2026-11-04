@@ -8,7 +8,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # The only place that points at the real .env. Tests repoint this at a missing file.
@@ -72,7 +72,9 @@ class Settings(BaseSettings):
     ibm_ica_gemini_price_output_per_mtok: float | None = None
 
     app_mode: Literal["replay", "live"] = "replay"
-    run_budget_usd: float = 5.0
+    # `.env.example` has always documented this name as the per-run spending limit, but nothing read it: the cap the runner enforces is `run_max_cost_usd`. A person who set this
+    # one (as the example file tells them to) still ran under the built-in $5. It now sets the cap, unless RUN_MAX_COST_USD is given too (that one wins).
+    run_budget_usd: float = Field(default=5.0, ge=0, le=1000)
     llm_timeout_seconds: float = Field(default=180, gt=0)
     llm_max_retries: int = Field(default=1, ge=0, le=5)
     llm_retry_backoff_seconds: float = Field(default=1.0, ge=0, le=30)
@@ -109,13 +111,18 @@ class Settings(BaseSettings):
     # Roles that need a larger output limit than the rest, as "role=tokens" pairs separated by commas. The default carries Gemini's UX designer:
     # its wireframe sets are ~4,000 tokens of reply, but the model also spends output tokens on reasoning it never shows (measured on the user's
     # real run: 300 visible tokens billed as 7,996), so 8,000 was a coin toss and 24,000 is room for both.
-    agent_output_tokens_by_role: str = "ux_designer=24000"
+    # Real code is long, and some models spend part of the limit thinking before they write: at 8,000 a real frontend and a real test suite were cut off
+    # (2026-11-03). The database schema is short and keeps the general limit.
+    agent_output_tokens_by_role: str = "ux_designer=24000,frontend_developer=24000,test_engineer=24000,backend_developer=16000,solution_architect=16000"
     agent_upstream_max_chars: int = Field(default=100000, ge=1000, le=400000)
     agent_context_max_chunks: int = Field(default=6, ge=0, le=30)
     agent_context_max_chars: int = Field(default=6000, ge=0, le=60000)
     agent_context_min_coverage: float = Field(default=0.5, ge=0, le=1)
     agent_brief_queries: int = Field(default=8, ge=0, le=20)  # extra searches, one per sentence of the brief
     review_max_output_tokens: int = Field(default=8000, ge=256, le=32000)
+    # The review of ONE FILE of the Build instruction set (S19e). Larger than the general limit because the reviewer spends part of its limit thinking before it writes: at 8,000 the
+    # first reviews of the set came back EMPTY (finish_reason=length). Used only for a file-review call; every other review keeps REVIEW_MAX_OUTPUT_TOKENS.
+    review_file_max_output_tokens: int = Field(default=12000, ge=256, le=32000)
     review_max_repairs: int = Field(default=1, ge=0, le=3)
     review_max_findings: int = Field(default=20, ge=1, le=100)
     review_cited_max_chars: int = Field(default=8000, ge=0, le=100000)  # cited source text shown to a reviewer
@@ -128,6 +135,8 @@ class Settings(BaseSettings):
     sandbox_total_bytes: int = Field(default=50 * 1024 * 1024, ge=1024, le=2 * 1024 * 1024 * 1024)
     sandbox_max_processes: int = Field(default=64, ge=4, le=1024)
     sandbox_memory_mb: int = Field(default=1024, ge=64, le=16384)
+    # Build (S17b): how many times the generated tests are run and the failures sent back for a fix. Worst case is rounds x (1 call + agent_max_repairs).
+    build_fix_rounds: int = Field(default=3, ge=1, le=10)
     # Left unset by default: some newer models reject the parameter, which would fail the call with no fallback.
     agent_temperature: float | None = Field(default=None, ge=0, le=2)
 
@@ -141,6 +150,13 @@ class Settings(BaseSettings):
 
     # No env_file here: get_settings() is the only code that names the real .env.
     model_config = SettingsConfigDict(env_file_encoding="utf-8", extra="ignore")
+
+    @model_validator(mode="after")
+    def _the_budget_sets_the_run_cap(self) -> "Settings":
+        given = self.model_fields_set
+        if "run_budget_usd" in given and "run_max_cost_usd" not in given:
+            self.run_max_cost_usd = self.run_budget_usd
+        return self
 
     @field_validator(*_PRICE_FIELDS, mode="before")
     @classmethod

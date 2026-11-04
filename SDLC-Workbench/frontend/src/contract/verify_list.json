@@ -1,0 +1,62 @@
+{
+  "advice": "This shows how far the build has drifted from the design. A real build always differs from its design, so this is a highlighter, not a pass or fail, and it never runs your code.",
+  "runs": [
+    {
+      "at": "2026-01-01T00:00:00.000Z",
+      "backend_path": "/projects/build/backend",
+      "by": "human:Demo Person",
+      "counts": [
+        {
+          "area": "endpoint",
+          "designed": 3,
+          "differences": 0,
+          "extras": 2,
+          "found": 1,
+          "not_found": 2,
+          "possible": 0,
+          "weak": 0
+        },
+        {
+          "area": "table",
+          "designed": 1,
+          "differences": 1,
+          "extras": 0,
+          "found": 0,
+          "not_found": 0,
+          "possible": 0,
+          "weak": 0
+        },
+        {
+          "area": "screen",
+          "designed": 1,
+          "differences": 0,
+          "extras": 0,
+          "found": 1,
+          "not_found": 0,
+          "possible": 0,
+          "weak": 0
+        },
+        {
+          "area": "rule",
+          "designed": 1,
+          "differences": 0,
+          "extras": 0,
+          "found": 0,
+          "not_found": 0,
+          "possible": 0,
+          "weak": 1
+        }
+      ],
+      "design": {
+        "DES-HFS-001": 1,
+        "DES-LLD-001": 1
+      },
+      "frontend_path": "/projects/build/frontend",
+      "id": 1,
+      "notes": [
+        "backend: left out .env (it may hold a secret)",
+        "frontend: read 1 files by pattern, not parsed: 1 pages and 1 API calls found"
+      ]
+    }
+  ]
+}

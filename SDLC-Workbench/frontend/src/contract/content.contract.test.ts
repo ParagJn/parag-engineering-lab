@@ -72,6 +72,21 @@ describe('the S12b fixtures decode', () => {
     expect(one.totals?.artefacts.done).toBe(7)
   })
 
+  it('a stored run may carry why each artefact failed, and an older one without it still decodes', () => {
+    expect(decodeRun(runDetail).totals?.failures).toEqual({})
+    const failed = { ...(runDetail as Record<string, unknown>), totals: { ...((runDetail as Record<string, unknown>).totals as Record<string, unknown>),
+      failures: { frontend_code: { reason: 'could not be produced', problems: ['one', 'two'], cut_off: true } } } }
+    expect(decodeRun(failed).totals?.failures).toEqual({ frontend_code: { reason: 'could not be produced', problems: ['one', 'two'], cut_off: true } })
+  })
+  it('a malformed failure record is refused, naming the field', () => {
+    const base = runDetail as Record<string, unknown>
+    const bad = (failures: unknown) => ({ ...base, totals: { ...(base.totals as Record<string, unknown>), failures } })
+    expect(() => decodeRun(bad({ x: { reason: 1, problems: [], cut_off: false } }))).toThrow(/reason/)
+    expect(() => decodeRun(bad({ x: { reason: 'r', problems: 'no', cut_off: false } }))).toThrow(/problems/)
+    expect(() => decodeRun(bad({ x: { reason: 'r', problems: [], cut_off: 'yes' } }))).toThrow(/cut_off/)
+    expect(() => decodeRun(bad('nope'))).toThrow(ContractError)
+  })
+
   it('a started run, the two gate answers, and a 409 sentence', () => {
     expect(decodeRunStarted(runStarted).events).toContain('/events')
     expect(decodeGate(gateFinish)).toMatchObject({ status: 'awaiting_review', decision: null })
