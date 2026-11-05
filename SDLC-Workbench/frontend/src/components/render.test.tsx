@@ -101,6 +101,35 @@ describe('the name prompt', () => {
   })
 })
 
+describe('the name prompt with a Users list', () => {
+  const names = ['Parag', 'Asha']
+  it('offers the listed people in a drop-down, with a way to type someone else, and no typing box until then', () => {
+    const out = html(<NamePrompt initial="" names={names} onSave={noop} />)
+    expect(out).toContain('<select')
+    expect(out).toContain('>Parag</option>')
+    expect(out).toContain('>Asha</option>')
+    expect(out).toContain('Someone else')
+    expect(out).not.toContain('id="actor-name"')
+    expect(out).toMatch(disabledButton('Continue'))
+  })
+  it('a saved name that is on the list starts selected and Continue is ready', () => {
+    const out = html(<NamePrompt initial="Asha" names={names} onSave={noop} />)
+    expect(out).toMatch(/<option value="Asha" selected/)
+    expect(out).not.toContain('id="actor-name"')
+    expect(out).not.toMatch(disabledButton('Continue'))
+  })
+  it('a saved name that is not on the list starts on Someone else with the name in the typing box', () => {
+    const out = html(<NamePrompt initial="Visitor" names={names} onSave={noop} />)
+    expect(out).toContain('id="actor-name"')
+    expect(out).toContain('value="Visitor"')
+  })
+  it('with no list the prompt is the plain typing box, as before', () => {
+    const out = html(<NamePrompt initial="" names={[]} onSave={noop} />)
+    expect(out).not.toContain('<select')
+    expect(out).toContain('id="actor-name"')
+  })
+})
+
 describe('the project list', () => {
   it('the empty state offers a way forward', () => {
     const out = html(<HomePage projects={[]} />)

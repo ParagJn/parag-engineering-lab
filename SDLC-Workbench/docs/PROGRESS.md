@@ -92,3 +92,5 @@ Closed means the user said so, or tried it in the UI and was happy. The Step log
 | (planned) Observability UI | not started, not scheduled | | Originally numbered S22 |
 | (planned) Demo kit | not started, not scheduled | | Originally numbered S23 |
 | (planned) Replay set and polish | not started, not scheduled | | Originally numbered S24 |
+
+**Name drop-down (2026-11-05, last change before the demos):** the 'What should we call you?' prompt now offers a drop-down of the people switched ON in the Users list (plus 'Someone else (type a name)'); with no list it is the typing box as before. A saved name on the list starts selected. Frontend only (reads the existing `/api/users`). Frontend 1634 passed, build clean; sweep 16/16 (one onChange wire recorded as not testable without React). Not committed. Version 1 paused here; open items (template use at download, 23f, 18c/18d, parked ideas) stay as they are until after the demos and feedback.

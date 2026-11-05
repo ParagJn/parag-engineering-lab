@@ -42,3 +42,30 @@ describe('actor name', () => {
     expect(loadName(store)).toBe('a b')
   })
 })
+
+import { OTHER, pickableNames, startingChoice, valueForChoice } from './actor'
+
+describe('the names offered in the drop-down', () => {
+  it('lists only active people, in list order, once each, with tidy spacing', () => {
+    const users = [{ name: 'Parag', active: true }, { name: 'Gone', active: false }, { name: '  Asha   K ', active: true }, { name: 'parag', active: true }, { name: '', active: true }]
+    expect(pickableNames(users)).toEqual(['Parag', 'Asha K'])
+  })
+  it('is empty when there is no list', () => {
+    expect(pickableNames(null)).toEqual([])
+    expect(pickableNames([])).toEqual([])
+  })
+  it('starts on the saved name when it is listed (any case, listed spelling), on someone else when it is not, and on nothing when there is no saved name', () => {
+    expect(startingChoice('asha', ['Parag', 'Asha'])).toBe('Asha')
+    expect(startingChoice('Visitor', ['Parag'])).toBe(OTHER)
+    expect(startingChoice('', ['Parag'])).toBe('')
+    expect(startingChoice('   ', ['Parag'])).toBe('')
+  })
+})
+
+describe('choosing in the drop-down', () => {
+  it('a listed name becomes the name; someone else or nothing leaves the box empty to type in', () => {
+    expect(valueForChoice('Asha')).toBe('Asha')
+    expect(valueForChoice(OTHER)).toBe('')
+    expect(valueForChoice('')).toBe('')
+  })
+})

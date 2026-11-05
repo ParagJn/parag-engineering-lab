@@ -5,7 +5,7 @@ import {
 import { Shell } from './components/Shell'
 import { NamePrompt } from './components/NamePrompt'
 import { Notice, Spinner } from './components/Notice'
-import { browserStore, loadName, saveName } from './lib/actor'
+import { browserStore, loadName, pickableNames, saveName } from './lib/actor'
 import { buildHash } from './lib/router'
 import { fileProblem, pastedFilename, type StagedDocument } from './lib/documents'
 import { createPayload, initialWizard, selectionOf } from './lib/wizard'
@@ -53,6 +53,15 @@ export default function App() {
   const mode = modeLoad.state === 'ready' ? modeLoad.value.mode : null
   const needName = !actorName || asking
 
+  const [pickNames, setPickNames] = useState<string[] | null>(null)           // null = the Users list has not been read yet for this prompt
+  useEffect(() => {
+    if (!needName) return
+    let live = true
+    setPickNames(null)
+    client.users().then((l) => live && setPickNames(pickableNames(l.users))).catch(() => live && setPickNames([]))       // no list readable: the name is simply typed
+    return () => { live = false }
+  }, [needName])
+
   const saveActor = (name: string) => { saveName(browserStore(), name); setActorName(name.trim().split(/\s+/).join(' ')); setAsking(false) }
 
   return (
@@ -60,7 +69,7 @@ export default function App() {
       {modeLoad.state === 'failed' && modeLoad.unreachable ? (
         <Notice tone="error" title="The backend is not reachable">{modeLoad.message}</Notice>
       ) : needName ? (
-        <NamePrompt initial={actorName} onSave={saveActor} onCancel={actorName ? () => setAsking(false) : undefined} />
+        pickNames === null ? <Spinner label="Loading" /> : <NamePrompt initial={actorName} names={pickNames} onSave={saveActor} onCancel={actorName ? () => setAsking(false) : undefined} />
       ) : route.name === 'home' ? <Home actorName={actorName} />
         : route.name === 'new' ? <NewProject key={route.sample ? 'sample' : 'blank'} useSample={!!route.sample} actorName={actorName} modeInfo={modeLoad.state === 'ready' ? modeLoad.value : null} onCreated={(id, note) => { setFlash(note ? { id, message: note } : null); go({ name: 'project', id, phase: null }) }} />
         : route.name === 'traceability' ? <TraceabilityPage key={route.id} client={client} id={route.id} item={route.item} />
