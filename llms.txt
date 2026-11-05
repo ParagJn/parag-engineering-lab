@@ -7,5 +7,6 @@ Parag Jain is a Lead Architect and GenAI Account Partner at IBM Consulting. He d
 ## Pages
 
 - [Home](https://paragjn.github.io/parag-engineering-lab/): Overview, capabilities, featured GenAI assets, projects, signature engagements, and contact.
+- [Intelligent SDLC Manager](https://paragjn.github.io/parag-engineering-lab/sdlc-manager/): AI-orchestrated software delivery from brief to handover with human approval gates; consulting offer and walkthrough.
 - [Executive Summary](https://paragjn.github.io/parag-engineering-lab/executive-summary/): Crawlable one-page summary.
 - [Engineering Lab](https://paragjn.github.io/parag-engineering-lab/projects.html): Full catalogue of AI-powered projects.
