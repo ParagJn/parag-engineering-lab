@@ -1,0 +1,37 @@
+{
+  "can_change": true,
+  "categories": [
+    {
+      "category": "deployment_plan",
+      "label": "Deployment plan",
+      "template": null
+    },
+    {
+      "category": "release_notes",
+      "label": "Release notes",
+      "template": null
+    },
+    {
+      "category": "runbook",
+      "label": "Runbook",
+      "template": null
+    },
+    {
+      "category": "hypercare_plan",
+      "label": "Hypercare plan",
+      "template": null
+    },
+    {
+      "category": "deployment_verification",
+      "label": "Deployment verification report",
+      "template": null
+    },
+    {
+      "category": "handover_signoff",
+      "label": "Handover sign-off report",
+      "template": null
+    }
+  ],
+  "max_mb": 5,
+  "note": "A template is a Word file (.docx) that gives a document its look: styles, page and header and footer. A new upload replaces the old one. It is used only if it has a table of contents."
+}

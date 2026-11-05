@@ -209,6 +209,89 @@ def _checklist_examples() -> dict[str, Any]:
         return out
 
 
+def _users_examples() -> dict[str, Any]:
+    """The Users list (S23): empty, then with a few people; what a typed name may do; and the refusals a person meets."""
+    with tempfile.TemporaryDirectory(prefix="sdlc_contract_users_") as tmp:
+        settings = Settings(_env_file=None, data_dir=str(Path(tmp) / "data"), recordings_dir=str(Path(tmp) / "rec"), app_mode="replay")
+        app = create_app(settings)
+        client = TestClient(app)
+        out: dict[str, Any] = {"users_empty": client.get("/api/users").json()}
+        root, ann, bo = {"X-Actor": "Root"}, {"X-Actor": "Ann"}, {"X-Actor": "Bo"}
+        client.post("/api/users", json={"name": "Root", "roles": ["Administrator", "Project Manager"]}, headers=root)
+        client.post("/api/users", json={"name": "Ann", "roles": ["Architect", "Technical Lead"]}, headers=root)
+        client.post("/api/users", json={"name": "Bo", "roles": ["Project Manager"]}, headers=root)
+        client.put("/api/users/Bo/active", json={"active": False}, headers=root)
+        client.put("/api/approvers/requirements", json={"roles": ["Architect", "Technical Lead"]}, headers=root)
+        out["users_list"] = client.get("/api/users").json()
+        out["users_me_architect"] = client.get("/api/users/me", headers=ann).json()
+        out["users_me_stranger"] = client.get("/api/users/me", headers={"X-Actor": "Stranger"}).json()
+        out["error_403_users"] = client.post("/api/users", json={"name": "New", "roles": []}, headers=ann).json()
+        out["error_409_users"] = client.put("/api/users/Root/roles", json={"roles": ["Architect"]}, headers=root).json()
+        return out
+
+
+def _settings_examples() -> dict[str, Any]:
+    """System settings (S23d, e): the read-only view, then a real save to a file inside the scratch folder, the refusal, and the 403. The settings file is a throwaway: the real backend/.env is never opened."""
+    with tempfile.TemporaryDirectory(prefix="sdlc_contract_settings_") as tmp:
+        env = Path(tmp) / "scratch.env"
+        env.write_text("IBM_ICA_" + "API_KEY" + "=scratch" + "-key\nRUN_BUDGET_USD=5.0\n", encoding="utf-8")                    # built from pieces so the repo's own secret scan does not read a made-up key as a real one
+        settings = Settings(_env_file=env, data_dir=str(Path(tmp) / "data"), recordings_dir=str(Path(tmp) / "rec"), app_mode="replay")
+        app = create_app(settings)
+        app.state.env_file, app.state.env_backups = env, Path(tmp) / "bk"
+        app.state.settings_at_start = Settings(_env_file=env).model_dump_json()
+        client = TestClient(app)
+        out: dict[str, Any] = {}
+        root = {"X-Actor": "Root"}
+        client.post("/api/users", json={"name": "Root", "roles": ["Administrator"]}, headers=root)
+        client.post("/api/users", json={"name": "Ann", "roles": ["Architect"]}, headers=root)
+        out["settings_view"] = client.get("/api/settings", headers=root).json()
+        out["error_403_settings"] = client.put("/api/settings", json={"values": {"run_budget_usd": "9"}}, headers={"X-Actor": "Ann"}).json()
+        out["error_422_settings"] = client.put("/api/settings", json={"values": {"run_budget_usd": "5000"}}, headers=root).json()
+        out["settings_saved"] = client.put("/api/settings", json={"values": {"run_budget_usd": "7.5", "ibm_ica_api_key": "new-scratch-key"}}, headers=root).json()
+        text = json.dumps(out).replace(tmp, "/projects/scratch")                                              # the scratch folder is a random name and a real local path: a fixed one is kept
+        text = re.sub(r"env-\d{8}-\d{6}-\d{6}\.bak", "env-20260101-000000-000001.bak", text)
+        return json.loads(text)
+
+
+def _templates_examples() -> dict[str, Any]:
+    """Document templates (S23 Part C): a project with none, one with a template that has a table of contents and one without, and the refusals a person meets. The Word files are made
+    in memory and kept in a scratch folder; nothing in the real backend/data is touched."""
+    import io
+
+    from docx import Document
+    from docx.oxml import parse_xml
+
+    def word(toc: bool) -> bytes:
+        doc = Document()
+        doc.add_heading("Title", level=1)
+        if toc:
+            ns = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
+            doc.element.body.insert(0, parse_xml(f'<w:p {ns}><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> TOC \\o "1-3" </w:instrText></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>'))
+        buffer = io.BytesIO()
+        doc.save(buffer)
+        return buffer.getvalue()
+
+    kind = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    with tempfile.TemporaryDirectory(prefix="sdlc_contract_templates_") as tmp:
+        settings = Settings(_env_file=None, data_dir=str(Path(tmp) / "data"), recordings_dir=str(Path(tmp) / "rec"), app_mode="replay")
+        app = create_app(settings)
+        client = TestClient(app)
+        root, ann = {"X-Actor": "Root"}, {"X-Actor": "Ann"}
+        client.post("/api/users", json={"name": "Root", "roles": ["Administrator"]}, headers=root)
+        client.post("/api/users", json={"name": "Ann", "roles": ["Architect"]}, headers=root)
+        pid = client.post("/api/projects", json={"name": "Templates", "brief": BRIEF}, headers=root).json()["id"]
+        base = f"/api/projects/{pid}/templates"
+        out: dict[str, Any] = {"templates_empty": client.get(base, headers=root).json()}
+        client.post(f"{base}/runbook", files={"file": ("a.docx", word(False), kind)}, headers=root)
+        out["templates_saved"] = client.post(f"{base}/release_notes", files={"file": ("b.docx", word(True), kind)}, headers=root).json()
+        out["error_403_templates"] = client.post(f"{base}/runbook", files={"file": ("a.docx", word(False), kind)}, headers=ann).json()
+        out["error_422_templates"] = client.post(f"{base}/runbook", files={"file": ("a.docx", b"not a word file", kind)}, headers=root).json()
+        text = json.dumps(out)
+        text = re.sub(r'"uploaded_at": "[^"]+"', '"uploaded_at": "2026-01-01T00:00:00Z"', text)
+        text = re.sub(r'"size": \d+', '"size": 1000', text)
+        return json.loads(text)
+
+
 def _verify_examples() -> dict[str, Any]:
     """Build Verify (S20): a real check of a small FastAPI project written to a temporary folder, as the server answers it. The folder is a random name, so it is
     replaced with a fixed one before the fixture is kept."""
@@ -448,6 +531,9 @@ def build_examples() -> dict[str, Any]:
         out.update(_architecture_examples())
         out.update(_verify_examples())
         out.update(_checklist_examples())
+        out.update(_users_examples())
+        out.update(_settings_examples())
+        out.update(_templates_examples())
         return {name: normalise(body) for name, body in out.items()}
 
 

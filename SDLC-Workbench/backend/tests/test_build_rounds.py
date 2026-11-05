@@ -157,7 +157,7 @@ def test_a_v6_database_upgrades_to_v7_keeping_its_data(tmp_path):
     raw.execute("PRAGMA user_version = 6")
     raw.execute("INSERT INTO projects (id, name, mode, created_at, updated_at) VALUES ('p1', 'Old', 'replay', 't', 't')")
     raw.commit(); raw.close()
-    assert len(MIGRATIONS) == 10 and Database(path).migrate() == 10
+    assert len(MIGRATIONS) == 11 and Database(path).migrate() == 11
     store = Store.open(path)
     assert [p.name for p in store.projects.list()] == ["Old"] and store.build_rounds.list("p1") == []
     store.build_rounds.append("p1", "loop-1", 1, artefact="a", outcome="passed", passed=1)

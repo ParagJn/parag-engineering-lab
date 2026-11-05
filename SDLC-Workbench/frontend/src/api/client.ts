@@ -3,6 +3,9 @@
 import { ContractError, type Json } from './decode'
 import { decodeTraceItem, decodeTraceability, type TraceItem, type Traceability } from './trace'
 import { decodeChecklist, type Answer, type Checklist } from './deploy'
+import { decodeSettings, type SettingsView } from './settings'
+import { decodeTemplates, type TemplatesView } from './templates'
+import { decodeApprovers, decodeMe, decodeUser, decodeUsersList, type AppUser, type Me, type UsersList } from './users'
 import { decodeVerifyDetail, decodeVerifyList, type VerifyDetail, type VerifyList } from './verify'
 import { decodeChangesRequested, decodeEditFileSaved, decodeEditRefusal, decodeEditSaved, decodePhaseReview, decodeReviewAnswer, decodeReviewState, decodeRerun, type ChangesRequested, type EditFileSaved, type EditSaved, type RerunStarted, type ReviewAnswer, type ReviewState_ } from './review'
 import {
@@ -70,6 +73,21 @@ export interface Client {
   /** S21c: the deployment checklist. Reading needs no name; answering a check is saved in the person's name. */
   checklist(projectId: string, phase?: string): Promise<Checklist>
   answerCheck(projectId: string, checkId: string, actorName: string, answer: Answer, note: string, phase?: string): Promise<Checklist>
+  /** S23: the Users list, and what a typed name may do. Reading needs no name except `me`; changing the list is saved in the person's name and needs an Administrator. */
+  users(): Promise<UsersList>
+  /** S23: the system settings. Reading needs no name. Saving is in the person's name and needs an Administrator; a secret left blank is kept; a change takes effect after a restart. */
+  settings(actorName?: string): Promise<SettingsView>
+  saveSettings(actorName: string, values: Record<string, string>): Promise<SettingsView>
+  restoreSettings(actorName: string, name: string): Promise<SettingsView>
+  /** S23 Part C: a project's Word templates. Listing is asked as the typed name, because whether this person may change them depends on who they are. */
+  templates(projectId: string, actorName?: string): Promise<TemplatesView>
+  uploadTemplate(projectId: string, category: string, file: File | Blob, filename: string, actorName: string): Promise<TemplatesView>
+  removeTemplate(projectId: string, category: string, actorName: string): Promise<TemplatesView>
+  me(actorName: string): Promise<Me>
+  addUser(actorName: string, name: string, roles: string[]): Promise<AppUser>
+  setUserRoles(actorName: string, name: string, roles: string[]): Promise<AppUser>
+  setUserActive(actorName: string, name: string, active: boolean): Promise<AppUser>
+  setApprovers(actorName: string, phase: string, roles: string[]): Promise<{ phase: string; roles: string[] }>
   verifyRun(projectId: string, runId: number): Promise<VerifyDetail>
   runVerify(projectId: string, actorName: string, backendPath: string): Promise<VerifyDetail>
   requestChanges(projectId: string, phase: string, actorName: string, input: ChangeRequest): Promise<ChangesRequested>
@@ -114,6 +132,8 @@ export function makeClient(fetcher: Fetcher = (...args) => fetch(...args), base 
 
   const post = (path: string, payload: Json, headers: Record<string, string> = {}) =>
     call(path, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(payload) })
+  const put = (path: string, payload: Json, headers: Record<string, string> = {}) =>
+    call(path, { method: 'PUT', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(payload) })
   const id = encodeURIComponent
   const who = (actorName: string) => ({ 'X-Actor': actorName })
 
@@ -135,6 +155,23 @@ export function makeClient(fetcher: Fetcher = (...args) => fetch(...args), base 
       decodeChecklist(await call(`/api/projects/${id(projectId)}/${id(phase)}/checklist/${id(checkId)}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json', ...who(actorName) }, body: JSON.stringify({ answer, note }),
       })),
+    users: async () => decodeUsersList(await call('/api/users')),
+    settings: async (actorName) => decodeSettings(await call('/api/settings', actorName ? { headers: who(actorName) } : undefined)),
+    saveSettings: async (actorName, values) => decodeSettings(await put('/api/settings', { values }, who(actorName))),
+    restoreSettings: async (actorName, name) => decodeSettings(await post('/api/settings/restore', { name }, who(actorName))),
+    templates: async (projectId, actorName) => decodeTemplates(await call(`/api/projects/${id(projectId)}/templates`, actorName ? { headers: who(actorName) } : undefined)),
+    uploadTemplate: async (projectId, category, file, filename, actorName) => {
+      const form = new FormData()
+      form.append('file', file, filename)     // no Content-Type: the browser sets the multipart boundary itself
+      return decodeTemplates(await call(`/api/projects/${id(projectId)}/templates/${id(category)}`, { method: 'POST', headers: who(actorName), body: form }))
+    },
+    removeTemplate: async (projectId, category, actorName) =>
+      decodeTemplates(await call(`/api/projects/${id(projectId)}/templates/${id(category)}`, { method: 'DELETE', headers: who(actorName) })),
+    me: async (actorName) => decodeMe(await call('/api/users/me', { headers: who(actorName) })),
+    addUser: async (actorName, name, roles) => decodeUser(await post('/api/users', { name, roles }, who(actorName))),
+    setUserRoles: async (actorName, name, roles) => decodeUser(await put(`/api/users/${id(name)}/roles`, { roles }, who(actorName))),
+    setUserActive: async (actorName, name, active) => decodeUser(await put(`/api/users/${id(name)}/active`, { active }, who(actorName))),
+    setApprovers: async (actorName, phase, roles) => decodeApprovers(await put(`/api/approvers/${id(phase)}`, { roles }, who(actorName))),
     verifyRuns: async (projectId) => decodeVerifyList(await call(`/api/projects/${id(projectId)}/verify`)),
     verifyRun: async (projectId, runId) => decodeVerifyDetail(await call(`/api/projects/${id(projectId)}/verify/${id(String(runId))}`)),
     runVerify: async (projectId, actorName, backendPath) =>

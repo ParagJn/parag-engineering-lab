@@ -14,6 +14,7 @@ TABLES = {
     "build_rounds",  # S17b
     "verify_runs", "verify_matches",  # S20b
     "deploy_checks",  # S21c
+    "users", "user_roles", "phase_approvers",  # S23a
 }
 
 

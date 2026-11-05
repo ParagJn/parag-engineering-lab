@@ -19,7 +19,7 @@ from .archive import refuse_if_archived
 from .llm.errors import ReviewerUnavailable
 from .llm.types import ReviewerOption
 from .models import InvalidInput, NotFoundError
-from .review.errors import EditRefused, NothingToReview, ReviewError, ReviewOutputInvalid, WrongPhaseState
+from .review.errors import EditRefused, NotAnApprover, NothingToReview, ReviewError, ReviewOutputInvalid, WrongPhaseState
 from .review.human import MAX_NOTE_CHARS
 from .routes import _run_payload, _translate  # noqa: F401  (kept next to the run routes it mirrors)
 from .routes_artefacts import KEY, ARTEFACT_ID, _valid
@@ -40,6 +40,8 @@ def _store(request: Request):
 def _fail(exc: Exception) -> HTTPException:
     if isinstance(exc, NotFoundError):
         return HTTPException(status_code=404, detail=str(exc))
+    if isinstance(exc, NotAnApprover):
+        return HTTPException(status_code=403, detail=str(exc))
     if isinstance(exc, (WrongPhaseState, PrerequisiteNotMet, GateNotMet, RunAlreadyActive)) or type(exc).__name__ == "IllegalTransition":
         return HTTPException(status_code=409, detail=str(exc))
     return HTTPException(status_code=422, detail=str(exc))

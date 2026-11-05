@@ -17,7 +17,7 @@ from .actor import actor_from
 from .archive import refuse_if_archived
 from .architecture.diagram import names_for, render_all
 from .models import ArtefactVersion, IllegalTransition, InvalidInput, NotFoundError
-from .review.errors import WrongPhaseState
+from .review.errors import NotAnApprover, WrongPhaseState
 from .routes import _run_payload, _translate
 from .routes_review_shape import review_payload
 from .workflow.gates import GateNotMet, PrerequisiteNotMet
@@ -37,6 +37,8 @@ def _store(request: Request):
 def _fail(exc: Exception) -> HTTPException:
     if isinstance(exc, NotFoundError):
         return HTTPException(status_code=404, detail=str(exc))
+    if isinstance(exc, NotAnApprover):
+        return HTTPException(status_code=403, detail=str(exc))
     if isinstance(exc, (PrerequisiteNotMet, GateNotMet, IllegalTransition, WrongPhaseState)):
         return HTTPException(status_code=409, detail=str(exc))
     return HTTPException(status_code=422, detail=str(exc))

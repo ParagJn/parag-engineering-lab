@@ -71,6 +71,9 @@ class Settings(BaseSettings):
     ibm_ica_gemini_price_input_per_mtok: float | None = None
     ibm_ica_gemini_price_output_per_mtok: float | None = None
 
+    # The first person on the Users list (S23a): created with every role at start-up when the list is empty. Blank means nobody is seeded, and then nothing is restricted.
+    admin_name: str = Field(default="", max_length=60)
+
     app_mode: Literal["replay", "live"] = "replay"
     # `.env.example` has always documented this name as the per-run spending limit, but nothing read it: the cap the runner enforces is `run_max_cost_usd`. A person who set this
     # one (as the example file tells them to) still ran under the built-in $5. It now sets the cap, unless RUN_MAX_COST_USD is given too (that one wins).
@@ -191,9 +194,9 @@ class Settings(BaseSettings):
             role, sep, number = part.partition("=")
             role, number = role.strip(), number.strip()
             if not sep or not re.fullmatch(r"[a-z][a-z0-9_]{0,63}", role) or not number.isdigit():
-                raise ValueError(f"AGENT_OUTPUT_TOKENS_BY_ROLE entries look like 'ux_designer=24000'; got {part!r}")
+                raise ValueError("AGENT_OUTPUT_TOKENS_BY_ROLE entries look like 'ux_designer=24000'")                  # the bad entry is not repeated: it could be a typed secret
             if not 256 <= int(number) <= 64000:
-                raise ValueError(f"the output limit for {role!r} must be between 256 and 64000; got {number}")
+                raise ValueError(f"the output limit for {role!r} must be between 256 and 64000")
             if role in out:
                 raise ValueError(f"AGENT_OUTPUT_TOKENS_BY_ROLE lists {role!r} twice")
             out[role] = int(number)
@@ -231,6 +234,11 @@ class Settings(BaseSettings):
     def workspaces_path(self) -> Path:
         """Where each project's generated code lives: beside the database, in the git-ignored data folder. One folder per project."""
         return self.db_path.parent / "workspaces"
+
+    @property
+    def templates_path(self) -> Path:
+        """Where each project's Word templates live (S23 Part C): beside the database, in the git-ignored data folder, one sub-folder per project."""
+        return self.db_path.parent / "Templates"
 
     @property
     def db_path(self) -> Path:

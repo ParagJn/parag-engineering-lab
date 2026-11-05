@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .config import SlotConfig, Settings, get_settings
+from .config import ENV_FILE, SlotConfig, Settings, get_settings
 from .llm.gateway import Gateway
 from .llm.providers.base import Provider
 from .llm.providers.ica import IcaProvider
@@ -29,6 +29,10 @@ from .routes_review import router as review_router
 from .routes_trace import router as trace_router
 from .routes_verify import router as verify_router
 from .routes_deploy import router as deploy_router
+from .routes_users import router as users_router
+from .routes_settings import router as settings_router
+from .routes_templates import router as templates_router
+from .models import ConflictError, InvalidInput
 from .run.events import EventBus
 from .run.runner import PhaseRunner
 from .run.status import run_status
@@ -68,6 +72,7 @@ def choose_provider(cfg: Settings, recordings: RecordingStore | None = None) -> 
 def create_app(settings: Settings | None = None, provider: Provider | None = None) -> FastAPI:
     """Build the API. Settings are read here, not at import, so tests can inject their own."""
     cfg = settings or get_settings()
+    env_file = ENV_FILE if settings is None else None                # the settings file the app may WRITE: only when it loaded the real one itself. An app built with given settings (every test) has none, so it can never write .env
     store = Store.open(cfg.db_path, limits=cfg.context_limits)
     routing = Routing.load()  # a broken routing file stops startup with a clear message
     catalogue = load_catalogue(routing.roles.keys())  # so does a broken phase definition
@@ -96,10 +101,18 @@ def create_app(settings: Settings | None = None, provider: Provider | None = Non
     rubric = load_rubric()  # a broken rubric stops startup, like a broken skill
     app.state.reviews = ReviewService(cfg, store, gateway, app.state.agents, engine, rubric)
     app.state.human = HumanActions(store, engine, app.state.agents, app.state.reviews)
+    try:
+        store.users.seed_admin(cfg.admin_name)                  # the first person on the Users list, from ADMIN_NAME; nothing happens when anyone is already there
+    except (InvalidInput, ConflictError) as exc:
+        raise SystemExit(f"ADMIN_NAME in backend/.env cannot be used: {exc}") from exc
     store.runs.interrupt_unfinished()  # runs left "running" by a process that no longer exists
     bus = EventBus(store, queue_size=cfg.run_event_queue, secrets=cfg.secret_values)
     app.state.bus = bus
     app.state.settings = cfg
+    app.state.templates_root = cfg.templates_path                      # beside the database: a test app built with its own data folder keeps its templates there, never in the real one
+    app.state.env_file = env_file
+    app.state.env_backups = (cfg.db_path.parent / "env-backups") if env_file is not None else None
+    app.state.settings_at_start = cfg.model_dump_json()                # to tell, later, whether the file has moved on since this process started
     from .build.loop import FixLoop
     from .build.phase import BuildHooks
     from .build.service import BuildService
@@ -119,6 +132,9 @@ def create_app(settings: Settings | None = None, provider: Provider | None = Non
     app.include_router(trace_router)
     app.include_router(verify_router)
     app.include_router(deploy_router)
+    app.include_router(users_router)
+    app.include_router(settings_router)
+    app.include_router(templates_router)
 
     app.add_middleware(
         CORSMiddleware,

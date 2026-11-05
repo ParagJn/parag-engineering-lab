@@ -368,7 +368,7 @@ def test_next_action_walks_through_a_phase_in_plain_words(engine, store, started
     fill(store, engine, started, "setup")
     assert engine.next_action(started.id) == "Setup is running"
     engine.finish(started.id, "setup", actor="system")
-    assert engine.next_action(started.id) == "Setup is awaiting review by the business engineer"
+    assert engine.next_action(started.id) == "Setup is awaiting review by the architect"          # S23: follows the roles that may approve Setup, not the definition's old label
     engine.reject(started.id, "setup", actor=PERSON, feedback="redo")
     assert engine.next_action(started.id) == "Setup was rejected and needs to be re-run"
     engine.start(started.id, "setup", actor="system")

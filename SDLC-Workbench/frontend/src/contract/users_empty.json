@@ -1,0 +1,61 @@
+{
+  "approvers": {
+    "architecture": [
+      "Technical Lead"
+    ],
+    "build": [
+      "Technical Lead"
+    ],
+    "deploy": [
+      "Deployment Engineer"
+    ],
+    "design": [
+      "Architect"
+    ],
+    "handover": [
+      "BAU Lead"
+    ],
+    "requirements": [
+      "Architect"
+    ],
+    "setup": [
+      "Architect"
+    ]
+  },
+  "defaults": {
+    "architecture": [
+      "Technical Lead"
+    ],
+    "build": [
+      "Technical Lead"
+    ],
+    "deploy": [
+      "Deployment Engineer"
+    ],
+    "design": [
+      "Architect"
+    ],
+    "handover": [
+      "BAU Lead"
+    ],
+    "requirements": [
+      "Architect"
+    ],
+    "setup": [
+      "Architect"
+    ]
+  },
+  "empty": true,
+  "empty_hint": "Nobody is on the list yet, so nothing is restricted. Add ADMIN_NAME=<your name> to backend/.env and restart, or add the first person here.",
+  "note": "A name is a label, not a password: this app runs on your own computer, so anyone who can open it can type any name.",
+  "roles": [
+    "Project Manager",
+    "Architect",
+    "Business Engineer",
+    "Technical Lead",
+    "Deployment Engineer",
+    "BAU Lead",
+    "Administrator"
+  ],
+  "users": []
+}

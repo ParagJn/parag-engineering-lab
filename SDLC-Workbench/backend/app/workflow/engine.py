@@ -10,6 +10,7 @@ import sqlite3
 from dataclasses import dataclass
 from typing import Any
 
+from ..access.who import approver_label
 from ..models import InvalidInput, NotFoundError, PhaseRun, Project
 from ..repos import Store, artefact_types_with_content_in, phase_runs_in
 from .definitions import Catalogue
@@ -190,12 +191,12 @@ class WorkflowEngine:
 
     def reject(
         self, project_id: str, phase_key: str, *, actor: str, feedback: str,
-        notes: tuple[tuple[str | None, str, str], ...] = (),
+        notes: tuple[tuple[str | None, str, str], ...] = (), detail: dict[str, Any] | None = None,
     ) -> PhaseRun:
-        """Send a phase back. `notes` (artefact ID or None, memory kind, text) are saved with the rejection."""
+        """Send a phase back. `notes` (artefact ID or None, memory kind, text) are saved with the rejection; `detail` is extra audit information (the role it was decided as)."""
         self._phase_plan(project_id, phase_key)
         return self.store.phases.record_decision(
-            project_id, phase_key, "reject", actor=actor, feedback=feedback, notes=notes,
+            project_id, phase_key, "reject", actor=actor, feedback=feedback, notes=notes, detail=detail,
         )
 
     def reopen(self, project_id: str, phase_key: str, *, actor: str, reason: str) -> PhaseRun:
@@ -224,6 +225,7 @@ class WorkflowEngine:
         with self.store.db.read() as conn:
             content = artefact_types_with_content_in(conn, project_id)
         reopened_at = self._latest_reopen_times(project_id)
+        approvers = self.store.users.approvers()                     # who may approve each phase right now (S23); the definition's label is only the fallback
 
         states: list[PhaseState] = []
         for phase in plan.phases:
@@ -240,7 +242,7 @@ class WorkflowEngine:
             )
             states.append(
                 PhaseState(
-                    key=phase.key, order=phase.phase.order, name=phase.phase.name, approver=phase.phase.approver,
+                    key=phase.key, order=phase.phase.order, name=phase.phase.name, approver=approver_label(phase.key, phase.phase.approver, approvers),
                     status=status,
                     decision=row.decision if row else None, decided_by=row.decided_by if row else None,
                     feedback=row.feedback if row else None,

@@ -33,6 +33,10 @@ def test_every_route_the_screen_calls_has_a_fixture():
         "verify_run", "verify_list", "error_422_verify", "error_404_verify",
         # S21c
         "checklist_empty", "checklist_answered", "error_409_checklist_closed", "error_404_check", "signoff_empty", "signoff_answered",
+        # S23
+        "users_empty", "users_list", "users_me_architect", "users_me_stranger", "error_403_users", "error_409_users",
+        "settings_view", "settings_saved", "error_403_settings", "error_422_settings",
+        "templates_empty", "templates_saved", "error_403_templates", "error_422_templates",
     }
 
 
@@ -67,7 +71,7 @@ def test_writing_then_checking_agrees(tmp_path, monkeypatch, capsys):
     assert contract.main(["--check"]) == 0
     capsys.readouterr()
     written = sorted(p.name for p in (tmp_path / "out").glob("*.json"))
-    assert len(written) == 58 and all(json.loads((tmp_path / "out" / n).read_text(encoding="utf-8")) is not None for n in written)
+    assert len(written) == 72 and all(json.loads((tmp_path / "out" / n).read_text(encoding="utf-8")) is not None for n in written)
 
 
 def test_a_fixture_holds_no_machine_specific_detail():

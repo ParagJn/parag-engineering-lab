@@ -13,6 +13,9 @@ import { HomePage } from './pages/HomePage'
 import { ProjectPage } from './pages/ProjectPage'
 import { TraceabilityPage } from './pages/TraceabilityPage'
 import { VerifyPage } from './pages/VerifyPage'
+import { ConfigurationPage } from './pages/ConfigurationPage'
+import type { Me } from './api/users'
+import { loadMe } from './lib/users'
 import { WizardPage } from './pages/WizardPage'
 import { makeWizardReducer } from './state/wizardReducer'
 import { useRoute } from './state/useRoute'
@@ -62,6 +65,7 @@ export default function App() {
         : route.name === 'new' ? <NewProject key={route.sample ? 'sample' : 'blank'} useSample={!!route.sample} actorName={actorName} modeInfo={modeLoad.state === 'ready' ? modeLoad.value : null} onCreated={(id, note) => { setFlash(note ? { id, message: note } : null); go({ name: 'project', id, phase: null }) }} />
         : route.name === 'traceability' ? <TraceabilityPage key={route.id} client={client} id={route.id} item={route.item} />
         : route.name === 'verify' ? <VerifyPage key={route.id} client={client} id={route.id} actorName={actorName} />
+        : route.name === 'configuration' ? <ConfigurationPage key={route.id} client={client} id={route.id} actorName={actorName} />
         : route.name === 'project' ? <OneProject id={route.id} phase={route.phase} actorName={actorName} mode={mode} reviewsAvailable={modeLoad.state === 'ready' && modeLoad.value.reviews_available} flash={flash?.id === route.id ? flash.message : null} />
         : <Notice tone="info" title="That page does not exist"><a href={buildHash({ name: 'home' })} className="underline">Back to projects</a></Notice>}
     </Shell>
@@ -104,12 +108,18 @@ function LoadedProject({ initial, phase, actorName, mode, reviewsAvailable, flas
   const first = initial.phases.find((p) => p.key === phase) ?? initial.phases.find((p) => p.status !== 'approved' && p.artefacts.length > 0) ?? initial.phases[0]
   const screen = useProjectScreen(client, initial, first.key, actorName, reviewsAvailable)
   const current = screen.project.phases.find((p) => p.key === first.key) ?? first
+  const [me, setMe] = useState<Me | null>(null)
+  useEffect(() => {
+    let live = true
+    loadMe(client, actorName).then((m) => live && setMe(m))
+    return () => { live = false }
+  }, [actorName, current.status])
   return (
     <>
       {flash && <div className="mb-3"><Notice tone="warn" title="One thing did not work">{flash}</Notice></div>}
       {mode && mode !== screen.project.mode && <div className="mb-3"><Notice tone="warn" title="This project was made in a different mode">It was created in {screen.project.mode.toUpperCase()} mode; this server is now in {mode.toUpperCase()} mode, and that is what runs will use.</Notice></div>}
       <ProjectPage
-        project={screen.project} phaseKey={current.key} canChange={!!actorName}
+        project={screen.project} phaseKey={current.key} canChange={!!actorName} me={me}
         screen={{
           documents: screen.documents, cards: screen.cards, open: screen.open, progress: screen.progress, connected: screen.connected, streamProblem: screen.streamProblem,
           actionError: screen.actionError, busy: screen.busy, uploadError: screen.uploadError, lastUpload: screen.lastUpload, cancelNote: screen.cancelNote, query: screen.query,

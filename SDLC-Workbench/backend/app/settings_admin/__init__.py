@@ -1,0 +1,1 @@
+"""System configuration (S23 Part B): what the app's settings are, what they are now, and (23e) how to change them. Settings live in backend/.env; the app reads them once at start-up, so a change needs a restart."""

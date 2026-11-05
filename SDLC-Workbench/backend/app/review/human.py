@@ -21,7 +21,8 @@ from ..models import InvalidInput, NotFoundError
 from ..repos import Store
 from ..workflow.engine import WorkflowEngine
 from ..trace.gather import gaps_for_phase
-from .errors import EditRefused, PersonRequired, ReviewError, WrongPhaseState
+from ..access.decide import NotAllowed, deciding_role
+from .errors import EditRefused, NotAnApprover, PersonRequired, ReviewError, WrongPhaseState
 from .service import ReviewService
 from ..deploy import checklist as deploy_checklist
 from ..deploy import checks as deploy_checks
@@ -81,6 +82,7 @@ class HumanActions:
         review findings should also be saved as notes for the writer; findings are never passed on unless asked.
         """
         require_person(actor, "asking for changes")
+        role = self.approving_role(actor, phase_key, "sent back")
         named = {k: (v or "").strip() for k, v in notes.items()}
         if not named:
             raise ReviewError("name at least one artefact to send back, with a note saying what to change")
@@ -110,7 +112,7 @@ class HumanActions:
             rows.append((None, "human_feedback", overall.strip()))
 
         summary = "; ".join(f"{k}: {v}" for k, v in named.items())
-        return self.engine.reject(project_id, phase_key, actor=actor, feedback=summary[:MAX_NOTE_CHARS], notes=tuple(rows))
+        return self.engine.reject(project_id, phase_key, actor=actor, feedback=summary[:MAX_NOTE_CHARS], notes=tuple(rows), detail={"decided_as": role} if role is not None else None)
 
     # ---- rewrite only what was sent back ------------------------------------------------------------------------------
 
@@ -354,9 +356,21 @@ class HumanActions:
         return items
 
     def approve(self, project_id: str, phase_key: str, *, actor: str):
-        """Approve a phase under review, recording in the audit row what was still open when the person approved."""
+        """Approve a phase under review, recording in the audit row what was still open when the person approved and the role they approved as."""
         require_person(actor, "approving a phase")
-        return self.engine.approve(project_id, phase_key, actor=actor, detail=self.open_items(project_id, phase_key))
+        role = self.approving_role(actor, phase_key, "approved")
+        detail = self.open_items(project_id, phase_key)
+        if role is not None:
+            detail["approved_as"] = role
+        return self.engine.approve(project_id, phase_key, actor=actor, detail=detail)
+
+    def approving_role(self, actor: str, phase_key: str, what: str = "approved") -> str | None:
+        """May this person take the decision on this phase, and as which role (S23b). Raises NotAnApprover with a plain sentence. See access/decide.py."""
+        phase = self.engine.catalogue.phase(phase_key).name if self.engine.catalogue.has_phase(phase_key) else phase_key
+        try:
+            return deciding_role(self.store.users, actor, phase_key, phase, what)
+        except NotAllowed as exc:
+            raise NotAnApprover(str(exc)) from exc
 
     # ---- shared checks ------------------------------------------------------------------------------------------------------
 

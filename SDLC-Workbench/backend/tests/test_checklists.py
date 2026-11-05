@@ -165,7 +165,7 @@ def test_a_v9_database_keeps_its_deploy_answers_as_deploy_answers_after_the_upgr
     raw.execute("INSERT INTO projects (id, name, mode, created_at, updated_at) VALUES ('p1', 'Old', 'replay', 't', 't')")
     raw.execute("INSERT INTO deploy_checks (project_id, check_id, answer, note, actor, at) VALUES ('p1', 'CHK-001', 'go', 'ok', 'human:a', 't')")
     raw.commit(); raw.close()
-    assert len(MIGRATIONS) == 10 and Database(path).migrate() == 10
+    assert len(MIGRATIONS) == 11 and Database(path).migrate() == 11
     from app.repos import Store
     store = Store.open(path)
     [kept] = store.deploy_checks.history("p1")

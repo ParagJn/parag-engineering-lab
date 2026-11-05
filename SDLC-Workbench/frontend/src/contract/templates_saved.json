@@ -1,0 +1,59 @@
+{
+  "can_change": true,
+  "categories": [
+    {
+      "category": "deployment_plan",
+      "label": "Deployment plan",
+      "template": null
+    },
+    {
+      "category": "release_notes",
+      "label": "Release notes",
+      "template": {
+        "category": "release_notes",
+        "has_toc": true,
+        "label": "Release notes",
+        "size": 1000,
+        "toc_note": "It has a table of contents, so downloads of this document can use it.",
+        "uploaded_at": "2026-01-01T00:00:00Z"
+      }
+    },
+    {
+      "category": "runbook",
+      "label": "Runbook",
+      "template": {
+        "category": "runbook",
+        "has_toc": false,
+        "label": "Runbook",
+        "size": 1000,
+        "toc_note": "No table of contents was found in this file, so downloads will use the standard layout.",
+        "uploaded_at": "2026-01-01T00:00:00Z"
+      }
+    },
+    {
+      "category": "hypercare_plan",
+      "label": "Hypercare plan",
+      "template": null
+    },
+    {
+      "category": "deployment_verification",
+      "label": "Deployment verification report",
+      "template": null
+    },
+    {
+      "category": "handover_signoff",
+      "label": "Handover sign-off report",
+      "template": null
+    }
+  ],
+  "max_mb": 5,
+  "note": "A template is a Word file (.docx) that gives a document its look: styles, page and header and footer. A new upload replaces the old one. It is used only if it has a table of contents.",
+  "saved": {
+    "category": "release_notes",
+    "has_toc": true,
+    "label": "Release notes",
+    "size": 1000,
+    "toc_note": "It has a table of contents, so downloads of this document can use it.",
+    "uploaded_at": "2026-01-01T00:00:00Z"
+  }
+}

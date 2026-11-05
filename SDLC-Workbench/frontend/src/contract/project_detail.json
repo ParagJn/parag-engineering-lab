@@ -17,7 +17,7 @@
       "allowed_actions": [
         "run"
       ],
-      "approver": "business engineer",
+      "approver": "architect",
       "artefacts": [
         {
           "has_content": false,
@@ -42,7 +42,7 @@
     },
     {
       "allowed_actions": [],
-      "approver": "business engineer",
+      "approver": "architect",
       "artefacts": [
         {
           "has_content": false,
@@ -127,7 +127,7 @@
     },
     {
       "allowed_actions": [],
-      "approver": "business engineer",
+      "approver": "architect",
       "artefacts": [
         {
           "has_content": false,

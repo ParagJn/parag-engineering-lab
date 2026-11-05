@@ -361,7 +361,32 @@ ALTER TABLE deploy_checks ADD COLUMN phase TEXT NOT NULL DEFAULT 'deploy';
 CREATE INDEX idx_deploy_checks_phase ON deploy_checks (project_id, phase, check_id, id);
 """
 
-MIGRATIONS = [SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5, SCHEMA_V6, SCHEMA_V7, SCHEMA_V8, SCHEMA_V9, SCHEMA_V10]
+# v11 (S23a): users and their roles, and which roles may approve which phase. Users are global to the app, not per project. A user's roles and the approver rule are SETTINGS, so
+# they are rewritten in place (a change is recorded in the audit log by the service); the user row itself is never deleted, a person is switched off instead, so the audit
+# trail's names keep meaning.
+SCHEMA_V11 = """
+CREATE TABLE users (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  name       TEXT NOT NULL,
+  name_key   TEXT NOT NULL UNIQUE,
+  active     INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+  created_by TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE TABLE user_roles (
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  role    TEXT NOT NULL,
+  PRIMARY KEY (user_id, role)
+);
+CREATE TABLE phase_approvers (
+  phase_key TEXT NOT NULL,
+  role      TEXT NOT NULL,
+  PRIMARY KEY (phase_key, role)
+);
+CREATE TRIGGER users_no_delete BEFORE DELETE ON users BEGIN SELECT RAISE(ABORT, 'users are switched off, never deleted'); END;
+"""
+
+MIGRATIONS = [SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5, SCHEMA_V6, SCHEMA_V7, SCHEMA_V8, SCHEMA_V9, SCHEMA_V10, SCHEMA_V11]
 
 
 def split_statements(script: str) -> list[str]:

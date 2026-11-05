@@ -9,6 +9,7 @@ from typing import Any, Callable, Iterable, Mapping, Sequence
 
 import sqlite3
 
+from .access.roles import ADMIN, DEFAULT_APPROVERS, ROLES, RoleError, clean_name, clean_roles
 from .db import Database
 from .models import (
     DECISIONS,
@@ -36,6 +37,7 @@ from .models import (
     Trace,
     CheckAnswer,
     VerifyMatch,
+    User,
     VerifyRun,
 )
 
@@ -1535,6 +1537,139 @@ class DeployCheckRepo(_Repo):
         return out
 
 
+# ---- users and roles (S23a) ------------------------------------------------
+
+def _user(conn: sqlite3.Connection, row: sqlite3.Row) -> User:
+    roles = [r["role"] for r in conn.execute("SELECT role FROM user_roles WHERE user_id = ?", (row["id"],)).fetchall()]
+    return User(id=row["id"], name=row["name"], active=bool(row["active"]), roles=tuple(r for r in ROLES if r in roles), created_by=row["created_by"], created_at=row["created_at"])
+
+
+class UserRepo(_Repo):
+    """The Users list, their roles and which roles may approve which phase. A person is switched off, never deleted. Every change is audited in the same transaction.
+    The last active Administrator can never be removed or switched off, so the list can always be managed."""
+
+    def _all(self, conn: sqlite3.Connection) -> list[User]:
+        return [_user(conn, r) for r in conn.execute("SELECT * FROM users ORDER BY name_key").fetchall()]
+
+    def list(self) -> list[User]:
+        with self.db.read() as conn:
+            return self._all(conn)
+
+    def count_active(self) -> int:
+        with self.db.read() as conn:
+            return conn.execute("SELECT COUNT(*) FROM users WHERE active = 1").fetchone()[0]
+
+    def find(self, name: str) -> User | None:
+        """The active or switched-off user a typed name belongs to, or None. Names match without regard to case or extra spaces."""
+        key = " ".join((name or "").split()).casefold()
+        with self.db.read() as conn:
+            row = conn.execute("SELECT * FROM users WHERE name_key = ?", (key,)).fetchone()
+            return _user(conn, row) if row else None
+
+    def _admins_left(self, conn: sqlite3.Connection, excluding: int | None = None) -> int:
+        return conn.execute("SELECT COUNT(*) FROM users u JOIN user_roles r ON r.user_id = u.id WHERE u.active = 1 AND r.role = ? AND u.id != ?",
+                            (ADMIN, -1 if excluding is None else excluding)).fetchone()[0]
+
+    def add(self, name: str, roles: Sequence[str], *, actor: str) -> User:
+        """Add a person with their roles. A name already on the list (in any case) is refused; a switched-off person is switched on again, with the roles given."""
+        try:
+            name, roles = clean_name(name), clean_roles(roles)
+        except RoleError as exc:
+            raise InvalidInput(str(exc)) from exc
+        check_actor(actor)
+        key = name.casefold()
+        with self.db.write() as conn:
+            existing = conn.execute("SELECT * FROM users WHERE name_key = ?", (key,)).fetchone()
+            if existing is not None and existing["active"]:
+                raise ConflictError(f"{existing['name']} is already on the list")
+            if existing is not None:
+                uid, name = existing["id"], existing["name"]                  # the same person keeps the name they were first given, so the audit trail follows one spelling
+                conn.execute("UPDATE users SET active = 1 WHERE id = ?", (uid,))
+                conn.execute("DELETE FROM user_roles WHERE user_id = ?", (uid,))
+                action = "user.reactivated"
+            else:
+                uid = conn.execute("INSERT INTO users (name, name_key, active, created_by, created_at) VALUES (?, ?, 1, ?, ?)", (name, key, actor, self._clock())).lastrowid
+                action = "user.added"
+            conn.executemany("INSERT INTO user_roles (user_id, role) VALUES (?, ?)", [(uid, r) for r in roles])
+            write_audit(conn, self._clock(), actor, action, "user", name, detail={"roles": list(roles)})
+            return _user(conn, conn.execute("SELECT * FROM users WHERE id = ?", (uid,)).fetchone())
+
+    def set_roles(self, name: str, roles: Sequence[str], *, actor: str) -> User:
+        """Replace a person's roles. The last active Administrator cannot lose the role."""
+        try:
+            roles = clean_roles(roles)
+        except RoleError as exc:
+            raise InvalidInput(str(exc)) from exc
+        check_actor(actor)
+        with self.db.write() as conn:
+            row = self._row(conn, name)
+            if ADMIN not in roles and row["active"] and self._admins_left(conn, excluding=row["id"]) == 0 and self._is_admin(conn, row["id"]):
+                raise ConflictError("this is the last Administrator; give someone else the role first")
+            before = [r["role"] for r in conn.execute("SELECT role FROM user_roles WHERE user_id = ?", (row["id"],)).fetchall()]
+            conn.execute("DELETE FROM user_roles WHERE user_id = ?", (row["id"],))
+            conn.executemany("INSERT INTO user_roles (user_id, role) VALUES (?, ?)", [(row["id"], r) for r in roles])
+            write_audit(conn, self._clock(), actor, "user.roles_changed", "user", row["name"], detail={"before": sorted(before), "after": list(roles)})
+            return _user(conn, row)
+
+    def set_active(self, name: str, active: bool, *, actor: str) -> User:
+        """Switch a person off or on. The last active Administrator cannot be switched off."""
+        check_actor(actor)
+        with self.db.write() as conn:
+            row = self._row(conn, name)
+            if not active and row["active"] and self._is_admin(conn, row["id"]) and self._admins_left(conn, excluding=row["id"]) == 0:
+                raise ConflictError("this is the last Administrator; give someone else the role first")
+            conn.execute("UPDATE users SET active = ? WHERE id = ?", (1 if active else 0, row["id"]))
+            write_audit(conn, self._clock(), actor, "user.switched_on" if active else "user.switched_off", "user", row["name"])
+            return _user(conn, conn.execute("SELECT * FROM users WHERE id = ?", (row["id"],)).fetchone())
+
+    def _row(self, conn: sqlite3.Connection, name: str) -> sqlite3.Row:
+        row = conn.execute("SELECT * FROM users WHERE name_key = ?", (" ".join((name or "").split()).casefold(),)).fetchone()
+        if row is None:
+            raise NotFoundError(f"{name!r} is not on the list")
+        return row
+
+    @staticmethod
+    def _is_admin(conn: sqlite3.Connection, user_id: int) -> bool:
+        return conn.execute("SELECT 1 FROM user_roles WHERE user_id = ? AND role = ?", (user_id, ADMIN)).fetchone() is not None
+
+    def seed_admin(self, name: str) -> User | None:
+        """Create the first Administrator, with every role, when the list is empty. Done at start-up from ADMIN_NAME. Does nothing when anyone is already on the list or the name is blank."""
+        if not (name or "").strip():
+            return None
+        with self.db.write() as conn:
+            if conn.execute("SELECT COUNT(*) FROM users").fetchone()[0] > 0:
+                return None
+        return self.add(name, ROLES, actor="system")
+
+    # ---- who may approve which phase ------------------------------------------------------------------------------------
+
+    def approvers(self) -> dict[str, tuple[str, ...]]:
+        """For each phase, the roles that may approve it: the saved choice, or the default when nothing is saved for that phase."""
+        with self.db.read() as conn:
+            saved: dict[str, list[str]] = {}
+            for r in conn.execute("SELECT phase_key, role FROM phase_approvers ORDER BY phase_key").fetchall():
+                saved.setdefault(r["phase_key"], []).append(r["role"])
+        return {phase: tuple(r for r in ROLES if r in saved[phase]) if saved.get(phase) else DEFAULT_APPROVERS[phase] for phase in DEFAULT_APPROVERS}
+
+    def set_approvers(self, phase_key: str, roles: Sequence[str], *, actor: str) -> tuple[str, ...]:
+        """Choose which roles may approve a phase. At least one role is needed, so a phase can always be approved by someone."""
+        if phase_key not in DEFAULT_APPROVERS:
+            raise NotFoundError(f"there is no phase {phase_key!r}; the phases are {', '.join(DEFAULT_APPROVERS)}")
+        try:
+            roles = clean_roles(roles)
+        except RoleError as exc:
+            raise InvalidInput(str(exc)) from exc
+        if not roles:
+            raise InvalidInput("a phase needs at least one role that may approve it")
+        check_actor(actor)
+        before = self.approvers()[phase_key]
+        with self.db.write() as conn:
+            conn.execute("DELETE FROM phase_approvers WHERE phase_key = ?", (phase_key,))
+            conn.executemany("INSERT INTO phase_approvers (phase_key, role) VALUES (?, ?)", [(phase_key, r) for r in roles])
+            write_audit(conn, self._clock(), actor, "phase.approvers_changed", "phase", phase_key, detail={"before": list(before), "after": list(roles)})
+        return roles
+
+
 # ---- the store -------------------------------------------------------------
 
 class Store:
@@ -1562,6 +1697,7 @@ class Store:
         self.build_rounds = BuildRoundRepo(db, clock, id_factory)
         self.verify = VerifyRepo(db, clock, id_factory)
         self.deploy_checks = DeployCheckRepo(db, clock, id_factory)
+        self.users = UserRepo(db, clock, id_factory)
         # Imported here, not at the top: the context store builds on this module's helpers.
         from .context.store import ContextStore
 

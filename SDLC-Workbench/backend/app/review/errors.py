@@ -28,6 +28,10 @@ class PersonRequired(ReviewError):
     """This action is a human decision. An agent or the system may not take it."""
 
 
+class NotAnApprover(ReviewError):
+    """The person is not allowed to take this decision: they hold none of the roles that may approve this phase (S23b). A permission, not a state of the phase."""
+
+
 class WrongPhaseState(ReviewError):
     """The phase is not in a state where this action is allowed."""
 

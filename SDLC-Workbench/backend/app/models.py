@@ -188,6 +188,17 @@ class BuildRound:
 
 
 @dataclass(frozen=True)
+class User:
+    """A person on the Users list (S23a). A name is a label, not a credential: the app runs on the person's own computer."""
+    id: int
+    name: str
+    active: bool
+    roles: tuple[str, ...]
+    created_by: str
+    created_at: str
+
+
+@dataclass(frozen=True)
 class VerifyRun:
     """One check of a build against the design (S20b): which folders, which design versions, the counts. The matches are in `verify_matches`."""
     id: int

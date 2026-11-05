@@ -4,6 +4,8 @@ import type { Answer, Checklist } from '../api/deploy'
 import { ChecklistPanel } from '../components/ChecklistPanel'
 import { ArtefactCardView, ByHandCard, NotEnabledCard } from '../components/ArtefactCard'
 import { headline } from '../lib/checklist'
+import { approveBlock } from '../lib/users'
+import type { Me } from '../api/users'
 import { checklistWanted } from '../state/useProjectScreen'
 import { ArtefactReader } from '../components/ArtefactReader'
 import { EditArtefact } from '../components/EditArtefact'
@@ -126,7 +128,7 @@ export const emptyScreen: ProjectScreen = {
   onVersion: () => {}, onClose: () => {}, review: emptyReview,
 }
 
-export function ProjectPage({ project, phaseKey, screen = emptyScreen, canChange = true }: { project: ProjectDetail; phaseKey: string | null; screen?: ProjectScreen; canChange?: boolean }) {
+export function ProjectPage({ project, phaseKey, screen = emptyScreen, canChange = true, me = null }: { project: ProjectDetail; phaseKey: string | null; screen?: ProjectScreen; canChange?: boolean; me?: Me | null }) {
   const phase = project.phases.find((p) => p.key === phaseKey) ?? project.phases.find((p) => p.status !== 'approved' && p.artefacts.length > 0) ?? project.phases[0]
   const waiting = phase.artefacts.filter((a) => a.waits_for.length > 0).length
   const names = Object.fromEntries(phase.artefacts.map((a) => [a.key, a.name]))
@@ -202,15 +204,17 @@ export function ProjectPage({ project, phaseKey, screen = emptyScreen, canChange
             <div className="mt-4 flex flex-wrap items-start gap-3">
               {specs.length === 0
                 ? <span className="text-sm text-slate-500">Nothing to do here right now.</span>
-                : specs.map((s) => (
+                : specs.map((s) => {
+                  const blocked = s.action === 'approve' || s.action === 'request_changes' ? approveBlock(me, phase.key) : null
+                  return (
                     <div key={s.action} className="max-w-xs">
-                      <button type="button" onClick={() => press(s.action)} disabled={!s.live || !canChange || screen.busy !== null || (screen.runLive && s.action !== 'run')}
+                      <button type="button" onClick={() => press(s.action)} disabled={!s.live || !canChange || !!blocked || screen.busy !== null || (screen.runLive && s.action !== 'run')}
                         className={`rounded-lg px-3 py-1.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${s.action === 'run' || s.action === 'approve' ? 'bg-slate-900 text-white' : 'border border-slate-300'}`}>
                         {screen.busy === s.action ? `${s.label}…` : s.label}
                       </button>
-                      <p className="mt-1 text-xs text-slate-500">{s.hint}</p>
+                      <p className="mt-1 text-xs text-slate-500">{blocked ? <span role="note" className="font-semibold text-amber-800">{blocked}</span> : s.hint}</p>
                     </div>
-                  ))}
+                  )})}
             </div>
             {screen.actionError && <div className="mt-3"><Notice tone="error" title="That could not be done">{screen.actionError}</Notice></div>}
 

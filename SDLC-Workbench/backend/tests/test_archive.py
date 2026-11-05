@@ -274,7 +274,7 @@ def test_a_v5_database_with_data_upgrades_to_the_latest_keeping_its_data_and_its
     raw.execute("INSERT INTO artefact_versions (project_id, artefact_id, number, body, author, created_at) VALUES ('p1', 'REQ-F-001', 1, 'old', 'human:a', 't')")
     raw.commit(); raw.close()
 
-    assert len(MIGRATIONS) == 10 and Database(path).migrate() == 10                     # v6 (archiving), v7 (S17b build rounds), v8 (S20b verify), v9 (S21c checklist) and v10 (S22a per-phase checklist) all apply
+    assert len(MIGRATIONS) == 11 and Database(path).migrate() == 11                     # v6 (archiving), v7 (S17b build rounds), v8 (S20b verify), v9 (S21c checklist), v10 (S22a per-phase checklist) and v11 (S23a users) all apply
     store = Store.open(path)
     [old] = store.projects.list()
     assert old.name == "Old" and old.archived_at is None                      # every existing project is active
