@@ -1,8 +1,0 @@
-node_modules/
-dist/
-*.tsbuildinfo
-.pytest_cache/
-backend/data/
-backend/workspaces/
-# Recorded model replies contain full prompts. Stay out of git until S24 scrubs a demo set (rule 10).
-backend/recordings/

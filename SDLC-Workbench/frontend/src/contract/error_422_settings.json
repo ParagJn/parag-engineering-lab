@@ -1,8 +1,0 @@
-{
-  "detail": {
-    "message": "the settings were not saved because the app would not accept them",
-    "problems": [
-      "RUN_BUDGET_USD: Input should be less than or equal to 1000"
-    ]
-  }
-}
