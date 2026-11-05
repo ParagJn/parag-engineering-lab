@@ -112,35 +112,98 @@ def check_docx(data: bytes) -> None:
         raise TemplateRefused("this Word document is damaged or is not a readable Word package") from None
 
 
-def table_of_contents(data: bytes) -> bool:
-    """Does the document hold a Table of Contents? Word keeps one either as a field (TOC) in the body, or as a built-in content block. Both are recognised. Only the body is read."""
+FIELD, TYPED, HEADING_ONLY, NONE = "field", "typed", "heading_only", "none"
+_CONTENTS_HEADINGS = ("table of contents", "table of content", "contents")
+MIN_TYPED_ENTRIES = 3                        # a typed list needs at least this many lines that each match a later heading
+_HEADING_STYLE = re.compile(r"^(heading\s*\d|title)", re.IGNORECASE)
+_SCAN_PARAGRAPHS = 120                       # a contents list is near the top; only the first paragraphs of the body are looked at
+
+
+def _flat(text: str) -> str:
+    """A line as it is compared: lower case, one space between words, no trailing dot leaders and no trailing page number (so 'Purpose ........ 3' matches the heading 'Purpose')."""
+    text = " ".join((text or "").split()).casefold()                         # split() already treats a non-breaking space as a space
+    return re.sub(r"[\s.…·_\-]*\d*\s*$", "", text).strip()
+
+
+def _paragraph_text(p: ET.Element) -> str:
+    return "".join(t.text or "" for t in p.iter(f"{_W}t"))
+
+
+def _paragraph_style(p: ET.Element) -> str:
+    style = p.find(f"{_W}pPr/{_W}pStyle")
+    return style.get(f"{_W}val", "") if style is not None else ""
+
+
+def _typed_contents(root: ET.Element) -> str:
+    """A contents list somebody typed instead of inserting Word's own: a heading that reads 'Table of Contents' (or 'Contents'), then a run of lines that each repeat a heading that comes
+    LATER in the document (with or without links, dot leaders or page numbers). Returns TYPED, HEADING_ONLY (there is such a heading but no such list under it) or NONE.
+    A document that merely mentions contents does not match: the heading must be a paragraph by itself, and at least MIN_TYPED_ENTRIES lines under it must match real headings."""
+    body = root.find(f"{_W}body")
+    if body is None:
+        return NONE
+    paragraphs = [c for c in body if c.tag == f"{_W}p"][:_SCAN_PARAGRAPHS * 3]
+    texts = [_flat(_paragraph_text(p)) for p in paragraphs]
+    verdict = NONE
+    for at, text in enumerate(texts[:_SCAN_PARAGRAPHS]):
+        if text not in _CONTENTS_HEADINGS:
+            continue
+        verdict = HEADING_ONLY
+        i = at + 1
+        while i < len(paragraphs) and not texts[i] and i - at <= 3:                  # a blank line or two straight after the heading
+            i += 1
+        start = i
+        while i < len(paragraphs) and texts[i] and not _HEADING_STYLE.match(_paragraph_style(paragraphs[i])):
+            i += 1
+        run = [t for t in texts[start:i]]
+        later = {texts[j] for j in range(i, len(paragraphs)) if texts[j] and _HEADING_STYLE.match(_paragraph_style(paragraphs[j]))}
+        if sum(1 for t in run if t in later) >= MIN_TYPED_ENTRIES:
+            return TYPED
+    return verdict
+
+
+def contents_kind(data: bytes) -> str:
+    """What kind of table of contents the document has: FIELD (Word's own: a TOC field or the built-in content block), TYPED (a list somebody typed under a contents heading),
+    HEADING_ONLY (a contents heading with nothing recognisable under it) or NONE. Only the body is read; nothing is run."""
     try:
         with zipfile.ZipFile(io.BytesIO(data)) as archive:
             xml = archive.read("word/document.xml")
     except (KeyError, zipfile.BadZipFile):
-        return False
+        return NONE
     try:
         root = ET.fromstring(xml)
     except ET.ParseError:
-        return False
+        return NONE
     for instr in root.iter(f"{_W}instrText"):
         if re.match(r"\s*TOC\b", instr.text or ""):
-            return True
+            return FIELD
     for fld in root.iter(f"{_W}fldSimple"):
         if re.match(r"\s*TOC\b", fld.get(f"{_W}instr", "")):
-            return True
+            return FIELD
     for gallery in root.iter(f"{_W}docPartGallery"):
         if "Table of Contents" in (gallery.get(f"{_W}val", "")):
-            return True
-    return False
+            return FIELD
+    return _typed_contents(root)
+
+
+def table_of_contents(data: bytes) -> bool:
+    """Does the document hold a Table of Contents that downloads can use: Word's own, or a typed list under a contents heading?"""
+    return contents_kind(data) in (FIELD, TYPED)
+
+
+NOTES = {
+    FIELD: "It has a table of contents, so downloads of this document can use it.",
+    TYPED: "It has a table of contents (a list of sections typed under a Table of Contents heading), so downloads of this document can use it.",
+    HEADING_ONLY: "A Table of Contents heading was found, but no Word contents field and no list of this document's sections under it, so downloads will use the standard layout. "
+                  "In Word, References, then Table of Contents, inserts a real one.",
+    NONE: "No table of contents was found in this file, so downloads will use the standard layout.",
+}
 
 
 def _info(path: Path, category: str) -> TemplateInfo:
     data = path.read_bytes()
-    toc = table_of_contents(data)
+    kind = contents_kind(data)
     when = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    note = "It has a table of contents, so downloads of this document can use it." if toc else "No table of contents was found in this file, so downloads will use the standard layout."
-    return TemplateInfo(category, CATEGORIES[category], len(data), when, toc, note)
+    return TemplateInfo(category, CATEGORIES[category], len(data), when, kind in (FIELD, TYPED), NOTES[kind])
 
 
 def save(root: Path, project_id: str, category: str, data: bytes) -> TemplateInfo:

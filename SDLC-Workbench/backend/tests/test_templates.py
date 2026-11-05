@@ -474,3 +474,189 @@ async def test_an_upload_over_the_limit_is_refused_without_the_whole_file_being_
     r = await c.post(f"/api/projects/{project.id}/templates/runbook", files=files(PLAIN + b"\0" * (T.MAX_TEMPLATE_BYTES + 10)))
     assert r.status_code == 422 and asked == [T.MAX_TEMPLATE_BYTES + 1]
     await c.aclose()
+
+
+# ---- a contents list somebody TYPED (found with a real document, 2026-11-05) -------------------------------------------------------------------------
+
+def typed_docx(*, heading="Table of Contents", entries=("Purpose", "Scope", "Steps", "Rollback"), later=("Purpose", "Scope", "Steps", "Rollback"), links=False, leaders=False,
+               gap=0, entry_style=None, extra_before=0, text_after_heading=None) -> bytes:
+    """A Word file with a typed contents list: a heading, then one paragraph per entry, then the real headings. Built in memory with python-docx."""
+    doc = Document()
+    for _ in range(extra_before):
+        doc.add_paragraph("Cover text")
+    doc.add_heading(heading, level=1)
+    for _ in range(gap):
+        doc.add_paragraph("")
+    if text_after_heading:
+        doc.add_paragraph(text_after_heading)
+    for n, entry in enumerate(entries, start=1):
+        label = f"{entry} ........ {n + 2}" if leaders else entry
+        p = doc.add_paragraph(label, style=entry_style) if entry_style else doc.add_paragraph(label)
+        if links:
+            from docx.oxml import parse_xml
+            ns = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
+            p._p.append(parse_xml(f'<w:hyperlink {ns} w:anchor="x{n}"><w:r><w:t></w:t></w:r></w:hyperlink>'))
+    for h in later:
+        doc.add_heading(h, level=1)
+        doc.add_paragraph(f"Text of {h}.")
+    out = io.BytesIO()
+    doc.save(out)
+    return out.getvalue()
+
+
+def test_a_typed_list_of_the_documents_own_sections_under_a_contents_heading_counts_as_a_table_of_contents():
+    data = typed_docx()
+    assert T.contents_kind(data) == T.TYPED and T.table_of_contents(data) is True
+
+
+@pytest.mark.parametrize("heading", ["Table of Contents", "table of contents", "TABLE OF CONTENTS", "Contents", "  Table  of   Contents ", "Table of Content"])
+def test_the_contents_heading_may_be_written_in_any_case_with_odd_spacing_or_as_just_contents(heading):
+    assert T.contents_kind(typed_docx(heading=heading)) == T.TYPED, heading
+
+
+def test_entries_with_links_dot_leaders_and_page_numbers_still_match_their_headings():
+    assert T.contents_kind(typed_docx(links=True)) == T.TYPED
+    assert T.contents_kind(typed_docx(leaders=True)) == T.TYPED
+    assert T.contents_kind(typed_docx(leaders=True, links=True)) == T.TYPED
+
+
+def test_one_or_two_blank_lines_between_the_heading_and_the_list_are_allowed_but_not_a_page_of_them():
+    assert T.contents_kind(typed_docx(gap=1)) == T.TYPED and T.contents_kind(typed_docx(gap=2)) == T.TYPED and T.contents_kind(typed_docx(gap=3)) == T.TYPED
+    assert T.contents_kind(typed_docx(gap=5)) == T.HEADING_ONLY
+
+
+def test_it_takes_at_least_three_matching_lines_so_a_short_list_is_not_enough():
+    assert T.contents_kind(typed_docx(entries=("Purpose", "Scope", "Steps"))) == T.TYPED
+    assert T.contents_kind(typed_docx(entries=("Purpose", "Scope"))) == T.HEADING_ONLY
+    assert T.contents_kind(typed_docx(entries=("Purpose",))) == T.HEADING_ONLY
+
+
+def test_lines_that_do_not_repeat_a_later_heading_do_not_count():
+    assert T.contents_kind(typed_docx(entries=("Apples", "Pears", "Plums", "Kiwis"))) == T.HEADING_ONLY
+    assert T.contents_kind(typed_docx(entries=("Purpose", "Apples", "Pears", "Plums"), later=("Purpose", "Scope"))) == T.HEADING_ONLY            # only one of four matches
+    assert T.contents_kind(typed_docx(entries=("Purpose", "Scope", "Steps", "Apples"), later=("Purpose", "Scope", "Steps"))) == T.TYPED         # three of four is enough
+
+
+def test_a_list_that_matches_headings_which_came_BEFORE_it_does_not_count():
+    doc = Document()
+    for h in ("Purpose", "Scope", "Steps"):
+        doc.add_heading(h, level=1)
+    doc.add_heading("Table of Contents", level=1)
+    for h in ("Purpose", "Scope", "Steps"):
+        doc.add_paragraph(h)
+    out = io.BytesIO(); doc.save(out)
+    assert T.contents_kind(out.getvalue()) == T.HEADING_ONLY
+
+
+def test_a_document_that_only_mentions_contents_in_a_sentence_is_not_matched():
+    doc = Document()
+    doc.add_paragraph("See the table of contents of the other manual for the contents.")
+    doc.add_paragraph("Contents are listed elsewhere.")
+    for h in ("Purpose", "Scope", "Steps"):
+        doc.add_heading(h, level=1)
+    out = io.BytesIO(); doc.save(out)
+    assert T.contents_kind(out.getvalue()) == T.NONE
+
+
+def test_a_contents_heading_with_a_heading_straight_after_it_is_heading_only():
+    data = typed_docx(entries=(), later=("Purpose", "Scope", "Steps"))
+    assert T.contents_kind(data) == T.HEADING_ONLY and T.table_of_contents(data) is False
+
+
+def test_a_contents_list_far_down_the_document_is_not_looked_for():
+    assert T.contents_kind(typed_docx(extra_before=125)) == T.NONE
+    assert T.contents_kind(typed_docx(extra_before=20)) == T.TYPED
+
+
+def test_a_real_word_field_wins_over_a_typed_list_and_is_called_a_field():
+    assert T.contents_kind(WITH_TOC) == T.FIELD
+    doc = Document(io.BytesIO(typed_docx()))
+    from docx.oxml import parse_xml
+    ns = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
+    doc.element.body.insert(0, parse_xml(f'<w:p {ns}><w:r><w:instrText> TOC \\o "1-3" </w:instrText></w:r></w:p>'))
+    out = io.BytesIO(); doc.save(out)
+    assert T.contents_kind(out.getvalue()) == T.FIELD
+
+
+def test_a_plain_document_and_a_broken_one_have_none():
+    assert T.contents_kind(PLAIN) == T.NONE and T.contents_kind(b"not a zip") == T.NONE
+    assert T.contents_kind(rezip(PLAIN, add={"word/document.xml": b"<broken"}, drop=("word/document.xml",))) == T.NONE
+
+
+def test_the_page_number_and_dots_are_taken_off_a_line_before_comparing():
+    assert T._flat("Purpose ........ 3") == "purpose" and T._flat("2.1  Cluster Creation   12") == "2.1 cluster creation" and T._flat("  Rollback  ") == "rollback"
+    assert T._flat("Scope …… 14") == "scope" and T._flat("") == "" and T._flat("1") == ""
+
+
+def test_each_kind_has_its_own_plain_sentence_and_only_the_first_two_are_used():
+    assert T.NOTES[T.FIELD].startswith("It has a table of contents") and "typed under a Table of Contents heading" in T.NOTES[T.TYPED]
+    assert "heading was found, but no Word contents field" in T.NOTES[T.HEADING_ONLY] and "References, then Table of Contents" in T.NOTES[T.HEADING_ONLY]
+    assert T.NOTES[T.NONE] == "No table of contents was found in this file, so downloads will use the standard layout."
+
+
+def test_the_stored_template_says_which_kind_it_found_and_a_heading_only_file_is_not_used(tmp_path):
+    typed = T.save(tmp_path, "p1", "runbook", typed_docx())
+    head = T.save(tmp_path, "p1", "release_notes", typed_docx(entries=()))
+    field = T.save(tmp_path, "p1", "hypercare_plan", WITH_TOC)
+    none = T.save(tmp_path, "p1", "deployment_plan", PLAIN)
+    assert [x.has_toc for x in (typed, head, field, none)] == [True, False, True, False]
+    assert typed.has_toc_note == T.NOTES[T.TYPED] and head.has_toc_note == T.NOTES[T.HEADING_ONLY] and field.has_toc_note == T.NOTES[T.FIELD] and none.has_toc_note == T.NOTES[T.NONE]
+
+
+# ---- the survivors of the first sweep of the typed-contents detector ----------------------------------------------------------------------------------
+
+def test_a_line_that_repeats_a_plain_paragraph_later_but_not_a_heading_does_not_count():
+    """The entries must match later HEADINGS. Body text that happens to repeat a word must not make a list out of nothing."""
+    doc = Document()
+    doc.add_heading("Table of Contents", level=1)
+    for t in ("Purpose", "Scope", "Steps"):
+        doc.add_paragraph(t)
+    doc.add_paragraph("Purpose"); doc.add_paragraph("Scope"); doc.add_paragraph("Steps")                         # later, but as plain paragraphs: no headings at all
+    out = io.BytesIO(); doc.save(out)
+    assert T.contents_kind(out.getvalue()) == T.HEADING_ONLY
+
+
+def test_a_line_that_repeats_a_plain_paragraph_after_a_real_heading_is_still_not_a_heading_match():
+    """The list ends at the first heading. Plain paragraphs further on that repeat the list's words are body text, not headings, so they are not what the list points at."""
+    doc = Document()
+    doc.add_heading("Table of Contents", level=1)
+    for t in ("Alpha", "Beta", "Gamma"):
+        doc.add_paragraph(t)
+    doc.add_heading("Introduction", level=1)                                                                      # the list ends here
+    for t in ("Alpha", "Beta", "Gamma"):
+        doc.add_paragraph(t)                                                                                      # repeated later, but only as body text
+    out = io.BytesIO(); doc.save(out)
+    assert T.contents_kind(out.getvalue()) == T.HEADING_ONLY
+
+
+def test_a_non_breaking_space_in_an_entry_or_a_heading_is_treated_as_a_space():
+    data = typed_docx(entries=("Rollback plan", "Pre checks", "Go live"), later=("Rollback plan", "Pre checks", "Go live"))
+    assert T.contents_kind(data) == T.TYPED
+    assert T._flat("a b") == "a b" and T._flat("a  b") == "a b"
+
+
+def test_a_title_styled_line_counts_as_a_heading_the_list_can_point_at():
+    doc = Document()
+    doc.add_heading("Contents", level=1)
+    for t in ("Overview", "Method", "Result"):
+        doc.add_paragraph(t)
+    doc.add_paragraph("Overview", style="Title"); doc.add_paragraph("Method", style="Title"); doc.add_paragraph("Result", style="Title")
+    out = io.BytesIO(); doc.save(out)
+    assert T.contents_kind(out.getvalue()) == T.TYPED
+
+
+def test_a_very_long_document_is_scanned_only_near_the_top_so_it_stays_fast_and_a_late_contents_heading_is_ignored():
+    import time
+    doc = Document()
+    for n in range(300):                                               # a fixed count well past the scanned stretch (not tied to the limit, or a widened limit would move the heading with it)
+        doc.add_paragraph(f"Filler line {n}")
+    doc.add_heading("Table of Contents", level=1)
+    for t in ("Purpose", "Scope", "Steps"):
+        doc.add_paragraph(t)
+    for t in ("Purpose", "Scope", "Steps"):
+        doc.add_heading(t, level=1)
+    out = io.BytesIO(); doc.save(out)
+    started = time.perf_counter()
+    kind = T.contents_kind(out.getvalue())
+    assert kind == T.NONE and time.perf_counter() - started < 5
+    assert len(T._flat("x" * 10)) == 10
